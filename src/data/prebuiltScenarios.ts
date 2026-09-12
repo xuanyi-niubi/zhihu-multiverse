@@ -46,6 +46,13 @@ export interface ScenarioChoice {
   readonly peerPressure?: boolean;
   readonly onSuccess: ScenarioOutcome;
   readonly onFail?: ScenarioOutcome;
+  /**
+   * 经验解锁标记（P0-H）：这个选项由一条真实知乎经验解锁而来。
+   * 预置剧本不带此字段 —— 所有旧数据零修改。
+   */
+  readonly experienceUnlockId?: string;
+  /** 解锁该选项的真实经验片段 id（可回溯到原文）。 */
+  readonly sourceFactIds?: readonly string[];
 }
 
 export interface ScenarioTurn {

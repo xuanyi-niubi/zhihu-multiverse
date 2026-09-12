@@ -91,6 +91,8 @@ import {
   type ScenarioTurn,
 } from '@/data/prebuiltScenarios';
 import { fetchDmTurn, fetchProfile, fetchRunReport } from '@/core/dmClient';
+import { unlockForTurn, worldContextForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
+import type { WorldBlueprint } from '@/features/game-world/domain';
 
 import type { DmSource } from '@/core/dm/generate';
 import type { PlayerProfile } from '@/core/dm/profile';
@@ -180,6 +182,9 @@ interface RunState {
   prevChoiceText: string | null;
   /** 每幕结束时的 SAN 快照，用于看山心情日记。 */
   sanHistory: number[];
+  /** 本局的 Session id 与世界蓝图（P0-G）。无 session 的旧路径两者为 null。 */
+  sessionId: string | null;
+  worldBlueprint: WorldBlueprint | null;
   /** 是否已经插入过「记忆残响」。 */
   memoryEchoed: boolean;
   /** 上一局的持久化记忆，用于「前世遗念」与 AI 老友开场。 */
@@ -240,6 +245,7 @@ type RunAction =
   | { type: 'SET_PROFILE'; profile: PlayerProfile; analysis: string | null }
   | { type: 'MEMORY_ECHO'; line: string }
   | { type: 'LOAD_MEMORY'; memory: RunMemory | null; authenticated: boolean }
+  | { type: 'LOAD_WORLD_BLUEPRINT'; blueprint: WorldBlueprint; sessionId: string }
   | { type: 'SET_RUN_SAVED'; totalRuns: number }
   | { type: 'SET_RUN_SAVE_FAILED'; reason: string }
   | { type: 'SET_SEAL_STATE'; state: 'idle' | 'sealing' | 'sealed' | 'failed' }
@@ -326,6 +332,9 @@ function createInitialState(scenarioId: string, seed: string, originId: OriginId
 
     prevChoiceText: null,
     sanHistory: [san],
+    // Session 世界蓝图（P0-G）：异步装载，开局为空 —— 与 memory 同一模式
+    sessionId: null,
+    worldBlueprint: null,
     memoryEchoed: false,
     memory: null,
     memoryAuthenticated: false,
@@ -980,6 +989,13 @@ function runReducer(state: RunState, action: RunAction): RunState {
     case 'SET_PROFILE':
       return { ...state, profile: action.profile, profileAnalysis: action.analysis };
 
+    case 'LOAD_WORLD_BLUEPRINT': {
+      // Session 世界蓝图（P0-G）：像 memory 一样异步装载，不动初始状态签名。
+      // 蓝图本身不直接驱动叙事 —— 它经过 worldContextForTurn 切成每幕上下文，
+      // 由 /api/dm 注入模型；这里只是把它挂进运行时供读取。
+      return { ...state, sessionId: action.sessionId, worldBlueprint: action.blueprint };
+    }
+
     case 'LOAD_MEMORY': {
       // 装载账号记忆，并把「前世遗念」卡补进遗物栏。
       //
@@ -1113,6 +1129,14 @@ function ChoiceCard({
       ].join(' ')}
     >
       <div className="flex flex-wrap items-center gap-2">
+        {choice.experienceUnlockId ? (
+          <span
+            className="chip-gold"
+            title="这个选项来自你在上一幕获得的一条真实知乎经验"
+          >
+            经验解锁
+          </span>
+        ) : null}
         {isRisk && choice.check ? (
           /*
             风险选项的标签。
@@ -1226,16 +1250,38 @@ function PlayScreen() {
   const goalParam = params.get('goal') ?? '';
   /** 黄金 Case id：带上它则证据走离线档案（零延迟、内容稳定）。 */
   const caseParam = params.get('case') ?? '';
+  /**
+   * Session 模式（P0-G）：`/play?session=<id>` —— 从已编译好的世界蓝图开局。
+   *
+   * 这是新主链的入口：首页 → POST /api/sessions → 澄清 → prepare-world → 这里。
+   * 没有 session 参数时走旧路径（goal / case / scenario），行为零变化。
+   */
+  const sessionParam = params.get('session') ?? '';
   const originParam = params.get('origin') ?? DEFAULT_ORIGIN_ID;
   const seed = React.useMemo(() => seedParam ?? createSeed(), [seedParam]);
   const origin = React.useMemo(() => getOrigin(originParam), [originParam]);
 
+  /**
+   * Session 模式强制走 AI DM 剧本：蓝图的世界是由 AI 驱动的；
+   * 预置剧本仍留给 case 兜底与无 API 演示。
+   */
+  const effectiveScenarioId = sessionParam ? AI_DM_SCENARIO_ID : scenarioId;
+
   const [state, dispatch] = React.useReducer(
     runReducer,
-    { scenarioId, seed, originId: origin.id },
+    { scenarioId: effectiveScenarioId, seed, originId: origin.id },
     (arg: { scenarioId: string; seed: string; originId: OriginId }) =>
       createInitialState(arg.scenarioId, arg.seed, arg.originId),
   );
+
+  /** Session 视图（窄接口）：蓝图、问题与档案。加载失败时保持 null（诚实降级）。 */
+  const [sessionView, setSessionView] = React.useState<PlaySessionView | null>(null);
+  const [sessionLoadFailed, setSessionLoadFailed] = React.useState(false);
+  /** 已使用过的经验解锁（P0-H）：同一解锁一局只出现一次。 */
+  const [usedUnlockIds, setUsedUnlockIds] = React.useState<readonly string[]>([]);
+
+  /** Session 模式下的玩家目标：来自会话的问题，而不是 URL 参数。 */
+  const effectiveGoal = sessionView?.question ?? goalParam;
 
   const [fateOpen, setFateOpen] = React.useState(false);
   const [inventoryOpen, setInventoryOpen] = React.useState(false);
@@ -1327,6 +1373,54 @@ function PlayScreen() {
   }, []);
 
   /**
+   * Session 模式（P0-G）：拉取会话视图，装载世界蓝图与档案。
+   *
+   * 与 memory 同一模式：开局先渲染，蓝图到位后 dispatch 进 reducer。
+   * 拉不到（网络挂了 / 会话不属于你）→ sessionLoadFailed 落 true，
+   * 界面如实说「加载不了这一局」，**不**悄悄退回旧路径装作没事。
+   */
+  React.useEffect(() => {
+    if (!sessionParam) {
+      return;
+    }
+
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`/api/sessions/${sessionParam}`, { signal: controller.signal });
+        if (!response.ok) {
+          setSessionLoadFailed(true);
+          return;
+        }
+        const payload = (await response.json()) as { data?: { id?: unknown; question?: unknown; profile?: unknown; profileAnalysis?: unknown; worldBlueprint?: unknown } };
+        const data = payload?.data;
+        const blueprint = data?.worldBlueprint as WorldBlueprint | undefined;
+        if (!blueprint || typeof data?.id !== 'string' || typeof data?.question !== 'string') {
+          setSessionLoadFailed(true);
+          return;
+        }
+        const view: PlaySessionView = {
+          id: data.id,
+          question: data.question,
+          profile: (data.profile as PlayerProfile | null) ?? null,
+          profileAnalysis: typeof data.profileAnalysis === 'string' ? data.profileAnalysis : null,
+          worldBlueprint: blueprint,
+        };
+        setSessionView(view);
+        dispatch({ type: 'LOAD_WORLD_BLUEPRINT', blueprint, sessionId: view.id });
+        if (view.profile) {
+          dispatch({ type: 'SET_PROFILE', profile: view.profile, analysis: view.profileAnalysis });
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setSessionLoadFailed(true);
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [sessionParam]);
+
+  /**
    * AI 自由推演时拉一次证据网格。
    *
    * 只拉一次：网格是同一个目标下的稳定产物（有 `meshHash` 与 24h 服务端缓存），
@@ -1337,14 +1431,14 @@ function PlayScreen() {
    * 且内容不会因为一次搜索抖动而变化 —— 这正是黄金 Case 需要的行为。
    */
   React.useEffect(() => {
-    if (state.scenarioId !== AI_DM_SCENARIO_ID || goalParam.trim().length === 0) {
+    if (state.scenarioId !== AI_DM_SCENARIO_ID || effectiveGoal.trim().length === 0) {
       return;
     }
 
     const controller = new AbortController();
     void (async () => {
       const result = await fetchMesh(
-        { goal: goalParam, ...(caseParam ? { caseId: caseParam } : {}) },
+        { goal: effectiveGoal, ...(caseParam ? { caseId: caseParam } : {}) },
         { signal: controller.signal },
       );
       if (controller.signal.aborted || !result) {
@@ -1354,7 +1448,7 @@ function PlayScreen() {
     })();
 
     return () => controller.abort();
-  }, [caseParam, goalParam, state.scenarioId]);
+  }, [caseParam, effectiveGoal, state.scenarioId]);
 
   /** 各轴的最紧需求：来自所有路线的代价画像，画成滑杆上的需求刻度线。 */
   const axisRequirements = React.useMemo(() => {
@@ -1478,7 +1572,9 @@ function PlayScreen() {
   const needsAiTurn =
     state.scenarioId === AI_DM_SCENARIO_ID &&
     state.phase === 'story' &&
-    !state.overrides[state.turnIndex];
+    !state.overrides[state.turnIndex] &&
+    // Session 模式必须等蓝图（或确认失败）才发请求 —— 失败时按旧路径降级
+    (!sessionParam || sessionView !== null || sessionLoadFailed);
 
   /**
    * 证据网格 → AI 回合语料（v2 §1：知乎真正进入回合生成）。
@@ -1524,8 +1620,8 @@ function PlayScreen() {
     [state.originId],
   );
 
-  const snapshotRef = React.useRef({ state, goalParam, totalTurns: totalActCount, turnSnippets });
-  snapshotRef.current = { state, goalParam, totalTurns: totalActCount, turnSnippets };
+  const snapshotRef = React.useRef({ state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, sessionView, usedUnlockIds });
+  snapshotRef.current = { state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, sessionView, usedUnlockIds };
 
   /**
    * 记忆是否已加载完成。
@@ -1545,11 +1641,21 @@ function PlayScreen() {
     const controller = new AbortController();
 
     const run = async () => {
-      const { state: current, goalParam: goal, totalTurns, turnSnippets } = snapshotRef.current;
+      const { state: current, goalParam: goal, totalTurns, turnSnippets, sessionView: currentSession, usedUnlockIds: usedUnlocks } = snapshotRef.current;
       const turnIndex = current.turnIndex;
 
       // 第一步：读懂处境（仅在第一幕、且还没有档案时）
-      let profile = current.profile;
+      // Session 模式（P0-G）：档案在建会话时已生成，**不再重复 fetchProfile**。
+      let profile = current.profile ?? currentSession?.profile ?? null;
+
+      if (!profile && currentSession?.profile) {
+        profile = currentSession.profile;
+        dispatch({
+          type: 'SET_PROFILE',
+          profile: currentSession.profile,
+          analysis: currentSession.profileAnalysis,
+        });
+      }
 
       if (!profile) {
         setLoadingPhase('profile');
@@ -1604,6 +1710,16 @@ function PlayScreen() {
         personaTags: current.memory?.personalityTags ?? [],
         // 只有第二局及以后才有前世记忆；第一幕注入，让 AI 以老友口吻开场
         ...(memoryBlock ? { memoryBlock } : {}),
+        // 世界蓝图上下文（P0-G）：本幕冲突与可引用的真实经验由 Session 编译
+        ...(() => {
+          const blueprint = currentSession?.worldBlueprint;
+          if (!blueprint) return {};
+          const unlock = unlockForTurn(blueprint, turnIndex, usedUnlocks);
+          return {
+            worldContext: worldContextForTurn(blueprint, turnIndex),
+            ...(unlock ? { experienceUnlock: unlock } : {}),
+          };
+        })(),
       };
 
       // 无论成功失败都必须落地一回合，否则 dmLoading 会永远卡住
@@ -1703,7 +1819,7 @@ function PlayScreen() {
       .map((match) => match[2]);
 
     const record = {
-      goal: goalParam,
+      goal: effectiveGoal,
       originId: state.originId,
       lastAct: Math.min(state.turnIndex, state.totalActs),
       status: (state.status === 'OVER_SUCCESS'
@@ -1737,7 +1853,7 @@ function PlayScreen() {
       dispatch({ type: 'SET_RUN_SAVE_FAILED', reason: result.reason });
     });
   }, [
-    goalParam,
+    effectiveGoal,
     scenario.turns.length,
     state.log,
     state.memoryAuthenticated,
@@ -1781,7 +1897,7 @@ function PlayScreen() {
       .map((match) => ({ act: Number(match[1]), text: match[2] }));
 
     const payload = {
-      goal: goalParam,
+      goal: effectiveGoal,
       profile: state.profile,
       analysis: state.profileAnalysis,
       originName: getOrigin(state.originId).name,
@@ -1805,7 +1921,7 @@ function PlayScreen() {
       })
       .finally(() => setReportLoading(false));
   }, [
-    goalParam,
+    effectiveGoal,
     scenario.turns.length,
     state.inventory,
     state.log,
@@ -1820,6 +1936,12 @@ function PlayScreen() {
 
   const handleSelect = React.useCallback(
     (choice: ScenarioChoice) => {
+      // 玩家真的选了经验解锁的选项（P0-H）→ 这一解锁本局不再重复出现
+      if (choice.experienceUnlockId) {
+        setUsedUnlockIds((previous) =>
+          previous.includes(choice.experienceUnlockId!) ? previous : [...previous, choice.experienceUnlockId!],
+        );
+      }
       dispatch({ type: 'CHOOSE', choice, turn: currentTurn });
     },
     [currentTurn],
@@ -1890,13 +2012,13 @@ function PlayScreen() {
   const checklist = React.useMemo(
     () =>
       buildRealityChecklist({
-        goal: goalParam,
+        goal: effectiveGoal,
         choices: runChoiceTexts,
         outcome: state.status === 'OVER_SUCCESS' ? 'success' : 'failure',
         bossIssues: state.boss?.issues ?? [],
         sources: checklistSources,
       }),
-    [checklistSources, goalParam, runChoiceTexts, state.boss?.issues, state.status],
+    [checklistSources, effectiveGoal, runChoiceTexts, state.boss?.issues, state.status],
   );
 
   const relicSummaries = React.useMemo(
@@ -2407,7 +2529,7 @@ function PlayScreen() {
                   : '当前两组设定下结论一致 —— 说明你的约束还没卡到这些路的边界上。'}
               </p>
               <Link
-                href={`/compare?goal=${encodeURIComponent(goalParam)}`}
+                href={`/compare?goal=${encodeURIComponent(effectiveGoal)}`}
                 className="btn-primary mt-3 inline-flex text-xs"
               >
                 去双牌对比

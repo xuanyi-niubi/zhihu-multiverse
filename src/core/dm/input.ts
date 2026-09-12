@@ -2,6 +2,7 @@ import { normalizeProfile } from '@/core/dm/profile';
 import { clampTotalTurns, clampTurnIndex } from '@/core/run/actRun';
 
 import type { DmTurnInput } from '@/core/dm/prompt';
+import type { DmExperienceUnlock, DmWorldContext } from '@/features/game-world/dmContext';
 
 /**
  * 外部输入的容错归一化。
@@ -100,5 +101,98 @@ export function normalizeDmInput(raw: unknown): DmTurnInput {
     ...(typeof body.memoryBlock === 'string' && body.memoryBlock.trim().length > 0
       ? { memoryBlock: body.memoryBlock.trim().slice(0, 1200) }
       : {}),
+    // 世界蓝图上下文（Phase 13 / P0-G）：字段逐个钳制，防 prompt 爆炸
+    ...(isRecord(body.worldContext) ? { worldContext: normalizeWorldContext(body.worldContext) } : {}),
+    // 经验解锁（Phase 14 / P0-H）：文本来自蓝图派生的解锁项，逐字段钳制后放行
+    ...normalizeExperienceUnlock(body),
+  };
+}
+
+/** 归一化经验解锁项（P0-H）。返回值直接展开进 DmTurnInput（合法时）。 */
+function normalizeExperienceUnlock(body: Record<string, unknown>): { experienceUnlock: DmExperienceUnlock } | Record<string, never> {
+  const raw = isRecord(body.experienceUnlock) ? body.experienceUnlock : {};
+  const choiceText = str(raw.choiceText, '', 60);
+  if (choiceText.length === 0) {
+    return {};
+  }
+  return {
+    experienceUnlock: {
+      unlockId: str(raw.unlockId, 'unlock-unknown', 80),
+      label: str(raw.label, '', 24),
+      choiceText,
+      hint: str(raw.hint, '', 120),
+      sourceFactIds: array(raw.sourceFactIds)
+        .slice(0, 5)
+        .map((id) => str(id, '', 80))
+        .filter((id) => id.length > 0),
+    },
+  };
+}
+
+/**
+ * 归一化世界蓝图上下文。
+ *
+ * 客户端传来的每一条「真实经验」都可能被塞进 prompt，因此**逐字段**
+ * 设上限：事实 ≤ 6 条、差异 ≤ 4 条、单条原文 ≤ 200 字 ——
+ * 与 legacy zhihuSnippets 的钳制口径一致。
+ */
+function normalizeWorldContext(raw: Record<string, unknown>): DmWorldContext {
+  const OBJECTIVES: readonly DmWorldContext['actObjective'][] = [
+    'enter-world',
+    'experience-cost',
+    'meet-counterexample',
+    'final-reflection',
+  ];
+  const objective = OBJECTIVES.includes(raw.actObjective as DmWorldContext['actObjective'])
+    ? (raw.actObjective as DmWorldContext['actObjective'])
+    : 'final-reflection';
+
+  const sourceFacts = array(raw.sourceFacts)
+    .slice(0, 6)
+    .map((item) => {
+      const fact = isRecord(item) ? item : {};
+      return {
+        id: str(fact.id, '', 80),
+        quote: str(fact.quote, '', 200),
+        sourceUrl: str(fact.sourceUrl, 'https://www.zhihu.com', 300),
+        author: str(fact.author, '知乎匿名用户', 32),
+      };
+    })
+    .filter((fact) => fact.quote.length > 0);
+
+  const RELATIONS = ['same', 'different', 'unknown'];
+  const differences = array(raw.differences)
+    .slice(0, 4)
+    .map((item) => {
+      const difference = isRecord(item) ? item : {};
+      const relation = RELATIONS.includes(difference.relation as string)
+        ? (difference.relation as 'same' | 'different' | 'unknown')
+        : 'unknown';
+      return {
+        variable: str(difference.variable, '未知条件', 120),
+        relation,
+        ...(typeof difference.userValue === 'string' && difference.userValue.trim().length > 0
+          ? { userValue: difference.userValue.trim().slice(0, 120) }
+          : {}),
+        ...(typeof difference.experienceValue === 'string' && difference.experienceValue.trim().length > 0
+          ? { experienceValue: difference.experienceValue.trim().slice(0, 120) }
+          : {}),
+      };
+    });
+
+  return {
+    sessionId: str(raw.sessionId, '', 80),
+    centralTension: str(raw.centralTension, '', 200),
+    actObjective: objective,
+    actConflict: str(raw.actConflict, '', 400),
+    keyUnknown: typeof raw.keyUnknown === 'string' && raw.keyUnknown.trim().length > 0
+      ? raw.keyUnknown.trim().slice(0, 120)
+      : null,
+    sourceFacts,
+    differences,
+    forbiddenClaims: array(raw.forbiddenClaims)
+      .slice(0, 8)
+      .map((claim) => str(claim, '', 60))
+      .filter((claim) => claim.length > 0),
   };
 }

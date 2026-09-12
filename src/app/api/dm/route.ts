@@ -17,6 +17,8 @@ import { buildSearchQuery } from '@/core/zhihu/query';
 import { toDmSnippets } from '@/core/zhihu/snippets';
 import { getFallbackTurn } from '@/data/prebuiltScenarios';
 
+import { injectExperienceUnlock } from '@/features/game-world/experienceUnlock';
+
 import type { DmTurnInput } from '@/core/dm/prompt';
 import type { ScenarioTurn } from '@/data/prebuiltScenarios';
 
@@ -56,6 +58,21 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const preDiagnostics: DmDiagnostic[] = [];
+
+    // 世界蓝图优先（Phase 13 / P0-G）：蓝图里编译好的真实经验直接转成
+    // 引用片段 —— 整局复用 Session 那一次检索，**不再逐幕烧知乎搜索配额**。
+    // 只有既无蓝图 sourceFacts、也无客户端片段时，才走 legacy 的逐幕搜索兜底。
+    if (input.worldContext && input.worldContext.sourceFacts.length > 0 && input.zhihuSnippets.length === 0) {
+      input = {
+        ...input,
+        zhihuSnippets: input.worldContext.sourceFacts.map((fact) => ({
+          author: fact.author,
+          quote: fact.quote,
+          sourceUrl: fact.sourceUrl,
+        })),
+      };
+      trace.note('world-context-grounded');
+    }
 
     // 用知乎搜索为这一回合补充真实站内语料：DM 据此生成，前端据此展示溯源角标
     const zhihuConfig = resolveZhihuConfigForRequest(request);
@@ -132,11 +149,19 @@ export async function POST(request: Request): Promise<Response> {
       diagnosticCount: preDiagnostics.length + result.diagnostics.length,
     });
 
+    // 经验解锁（P0-H）：把 Session 蓝图派生的新选项织进本幕（不足 3 项才注入）
+    const turn = injectExperienceUnlock({
+      choices: directed.turn.choices,
+      unlock: input.experienceUnlock ?? null,
+      act: input.turnIndex + 1,
+    });
+    const finalTurn = turn === directed.turn.choices ? directed.turn : { ...directed.turn, choices: turn };
+
     return NextResponse.json(
       {
         ok: true,
         source: result.source,
-        turn: directed.turn,
+        turn: finalTurn,
         plotSource: directed.plotSource,
         plotProvider: directed.plotProvider,
         // 第一回合解析出的处境档案回传前端，后续回合由前端带回来

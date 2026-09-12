@@ -2,6 +2,7 @@ import { RELIC_LIBRARY } from '@/data/prebuiltScenarios';
 
 import { profileToPromptBlock, type PlayerProfile } from '@/core/dm/profile';
 
+import type { DmExperienceUnlock, DmWorldContext } from '@/features/game-world/dmContext';
 import type { RelicKind } from '@/types/game';
 
 /**
@@ -80,6 +81,16 @@ export interface DmTurnInput {
    * 首次游玩时为 undefined。
    */
   readonly memoryBlock?: string;
+  /**
+   * 本局世界蓝图上下文（P0-G / Phase 13）。
+   *
+   * 有它时：本幕的冲突、允许引用的真实经验、与玩家的差异、
+   * 现实边界全部来自 Session 编译好的 WorldBlueprint ——
+   * DM 在蓝图**里面**创作，不重新发明现实。
+   */
+  readonly worldContext?: DmWorldContext;
+  /** 经验解锁（P0-H / Phase 14）：一条真实经验解锁的新选项。 */
+  readonly experienceUnlock?: DmExperienceUnlock;
 }
 
 export interface DmMessage {
@@ -507,7 +518,61 @@ export function formatDmUserMessage(input: DmTurnInput): string {
   const memoryBlock =
     input.memoryBlock && input.turnIndex === 1 ? `\n${input.memoryBlock}\n` : '';
 
-  return `【玩家目标】${input.goal || '（未提供，请生成一个普遍适用的校园抉择）'}${analysisBlock}${profileBlock}${memoryBlock}
+  /**
+   * 世界蓝图块（Phase 13 / P0-G）。
+   *
+   * 有蓝图时本幕冲突**必须**从 actConflict 长出来；允许引用的真实经验
+   * 是逐字原文 —— 引用它们时 quote 不得改写（这是新主链「原文忠实」的落点，
+   * 覆盖系统 prompt 里「改写自」的 legacy 规则）。
+   */
+  const world = input.worldContext;
+  const worldBlock = world
+    ? `
+【本局世界蓝图】
+核心矛盾：${world.centralTension || '（未提供）'}
+本幕目标：${world.actObjective}
+本幕冲突：${world.actConflict || '（未提供，请从核心矛盾长出来）'}
+${world.keyUnknown ? `玩家最大未知：${world.keyUnknown}\n` : ''}
+【允许引用的真实经验（quote 必须逐字使用其中原文，禁止改写）】
+${
+  world.sourceFacts.length > 0
+    ? world.sourceFacts.map((fact) => `· ${fact.author}：「${fact.quote}」(${fact.sourceUrl})`).join('\n')
+    : '（本幕没有可引用的真实经验 —— 不要编造任何「知乎用户说…」）'
+}
+【与玩家的差异】
+${
+  world.differences.length > 0
+    ? world.differences
+        .map((difference) => {
+          if (difference.relation === 'different') {
+            return `· 不同：${difference.variable}（玩家：${difference.userValue ?? '？'} / 经历：${difference.experienceValue ?? '？'}）—— 他的结果未必会发生在玩家身上`;
+          }
+          if (difference.relation === 'same') {
+            return `· 相同：${difference.variable}`;
+          }
+          return `· 未知：${difference.variable}`;
+        })
+        .join('\n')
+    : '（暂无可对照的差异）'
+}
+【现实边界（违反即任务失败）】
+${world.forbiddenClaims.map((claim) => `· ${claim}`).join('\n')}
+`
+    : '';
+
+  /** 经验解锁块（Phase 14 / P0-H）：让模型把这条新选择织进本幕叙事。 */
+  const unlock = input.experienceUnlock;
+  const unlockBlock = unlock
+    ? `
+【经验解锁的新选择（必须作为 choices 中的一项原样保留）】
+id 线索：${unlock.unlockId}
+选项文本：${unlock.choiceText}
+给玩家的提示：${unlock.hint}
+这一项来自玩家在上一幕获得的一条真实经验；请在 storyText 里给玩家「想起来了什么」的感觉，但不要替玩家选它。
+`
+    : '';
+
+  return `【玩家目标】${input.goal || '（未提供，请生成一个普遍适用的校园抉择）'}${analysisBlock}${profileBlock}${memoryBlock}${worldBlock}${unlockBlock}
 【宇宙种子】${input.seed}
 【回合】第 ${input.turnIndex} / ${input.totalTurns} 回合
 【当前属性】SAN ${input.stats.san} / 专业力 ${input.stats.skill} / 羁绊 ${input.stats.bond}
