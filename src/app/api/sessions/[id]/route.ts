@@ -4,6 +4,7 @@ import { fail, newTrace, ok, readBody } from '@/features/decision-session/api';
 import {
   answerFollowUp,
   applyClarify,
+  applyDynamicClarification,
   commitExperiment,
   designExperiment,
   loadOwnedSession,
@@ -54,8 +55,13 @@ function viewOf(session: DecisionSession, ownerId: string) {
     followUp: session.followUp,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
-    /** 澄清问题由服务端给出，保证与判定问题类型的逻辑同一份。 */
-    questions: questionsForSession(session),
+    /**
+     * 澄清问题（Phase 3）：动态生成、0～2 条，且**不含用户已说过的**。
+     *
+     * 旧 `questionsForSession()` 是 Phase 3 之前落盘会话的 fallback
+     * —— 那些会话没有 `clarificationNeeds` 字段，仍按固定三问答复。
+     */
+    questions: session.clarificationNeeds ?? questionsForSession(session),
     ownerId,
   };
 }
@@ -107,7 +113,14 @@ export async function PATCH(request: Request, context: { params: { id: string } 
           answers[key] = typeof value === 'string' ? value : undefined;
         }
       }
-      next = applyClarify(session, answers);
+      /**
+       * 有动态问题时走动态落地（按 missingVariable 分派）；
+       * 没有则回退旧实现 —— 保证 Phase 3 之前建的会话仍能被答复。
+       */
+      next =
+        (session.clarificationNeeds ?? []).length > 0
+          ? applyDynamicClarification(session, answers)
+          : applyClarify(session, answers);
       break;
     }
     case 'select-unknown': {

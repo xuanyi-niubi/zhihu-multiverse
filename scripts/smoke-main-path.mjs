@@ -161,8 +161,31 @@ async function main() {
     `实际 ${readBack.status}`,
   );
   check('会话带出证据事实', Array.isArray(readBody?.data?.evidenceFacts), `facts=${readBody?.data?.evidenceFacts?.length}`);
-  check('会话带出澄清问题', Array.isArray(readBody?.data?.questions) && readBody.data.questions.length === 3);
+  /**
+   * 澄清问题改成**动态**生成（Phase 3）：0～2 条。
+   *
+   * 旧断言是 `=== 3`（固定三问）。动态化之后数量取决于
+   * 「用户已经说清了什么」，所以断言上限而不是定值。
+   */
+  const questions = Array.isArray(readBody?.data?.questions) ? readBody.data.questions : [];
+  check('澄清问题不超过 2 条', questions.length <= 2, `实际 ${questions.length} 条`);
+  check(
+    '每个澄清问题都说清了它改变什么',
+    questions.every((item) => typeof item?.missingVariable === 'string' && typeof item?.reason === 'string'),
+  );
+  /**
+   * **不说用户已经说过的**。
+   *
+   * 演示话术里写了「基础一般」，所以系统不该再问「你的基础怎么样」——
+   * 这是 Phase 3 最重要的一条验收。
+   */
+  check(
+    '不重复问用户已经说过的（基础）',
+    !questions.some((item) => /基础/.test(String(item?.question ?? ''))),
+    questions.map((item) => item.question).join(' | ') || '（无问题）',
+  );
   check('「我听懂的是」所需字段齐全', Boolean(readBody?.data?.userContext), 'userContext');
+  check('会话带出问题框定（Phase 2）', Boolean(readBody?.data?.problemFrame), 'problemFrame');
 
   // ── 5. 别的浏览器读不到（归属隔离） ────────────────────────
   const strangerJar = cookieJar();

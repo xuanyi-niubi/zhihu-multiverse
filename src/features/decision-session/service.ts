@@ -1,4 +1,5 @@
 import { extractProfile, type PlayerProfile } from '@/core/dm/profile';
+import { answerValuesFor, clarificationNeedsFor } from '@/features/experience/clarification';
 import { buildProblemFrame } from '@/features/experience/frame';
 import { caseSources, matchDemoCase } from '@/data/demoCases';
 import { contextFrom, clarifyQuestions, experimentFor } from '@/features/decision-session/clarify';
@@ -14,6 +15,7 @@ import type {
   UserContext,
 } from '@/features/decision-session/domain';
 import type { DecisionSessionRepository } from '@/features/decision-session/store';
+import type { ProblemFrame } from '@/features/experience/domain';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
 /**
@@ -233,6 +235,14 @@ export async function createSession(input: CreateSessionInput): Promise<Decision
   const profileAnalysis = input.profileAnalysis ?? null;
   const problemFrame = buildProblemFrame({ question, profile, analysis: profileAnalysis });
 
+  /**
+   * 动态澄清（Phase 3）：需要问什么、还是什么都不用问。
+   *
+   * 长度为 0 时不进 `clarifying` 而是直接 `comparing` —— 用户已经说清了
+   * 这个选择所需的全部信息，再问一遍就是浪费他的耐心。
+   */
+  const clarificationNeeds = clarificationNeedsFor(problemFrame);
+
   const retrieved = await retrieveFor({
     question,
     ...(input.liveSearch ? { liveSearch: input.liveSearch } : {}),
@@ -254,12 +264,13 @@ export async function createSession(input: CreateSessionInput): Promise<Decision
      * 建会话后总是进入 `clarifying`：即使问题很好，
      * 也先问三件事再给结论 —— 这是方案的第二步，不是可跳过的装饰。
      */
-    status: 'clarifying',
+    status: clarificationNeeds.length > 0 ? 'clarifying' : 'comparing',
     question,
     userContext: { goal: question, nonNegotiables: [], existingResources: [] },
     problemFrame,
     profile,
     profileAnalysis,
+    clarificationNeeds,
     retrievalRun,
     evidenceFacts: paths.facts,
     pathClusters: paths.clusters,
@@ -283,6 +294,90 @@ export function applyClarify(
     questions,
   });
   return touch(session, { userContext, status: 'comparing' });
+}
+
+/**
+ * 动态澄清的答复落地（Phase 3）。
+ *
+ * 与旧 `applyClarify` 的分工：旧的按**固定问题集合**（time/verify/loss）
+ * 解析答复；这个按 `session.clarificationNeeds` 的 `missingVariable` 分派，
+ * 因此以后加新问题不需要改这里。
+ *
+ * 落地三件事：
+ * 1. 更新 `userContext`（旧组件仍在读它）；
+ * 2. 把用户**明确回答的**内容补进 `problemFrame`，标记 `user-explicit` + `hard`；
+ * 3. 清空 `clarificationNeeds` 并转 `comparing`（问过就不再问）。
+ */
+export function applyDynamicClarification(
+  session: DecisionSession,
+  answers: Readonly<Record<string, string | undefined>>,
+): DecisionSession {
+  const values = answerValuesFor(session.clarificationNeeds, answers);
+
+  const time = findAnswered(values, 'availableTime');
+  const resource = findAnswered(values, 'existingResources');
+  const nonNegotiable = findAnswered(values, 'nonNegotiables');
+
+  const userContext: UserContext = {
+    ...session.userContext,
+    ...(time ? { availableTime: time } : {}),
+    ...(resource ? { existingResources: [resource] } : {}),
+    ...(nonNegotiable ? { nonNegotiables: [nonNegotiable] } : {}),
+  };
+
+  const problemFrame = session.problemFrame
+    ? appendAnsweredStatements(session.problemFrame, values)
+    : null;
+
+  return touch(session, {
+    userContext,
+    problemFrame,
+    clarificationNeeds: [],
+    status: 'comparing',
+  });
+}
+
+/** 取某个变量上用户给出的值（没答就是 undefined）。 */
+function findAnswered(
+  values: readonly { readonly variable: string; readonly value: string }[],
+  variable: string,
+): string | undefined {
+  return values.find((item) => item.variable === variable)?.value;
+}
+
+/**
+ * 把用户亲口回答的内容补进 frame。
+ *
+ * **这是「升级为硬条件」的唯一入口**：只有走完这条路径的陈述才能拿到
+ * `user-explicit` + `hard: true`；解析器推断出来的东西永远拿不到。
+ */
+function appendAnsweredStatements(
+  frame: ProblemFrame,
+  values: readonly { readonly variable: string; readonly value: string; readonly text: string }[],
+): ProblemFrame {
+  const constraints = [...frame.constraints];
+  const resources = [...frame.resources];
+  const existing = new Set([...constraints, ...resources].map((item) => item.text));
+
+  for (const item of values) {
+    if (existing.has(item.value)) {
+      continue;
+    }
+    const statement = {
+      id: `answered-${item.variable}`,
+      text: item.value,
+      origin: 'user-explicit' as const,
+      hard: true,
+    };
+    if (item.variable === 'existingResources') {
+      resources.push(statement);
+    } else {
+      constraints.push(statement);
+    }
+    existing.add(item.value);
+  }
+
+  return { ...frame, constraints, resources };
 }
 
 /** 第四步：选中「最想先弄清的那个未知」。 */

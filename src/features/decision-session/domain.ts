@@ -1,5 +1,5 @@
 import type { PlayerProfile } from '@/core/dm/profile';
-import type { ProblemFrame } from '@/features/experience/domain';
+import type { ClarificationNeed, ProblemFrame } from '@/features/experience/domain';
 
 /**
  * DecisionSession 领域模型（重构方案 §5.1 / §6.1）。
@@ -244,6 +244,14 @@ export interface DecisionSession {
   readonly profile: PlayerProfile | null;
   /** 模型写的自由文本处境分析；没有就 null。 */
   readonly profileAnalysis: string | null;
+  /**
+   * 动态澄清问题（Phase 3）。
+   *
+   * 由 `clarificationNeedsFor(problemFrame)` 生成，**0～2 条**。
+   * 长度为 0 表示用户已经说清了这个选择所需的全部信息，
+   * 会话直接进入 `comparing`，一个问题都不问。
+   */
+  readonly clarificationNeeds: readonly ClarificationNeed[];
   readonly retrievalRun: RetrievalRun | null;
   readonly evidenceFacts: readonly EvidenceFact[];
   readonly pathClusters: readonly PathCluster[];

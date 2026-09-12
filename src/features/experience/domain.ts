@@ -272,3 +272,47 @@ export interface ExperiencePath {
 
   readonly origin: 'model-clustered' | 'legacy-fallback';
 }
+
+/* -------------------------------------------------------------------------- */
+/* 6. 动态澄清（Phase 3）                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 一条**该问的**澄清问题。
+ *
+ * 与旧 `ClarifyQuestion` 的关键差别：它带 `reason` 与 `missingVariable`，
+ * 因此系统能回答「为什么问这个」「答了会改变什么」。
+ *
+ * 旧实现固定问三件事，不看用户已经说过什么 —— 用户写了「怕影响课程」，
+ * 还是会被问一遍「哪种损失你不愿意接受」。这里靠复用 `frame.unknowns`
+ * 保证「说过就不问」。
+ */
+export interface ClarificationNeed {
+  readonly id: string;
+
+  readonly question: string;
+
+  /**
+   * 它改变什么。三选一是刻意的：任何一条澄清都必须能落到
+   * 检索 / 世界 / 实验三者之一，否则它就是「为画像完整而收集无用信息」。
+   */
+  readonly reason: 'changes-retrieval' | 'changes-world' | 'changes-experiment';
+
+  /** 它补的是哪个变量（答复按这个字段落地，因此加新问题不需要改答复逻辑）。 */
+  readonly missingVariable: string;
+
+  readonly answerType: 'choice' | 'number' | 'short-text';
+
+  readonly options?: readonly {
+    readonly id: string;
+    readonly label: string;
+    readonly value: string;
+  }[];
+
+  readonly priority: number;
+
+  /** 一行说明，供界面显示（可省略）。 */
+  readonly hint?: string;
+  /** 是否允许跳过。澄清一律允许跳过。 */
+  readonly optional?: boolean;
+}
