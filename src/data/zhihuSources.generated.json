@@ -1,0 +1,744 @@
+{
+  "_generated": "由 `npm run sync:zhihu` 生成：用知乎开放平台 Access Secret 调用 /api/v1/content/zhihu_search，把真实答主/赞同数/链接落盘。不要手工编辑。",
+  "generatedAt": "2026-09-12T00:51:27.632Z",
+  "sources": {
+    "law-to-cs:t1": {
+      "id": "law-to-cs:t1",
+      "author": "Darren",
+      "quote": "先说一下自己的情况:我本科是国际经济与贸易，与计算机几乎不沾边，唯一可以沾边的就是过了国家计算机二级😂 18年毕业后在一家国企银行工作，工作期间考过两次公务员均失败了。在银行工作一年，感觉人逐渐被国企化，思想开始退步，每天过着老年人的生活。看着身边比自己先入职一两年的师兄师姐，就仿佛看到了自己的未来。内心深处不想甘于平淡，但自己在金融方面确实没有才华，下定决心要改变。 在闲暇时和朋友聊天知道计算",
+      "upvotes": 653,
+      "url": "https://zhuanlan.zhihu.com/p/142579716?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1780653999,
+      "authority": "4"
+    },
+    "law-to-cs:t1#2": {
+      "id": "law-to-cs:t1#2",
+      "author": "草木轩",
+      "quote": "本人本科专业电子商务，一个普普通通的小镇做题家，考研帝都211管科，以初试成绩第三（416分），最终成绩第五成功上岸，目前是个研一的学姐了，因为最近有一些学弟学妹来问，所以就来和大家分享一下我自己的一些备考经验。 一、关于择校、择专业 万事开头难，择校和择专业是很重要的事情，一定要慎重慎重再慎重！ 在报考准备前，最重要的就是要确定好自己要选择哪个院校、哪个专业。因为不同专业不同院校的考试科目、专业",
+      "upvotes": 10,
+      "url": "https://www.zhihu.com/question/559405531/answer/2719292611?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1666008632,
+      "authority": "4"
+    },
+    "law-to-cs:t1#3": {
+      "id": "law-to-cs:t1#3",
+      "author": "柚子",
+      "quote": "法学跨考计算机是可行的。 但是，在决定跨考之前，还是想提醒一下： 首先跨考计算机这条路将会困难重重，因为你既要复习考研科目，也要自学计算机基础知识。 其次你要了解计算机专业的学习内容和毕业后的工作内容，如果真的喜欢计算机，那么可以大胆的跨考，如果只是觉得计算机毕业工资高，那可能要慎重考虑，因为律师的工资也是非常可观的。 最后可以参考我针对2023计算机考研写的这篇规划，希望可以帮助到你。",
+      "upvotes": 5,
+      "url": "https://www.zhihu.com/question/489186391/answer/2144238517?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1632799525,
+      "authority": "3"
+    },
+    "law-to-cs:t2": {
+      "id": "law-to-cs:t2",
+      "author": "吴师兄学算法",
+      "quote": "“1、LeetCode 题目太多，全部刷完肯定不是最好最有效的方式，其中涉及到的基本知识点来来回回就那些，同时有非常多的类似题，所以刷经典题，掌握这些经典题是最有效的学习方式。 2、经过这两年的同学们的反馈，终于整理出一份我认为是最适合新手小白转码同学的 LeetCode 刷题顺序。 3、本刷题顺序涵盖了 205 道算法题，如果你的自学能力强，每天能够投入 2 小时的刷题时间，两个月左右是可以做到",
+      "upvotes": 84,
+      "url": "https://zhuanlan.zhihu.com/p/637349617?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1686820285,
+      "authority": "4"
+    },
+    "law-to-cs:t2#2": {
+      "id": "law-to-cs:t2#2",
+      "author": "Astral1s",
+      "quote": "之后就是一直在leetcode刷刷刷，也参考了很多大神的题解，比如三叶姐的公众号会有每日一题。 该怎么刷 常见的算法练习有leetCode、洛谷、Codeforces等。因为我不是专业打算法竞赛的，只在LeetCode上练习。我觉得针对互联网公司手撕环节，LeetCode已经足够。虽然笔试可能涉及一些难题（比如数论、线段树等高级数据结构），但把LeetCode高频题刷透，笔试大部分也能过关。 大伙",
+      "upvotes": 18,
+      "url": "https://zhuanlan.zhihu.com/p/1890478013071729702?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1746014970,
+      "authority": "3"
+    },
+    "law-to-cs:t2#3": {
+      "id": "law-to-cs:t2#3",
+      "author": "jagaaan",
+      "quote": "cpp primer大几百页，这本书不是cpp的教程而是字典，如果直接去啃这大厚书，很容易劝退，对于准备面试而言简直是事倍功半。最新价比的操作是直接看视频。这里推荐黑马c++,或者直接去B站搜播放量高的教程，均可，主要是对cpp有一个的认识和了解。 注意：一定要边看边敲代码，在看的过程中梳理文档，把视频的每个知识点都弄懂。 看完视频后对于面试就不需要再看其他视频和书籍了。一方面原因是cpp视频很长",
+      "upvotes": 13,
+      "url": "https://zhuanlan.zhihu.com/p/1921250470959231778?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1750842069,
+      "authority": "3"
+    },
+    "law-to-cs:t3": {
+      "id": "law-to-cs:t3",
+      "author": "好人缘",
+      "quote": "非本专业应届生转行求职简历是要好好的去做一些处理，因为做了这么多年的HR，也筛选过很多科班出身的转行的简历，我们一般看到这样的简历的第一反应是他为什么能做这份工作，或者说他有什么特殊的经历来证明他能够胜任这份工作。 对于科班出生的应届生来接他的学历跟专业都是跟岗位强相关的，我们会认为他肯定是有一定的优势的，但是你非科班出身一般来讲学历栏包括你的专业，包括你可能的实习应当都不占优势，怎么让让怎么让H",
+      "upvotes": 47,
+      "url": "https://www.zhihu.com/question/2066118036789139050/answer/2069061054089393490?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1786082596,
+      "authority": "4"
+    },
+    "law-to-cs:t3#2": {
+      "id": "law-to-cs:t3#2",
+      "author": "JerryGaoSec",
+      "quote": "没有实习，该如何找实习？ 我相信这是绝大多数大学生初入社会都会面临的问题 企业招聘实习生的本质，其实就是找一个可以帮正式工打杂的助理，所以你需要在简历上体现出你过去了就可以直接给他们分担工作量的能力，说白了就是可以通过简单培训，就可以直接上手干活的能力 那么这个时候就需要项目经历 没有实习，就要有项目经历，一个有含精量的，贴近企业真实生产环境的，现代化的，能够证明你能胜任这份实习工作的项目经历 因",
+      "upvotes": 15,
+      "url": "https://www.zhihu.com/question/2074813669419098431/answer/2075173934945800665?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1787540020,
+      "authority": "4"
+    },
+    "law-to-cs:t3#3": {
+      "id": "law-to-cs:t3#3",
+      "author": "offer先生",
+      "quote": "\"老师，我没有实习经历，简历怎么写？\" \"老师，大厂实习是不是都要985的学生？我们双非有机会吗？\" \"老师，我现在大二了，是不是已经晚了？\" 每到就业季，这些问题我至少能听到几十遍。学生对于实习的心态普遍是：知道很重要，但不知道从哪开始。于是从大一焦虑到大三，从大三焦虑到大四，最后毕业了发现简历上实习经历那一栏还是空着。 先给你一组数据：智联招聘2025年调研显示，有2份以上实习经历的学生，秋招",
+      "upvotes": 6,
+      "url": "https://www.zhihu.com/question/611893769/answer/2060383823788086150?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1784013783,
+      "authority": "4"
+    },
+    "kaoyan-second:t1": {
+      "id": "kaoyan-second:t1",
+      "author": "热忱ing",
+      "quote": "能上就上，不能上也勉强不了，最后给自己画上一个圆满的句号。 别管啥学校，能调就调，这一下就可以回到你当时想考研的初心了吧，当时第二次考研目标就是一个好的学校。那考不上，都第二了，选择差不多的先上，至少研究生可比本科的好找工作多了。上了至少也是可以能满足我们这两年的付出呀。 我见过太多和你一样的同学在这个节点做出不同的选择，走出了截然不同的人生轨迹，也就是因为这些真实的经历才能够帮你看清楚每一条路的",
+      "upvotes": 86,
+      "url": "https://www.zhihu.com/question/2012851960685024022/answer/2016831984425530176?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1773630216,
+      "authority": "4"
+    },
+    "kaoyan-second:t1#2": {
+      "id": "kaoyan-second:t1#2",
+      "author": "热忱ing",
+      "quote": "你会问为什么说的这么肯定，不信你可以区各大平台看看帖子，基本上都是这样的情况，可能每个人细节上确实多少会有差异，但是，最终的结果确实也都是没有成功上岸，调剂看不上，不调剂只能二战！ 提问者：我今年考研分数不太理想，处于一个非常纠结的境地。是再给自己一年时间冲刺，还是接受现实争取调剂呢？好担心再考一年也考不上。 二战选好学校，然后找好学习环境，然后确保初试和复试都能一把过，各种环节和细节全部100%",
+      "upvotes": 82,
+      "url": "https://www.zhihu.com/question/2020819458558576023/answer/2021603608978830430?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1774767859,
+      "authority": "4"
+    },
+    "kaoyan-second:t1#3": {
+      "id": "kaoyan-second:t1#3",
+      "author": "考研研习社",
+      "quote": "3、教育部确定的复试分数线，对报考边远八省区以及部分特殊学科专业考生的要求有所降低。考生应经常和研招办联系，若自己的初试成绩未达到第一志愿的复试分数线，但达到了边远八省区的复试分数线，考生本人可以及时与有本专业招生的边远八省区的招生单位研招办取得联系，看他们是否愿意接收，若同意接收，就立即与原报考单位联系，按规定手续将报考材料转到接收你的招生单位的研招办。然后，按接收单位研招办要求的时间去参加复试",
+      "upvotes": 64,
+      "url": "https://www.zhihu.com/question/445170950/answer/1739469848?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1706865246,
+      "authority": "4"
+    },
+    "kaoyan-second:t2": {
+      "id": "kaoyan-second:t2",
+      "author": "热忱ing",
+      "quote": "考研调剂例如有以下规则:（1）考生的初试成绩需要达到第一志愿报考专业在调入地区的基本要求。这意味着我们的成绩要足够优秀，才能顺利调剂‌。（2）所有需要调剂的考生均需通过网上填报调剂志愿。考生可以在全国硕士研究生招生调剂服务系统开放后，填报两个平行调剂志愿，提交后的调剂志愿在48小时内不允许修改。48小时后，考生可以重新填报调剂志愿‌。（3）考生在网上填报调剂志愿时，选择调剂的招生单位、专业科类与自",
+      "upvotes": 109,
+      "url": "https://www.zhihu.com/question/1882707338181452432/answer/1891905816287748973?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1743845496,
+      "authority": "4"
+    },
+    "kaoyan-second:t2#2": {
+      "id": "kaoyan-second:t2#2",
+      "author": "热忱ing",
+      "quote": "这些都是有前提条件的，所以你看你上研究生后是学历提高了，也许你会在找工作的时候受到一些歧视，但是你没去上压根就是本科，然后找的也是本科的工作，是存在好的大厂要211或者是985，但是好赖毕业后你就是研究生，所以层次还是不一样。 所以调剂到本科还要差的学校，如果能上就去，毕竟也是对于我们这几个月甚至一年以来的付出的一种回报，先调呗，能上最好，不能上在说不能上的事情！ 读研院校比本科差，应该怎么面对?",
+      "upvotes": 86,
+      "url": "https://www.zhihu.com/question/2011366462124734179/answer/2018644681433589699?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1774062396,
+      "authority": "4"
+    },
+    "kaoyan-second:t2#3": {
+      "id": "kaoyan-second:t2#3",
+      "author": "瑾理",
+      "quote": "二、调剂偏远地区值不值得？ 如果决定调剂，偏远地区的学校确实相对容易捡漏，但是否值得，取决于你的目标是什么。 1. 调剂去偏远地区，优劣势是什么？ 优点： ・上岸机会大，毕竟名校调剂难，偏远地区院校有缺额更容易捡漏。 ・硕士学历依然有用，无论以后考公、进体制、考博，还是去企业，研究生学历在某些领域仍是敲门砖。 ・某些专业在偏远地区更有优势，比如地质、矿业、农业、生态类专业，可能偏远地区反而更有资源",
+      "upvotes": 3,
+      "url": "https://www.zhihu.com/question/1882707338181452432/answer/1887118089268725465?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1742704013,
+      "authority": "3"
+    },
+    "kaoyan-second:t3": {
+      "id": "kaoyan-second:t3",
+      "author": "热忱ing",
+      "quote": "考研二战完全堕落了，不要慌！调整心态，创伤需愈合，从小事重建，你比想象中更坚强！ （内容结尾有彩蛋!!!）临近考研的家长和学生，每天学习一些考研小技巧，非常实用哦~重点来啦~我完全理解你现在的状态，那种明明知道自己该做什么，就是不去做的无力感，真的特别折磨人。 你不是矫情，也不是堕落，你经历的这些事，单拎出来任何一件都够让人难受一阵子了，而它们却在短时间内接连发生，这根本不是“没什么大事”，而是生",
+      "upvotes": 89,
+      "url": "https://www.zhihu.com/question/1954117980477687015/answer/1962189713696851171?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1760602483,
+      "authority": "4"
+    },
+    "kaoyan-second:t3#2": {
+      "id": "kaoyan-second:t3#2",
+      "author": "小于考研日记",
+      "quote": "先说一句最扎心的实话：一战失败，90%不是你不够努力，而是你努力错了方向。 我是二战上岸985，一战303，二战403，整整提了100分。 二战这一年，我见过太多比一战还拼命、最后依旧落榜的人。也见过每天学8小时、稳稳上岸的人。 区别只有一个：会不会“有效复习”。 这篇文章，是我用两次考研、踩过无数坑总结出来的纯实战经验，没有废话，全是能直接用的方法。二战、在职、脱产、三战都适用。 一、先想清楚：",
+      "upvotes": 45,
+      "url": "https://zhuanlan.zhihu.com/p/2016103553794589022?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1773456776,
+      "authority": "4"
+    },
+    "kaoyan-second:t3#3": {
+      "id": "kaoyan-second:t3#3",
+      "author": "Aria.J",
+      "quote": "这个问题我非常有感触，我曾在考研行业工作6年，去年又全程陪伴我弟弟妹妹备战考研，备考路上的崩溃我太懂了！ 我妹，三本冲双一流，初试排名出来倒数第二进入复试。一边是开心终于进复试了，但更大的焦虑随之而来，满脑子都是\"导师歧视学历怎么办\"，\"复试被刷怎么办\"，“努力那么久，为啥分数这么低”。复试备考期间基本是一边背书一边脑补一百种被淘汰的场景，那段时间我都被她搞焦虑了。 我弟，计算机专业考408，备考",
+      "upvotes": 7,
+      "url": "https://www.zhihu.com/question/2062493082310940191/answer/2062853668714682147?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1784602640,
+      "authority": "4"
+    },
+    "kaoyan-second:t4": {
+      "id": "kaoyan-second:t4",
+      "author": "慵懒新生",
+      "quote": "全文大概7000字左右，阅读时长约10分钟。 前言 本帖意在记录曾经那个备考的自己，同时进行一次复盘和反思，有些方法或是看法可能比较主观，并不适用于所有人。虽然在考研前我也看了不下十篇的经验贴，但中间仍然走过一些弯路，所以希望各位： 1.多看看各类经验贴，找到更加适合的方法。 2.一定要将方法论与实际结合，特别是前期可以多进行尝试。 3.每隔一段时间可以进行一次复盘，逐渐提升自己的学习效率并形成自",
+      "upvotes": 587,
+      "url": "https://zhuanlan.zhihu.com/p/1889035301168584255?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1786372299,
+      "authority": "4"
+    },
+    "kaoyan-second:t4#2": {
+      "id": "kaoyan-second:t4#2",
+      "author": "Homegah",
+      "quote": "初试: ・九月九月初刚开的时候我就因为B站几个狂吹张宇强化18讲的视频而买了一本18讲狂写, 显然这本书是不怎么适合基础不好的我, 写的时候异常痛苦, 最后花了10天做了18讲的数二部分, 其中大部分都是不会写, 部分我认为重要的题在写完后的三天又进行了重写, 在这期间恶补了基础知识, 之后花了4天时间写完了线代9讲, 还没开始做1000.在后期的复盘中，我三刷甚至四刷了 18 讲的前六章，带来的",
+      "upvotes": 138,
+      "url": "https://zhuanlan.zhihu.com/p/1961414976544675324?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1760418171,
+      "authority": "4"
+    },
+    "kaoyan-second:t4#3": {
+      "id": "kaoyan-second:t4#3",
+      "author": "Betty熙和",
+      "quote": "因为记录是倒序的，复盘安排如下: 每月底大复盘，包括学习知识点和状态分析，制定下一月的学习计划。 每周七天用表格复盘，晚上学完复盘。 状态复盘如下: 十月 每日目标12H ——1天13H 7天12H30min左右 6天11H30min 4天10H，最好记录：13H 晚上回寝室的学习时间继续保持10:30 增加各个学习模块的学习时间,由此减少打断时间 早读35min; 396/145均55min; ",
+      "upvotes": 57,
+      "url": "https://www.zhihu.com/question/386627593/answer/2385601911?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1681889579,
+      "authority": "4"
+    },
+    "demo-sophomore:c2": {
+      "id": "demo-sophomore:c2",
+      "author": "Bt年",
+      "quote": "接着就是参加了中国机器人及人工智能大赛（CRAIC），学了一下BCI和树莓派机器人，但都是在企业已经写好的代码上改改，对这些还没有详细了解。只记得一些基础的东西。不过在做比赛的时候去刻意了解这些，还是了解了不少，对这些技术多了些认知。还有在准备嵌入式芯片与系统设计大赛的时候，了解了一些OpenHarmony的一些知识，但因为太忙了，目前还有几天要交项目，我们只设计了一个草图，放弃了。 概念就是计算",
+      "upvotes": 424,
+      "url": "https://zhuanlan.zhihu.com/p/1916918920591422263?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1750431447,
+      "authority": "4"
+    },
+    "demo-sophomore:c2#2": {
+      "id": "demo-sophomore:c2#2",
+      "author": "Martian148",
+      "quote": "大二下学期的主基调就是：迷茫，当时 ICPC 也没什么比赛可打了，然后开始看公开课，当时 DLH 和我一样迷茫，计算机的方向太多了，现在留给我们的试错机会不多了，我们需要尽快找到适合自己的方向，当时摆在我前面的有这几条路，后端，前端，体系结构，人工智能，OI教培，我分析了之后，尝试了最简单的前端，然后同时开始学习 UCB 的 CS61C，由于学校课程的很多，CS61C 推进得比较慢，我还做了详细的",
+      "upvotes": 111,
+      "url": "https://zhuanlan.zhihu.com/p/1946371951787479267?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1757311372,
+      "authority": "4"
+    },
+    "demo-sophomore:c2#3": {
+      "id": "demo-sophomore:c2#3",
+      "author": "lilmonix3",
+      "quote": "前言 笔者是一个课内成绩并不出众的竞赛生，因此，走上竞赛这条路以后，遇到的阻力远比想象中多。笔者在高二进入省队，又入选卓越计划，最终进入北大物院。 初一上 n校的信竞一直是很强势的学科。小升初后的那个暑假，我也尝试过一段时间，直到初一下学期才退竞。那段经历里，我没有学会太多算法，却意外地对编程和独立做项目产生了兴趣。我用 C++ 写过几款小游戏，也用 OpenCV 做过一些简单的图像识别功能。回头",
+      "upvotes": 88,
+      "url": "https://zhuanlan.zhihu.com/p/2077846025700693133?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1788685363,
+      "authority": "4"
+    },
+    "demo-sophomore:c3": {
+      "id": "demo-sophomore:c3",
+      "author": "冰晶石",
+      "quote": "看到你这么有热情，刚进大学就想在社团里大展拳脚，必须给你点个赞！当年我也是这么过来的，一边在学生会折腾，一边还得保证不挂科——说实话，这个过程就像玩一个高难度的平衡游戏，但只要掌握了技巧，绝对能成为“时间管理大师”。 下面是我用“血与泪”总结出的几条实用心得，全部都是大实话。 一、 核心心得：你不是时间不够，而是优先级不清 别再说“我没时间”了，这句话是逃避的借口。我们永远有时间刷手机、追剧，对吧",
+      "upvotes": 12,
+      "url": "https://www.zhihu.com/question/1962475529086154447/answer/1963623711916693029?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1781935159,
+      "authority": "4"
+    },
+    "demo-sophomore:c3#2": {
+      "id": "demo-sophomore:c3#2",
+      "author": "老关聊竞赛",
+      "quote": "课内和竞赛到底该怎么兼顾？这可是个老生常谈的问题，对于竞赛生，尤其是刚刚入门开始学习的同学而言，只有将时间安排合理，学习的效率才能提升。 老关之前为大家整理了一些竞赛大佬平衡竞赛和课内学习规划的经验，这里再放一次，希望对大家有所启发。 首先我们要把时间分为两部分，一部分是“碎片化的时间”，例如回家的途中，等吃饭之前的时间。另外一部分是可以用来攻克难题，限时训练之类的“整块的时间”。 最基本的原则就",
+      "upvotes": 7,
+      "url": "https://www.zhihu.com/question/624719344/answer/3257688980?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1697791691,
+      "authority": "4"
+    },
+    "demo-sophomore:c3#3": {
+      "id": "demo-sophomore:c3#3",
+      "author": "质心姐姐",
+      "quote": "很多竞赛生总在抱怨“没时间”，其实“课内和竞赛到底该怎么兼顾？”是个老生常谈的问题，对于竞赛生，尤其是刚刚入门开始学习的同学而言，只有将时间安排合理，学习的效率才能提升。 但每人时间和精力都是有限的，天天无休止的刷题，就算精力再充沛也吃不消，那么该如何提升学习的效率呢？ 今天为大家讲一下如何安排时间来更高效的学习。 首先我们要把时间分为两部分，一部分是“碎片化的时间”，例如回家的途中，等吃饭之前的",
+      "upvotes": 6,
+      "url": "https://zhuanlan.zhihu.com/p/568646773?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1664868412,
+      "authority": "3"
+    },
+    "demo-graduate:c1": {
+      "id": "demo-graduate:c1",
+      "author": "晏北",
+      "quote": "无论家境、学历如何，一概建议留在大城市， AI时代真正的竞争力，是离开平台仍然活得很好的能力，而不是与某个平台绑定一生的所谓稳定， 要获得这种能力，你必须在市场经济中打拼， 只有在城市这种由大规模人口组成的陌生人社会，才能为你提供打拼的环境。 县城以及四线以下小城市，基本不存在先进科技行业的民企外企，这些地方本质上仍然遵循熟人社会的逻辑，没有关系寸步难行， 有人说回老家可以离父母亲戚更近，或者压根",
+      "upvotes": 81,
+      "url": "https://www.zhihu.com/question/2046208873472717214/answer/2048350786829268728?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1781144884,
+      "authority": "4"
+    },
+    "demo-graduate:c1#2": {
+      "id": "demo-graduate:c1#2",
+      "author": "领克汽车",
+      "quote": "喝酒的时候，他就多次感叹，如果不是高中一门心思就要考北京，可能完全没有机会进入当时的公司。 而且北京、上海、深圳等一线城市给到年轻人的机会，不是一个简简单单的工作，而是视野、见识的拓展。尤其是在互联网、计算机、人工智能、大数据等行业，所有的优势资源都集中在了一线城市，留在这里，就意味着你能接触更先进的知识、更先进的理念，对于自身发展的重要性不言而喻。 我曾经的一名学长，在北京某大型游戏公司干了几年",
+      "upvotes": 74,
+      "url": "https://www.zhihu.com/question/21373902/answer/2728531771?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1776414808,
+      "authority": "4"
+    },
+    "demo-graduate:c1#3": {
+      "id": "demo-graduate:c1#3",
+      "author": "角落",
+      "quote": "我觉得一代人有一代人的选择和答案。 我生在小县城，长在山坳间的烟火里。 父亲是从大城市扎根小城的外乡人，我小的时候，他常常跟我说“长大后，你一定要离开这里，去外面发展”。 在父辈的认知里，那个年代能跳出小城、在外立足，就是 “有出息” 的代名词 —— 仿佛远方的霓虹，才藏着人生的全部可能。 我终究没辜负这份期待，去了大城市上学，毕业后留了下来。 原先朝九晚六地工作，后来自己打拼创业，日子过得安稳平",
+      "upvotes": 69,
+      "url": "https://www.zhihu.com/question/2021959766256219474/answer/2023123532649887247?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1775130958,
+      "authority": "4"
+    },
+    "demo-graduate:c2": {
+      "id": "demo-graduate:c2",
+      "author": "默默的文森特",
+      "quote": "看了很多，综合考虑，我认为其实是90-95这一波人。非常不幸，我本人94的 这一波人，一般都会踩两个超级大坑，工作+房产。而且越优秀的人踩得越狠，非常离谱 先说工作，就以我自身为例，毕业时16年，正是互联网鼎盛（末期）时期，当时没人想去考编，我专业120个学生，只有2个人考编，其他所有人都往互联网企业里冲。我当时也是如此，我家里所有的亲戚都是带编的，大家都劝我考回老家。我是整个家族里最小的，也是唯",
+      "upvotes": 1376,
+      "url": "https://www.zhihu.com/question/391574553/answer/2071544590750966182?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1786674717,
+      "authority": "4"
+    },
+    "demo-graduate:c2#2": {
+      "id": "demo-graduate:c2#2",
+      "author": "实名用户",
+      "quote": "不后悔，主要是自己能力一般，学历也只是双非本科，毕业后被社会毒打了几年，是真的狠狠地毒打（捂脸T_T）。我大学在西安读的，工作后呆过杭州、广州、东莞，也算是混过几个大城市了（凑不要脸），至于结果嘛，呃，只能说混的一塌糊涂，以前看不上的编制现在只想说真香。大城市是很繁华很精彩，可惜我水土不服，毕竟能力一般，原生家庭能给的助力也不多，即使很繁华很热闹，周围车水马龙，但我内心依然孤独，精神上一片荒芜，生",
+      "upvotes": 1212,
+      "url": "https://www.zhihu.com/question/312742772/answer/2530250891?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1744071697,
+      "authority": "4"
+    },
+    "demo-graduate:c2#3": {
+      "id": "demo-graduate:c2#3",
+      "author": "不发胖只发财",
+      "quote": "现在基层公务员竞争压力也不小，很多都是全职备考好几年的，而且考公有努力和运气的成分，你努力后也不一定考上，可能白白折腾几年。 你努力备考上一两年，不一定要考上，白白浪费精力，这几年的时间成本，精力成本，你完全可以干自己想干的事情，出去旅游，开阔眼界，陪伴家人，享受家庭的温暖。 基层公务员没有想象中的好。 一基层工作强度大。 1⃣️基层处于为人民服务的最后一公里，上边千条线，下边一根针。国家的政策，",
+      "upvotes": 25,
+      "url": "https://www.zhihu.com/question/2024261535170664204/answer/2077310857889985106?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1788049503,
+      "authority": "4"
+    },
+    "demo-pivot:c1": {
+      "id": "demo-pivot:c1",
+      "author": "慕容千语",
+      "quote": "二、第二个转折点：选对学习路径，少走半年弯路 大模型内容又多又杂，很多小白一上来就啃论文、看源码，直接劝退。 我走的是从基础到实战、从易到难的路线，非常适合普通人： 1.第一阶段：Python+机器学习基础（1个月） Python是AI开发的通用语言，先把基础语法、数据结构、常用库吃透； 再了解机器学习基本概念、常用算法、模型评估，打好底层地基。 2.第二阶段：深度学习+大语言模型（2个月） 这是",
+      "upvotes": 3,
+      "url": "https://zhuanlan.zhihu.com/p/2010750255352805045?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1772180264,
+      "authority": "4"
+    },
+    "demo-pivot:c1#2": {
+      "id": "demo-pivot:c1#2",
+      "author": "赫本的猫",
+      "quote": "想跟所有转行、待业的朋友说句心里话：我不是天赋型选手，既没有计算机学历，也没有 AI 相关过往经验。 能转型 AI 产品经理拿到 offer，本质是 2026 大量企业急缺懂业务的 AI 产品人才，行业缺口足够大，普通人有翻盘机会。 但我发现一个很矛盾的现状：网上到处都是 AI 教程，很多人会玩 AI 工具，但是企业招人的时候，很难找到真正懂业务，会把客户需求转化成 AI 产品方案的人才。 不少人",
+      "upvotes": 2,
+      "url": "https://zhuanlan.zhihu.com/p/2075899824726136620?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1787713112,
+      "authority": "3"
+    },
+    "demo-pivot:c1#3": {
+      "id": "demo-pivot:c1#3",
+      "author": "老码说求职",
+      "quote": "这是程序员学新技术的通病。看教程的时候觉得”这不就是调API吗，简单”，真到自己写的时候，各种报错、各种边界情况处理不了。 我的建议是：每学一个概念，立刻写一段代码验证。哪怕只是一个十几行的小脚本，也比看十遍教程强。 坑4：贪多求全，什么都想学 Agent领域技术栈更新极快，今天出个新框架，明天出个新论文。我最开始什么都想学：LangChain、LlamaIndex、AutoGen、CrewAI、",
+      "upvotes": 2,
+      "url": "https://zhuanlan.zhihu.com/p/2073404905960760342?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1787118392,
+      "authority": "4"
+    },
+    "demo-pivot:c2": {
+      "id": "demo-pivot:c2",
+      "author": "别为难我o",
+      "quote": "八周主题排期（每天≈2小时） 周 主题 每天干什么 周末验收 1 Python/工程清理 语法欠账+仓库初始化 可复现的小脚本 2 自动化 Agent 工具调用/流程 跑完一个业务小流程 3 MySQL+查数 SQL+权限意识 3 个真实查询场景 4 Text-to-SQL LangChain/函数调用 Demo 能查且会报错提示 5 RAG v1 切片+检索 10 问测试集 6 RAG v2 R",
+      "upvotes": 12,
+      "url": "https://zhuanlan.zhihu.com/p/2070820734700672963?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1786502161,
+      "authority": "4"
+    },
+    "demo-pivot:c2#2": {
+      "id": "demo-pivot:c2#2",
+      "author": "别为难我o",
+      "quote": "每周主题单一：本周只做检索评估，或只做工具调用，不平行开战 工作日 60–90 分钟：编码/改提示/写文档三选一 周末半天：串演示 + 录 3 分钟讲解视频（逼自己能讲） 每月一次：投真实简历或内推试水，用市场反馈纠偏 路径仍建议走三阶段，但允许你「阶段 1 做薄、阶段 2 贴自己行业」。 有家庭的人更要防「计划完美、执行为零」。地图是验收清单，不是焦虑清单。 不确定自己时间是否撑得住就业向训练，",
+      "upvotes": 4,
+      "url": "https://zhuanlan.zhihu.com/p/2070814029484914309?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1786500631,
+      "authority": "3"
+    },
+    "demo-pivot:c2#3": {
+      "id": "demo-pivot:c2#3",
+      "author": "香蕉讨厌苹果",
+      "quote": "这两年最容易看到的东西就是：AI副业、AI自媒体、AI电商、AI智能体，昨天学这个，过两个月又出来一个新的。很多人本来工作干得好好的，看多了以后反而开始怀疑自己是不是马上要被淘汰，然后下班继续看三个小时AI教程。 最后AI没学会，原来的工作也没干得更好。 我现在更倾向于一件很简单的事：先看看AI能不能把你现在每天干的东西砍掉一点。 你是运营，就拿自己真正写过的活动方案、数据表、用户评论去试；做行政",
+      "upvotes": 3,
+      "url": "https://www.zhihu.com/question/1903323000327115778/answer/2079551616651355598?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1788583741,
+      "authority": "4"
+    },
+    "demo-pivot:c4": {
+      "id": "demo-pivot:c4",
+      "author": "张文保",
+      "quote": "想从零开始，去跟 22 岁的人抢算法岗、投大厂校招——大概率不行。这条路我不骗你，它对 40 岁本来就窄，现在更窄。 如果你想的是\"学个半年转行进大厂\"，趁早断了这个念头。 但这不是唯一的路，甚至不是主路。 真正的变化是：现在最缺的，已经不是会调模型的人了。 模型谁都能调，工具三个月换一茬，会用的人一抓一大把。 缺的是知道\"该把 AI 用在哪儿\"的人。 而这个东西，只有在一个行业里趟过十几年的人才",
+      "upvotes": 4,
+      "url": "https://www.zhihu.com/question/2042556793184937482/answer/2065928692577088777?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1785335783,
+      "authority": "4"
+    },
+    "demo-pivot:c4#2": {
+      "id": "demo-pivot:c4#2",
+      "author": "AI打工仔小王",
+      "quote": "35岁了，想学习AI，搞懂AI，用好AI还来得及吗？ 35岁学AI不是来晚了，是来得刚好。 23岁的人学AI，动机是转行——他要进大厂算法岗、拿30万年薪、证明自己不比硕士差。 35岁的人学AI，动机是解决问题——你知道自己每天在重复什么工作、哪些流程浪费时间、哪些判断应该交给机器、哪些必须自己来。 这中间的差别，决定了你们学AI的效率完全不同。 我今年开始写Hermes Agent技能，那时候3",
+      "upvotes": 2,
+      "url": "https://www.zhihu.com/question/657841368/answer/2054704422911992651?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1782659709,
+      "authority": "4"
+    },
+    "demo-pivot:c4#3": {
+      "id": "demo-pivot:c4#3",
+      "author": "顺其自然666",
+      "quote": "当然来得及。 而且我觉得，40岁以后学AI，真正需要改变的不是“要不要学”，而是“学什么”。 如果把目标定成“从零开始成为AI算法工程师”，那确实很难。因为这条路涉及数学、统计、机器学习、深度学习、编程、模型训练、工程部署，年轻人也需要投入很长时间。 但如果你的目标是： “学会利用AI解决自己的实际问题，提升工作效率，甚至做出以前自己根本做不出来的东西。” 那么40岁开始，不仅来得及，反而可能有自",
+      "upvotes": 1,
+      "url": "https://www.zhihu.com/question/2042556793184937482/answer/2079521671040574760?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1788576602,
+      "authority": "3"
+    },
+    "law-to-cs:t4": {
+      "id": "law-to-cs:t4",
+      "author": "Cv大法代码酱",
+      "quote": "这个项目的核心是找到一份公开的数据集，通过你的分析，得出一份有商业洞察的报告。 具体做法如下： 首先是找数据和定问题。你可以去Kaggle、天池或者一些政府数据开放平台，找一份你感兴趣的数据集，比如电商用户行为数据、共享单车使用数据、二手车交易数据等。然后，你要提出一个明确的商业问题，而不是漫无目的地分析。比如，针对电商用户行为数据，你可以问：什么样的用户路径转化率最高？或者，哪些商品组合购买的频",
+      "upvotes": 216,
+      "url": "https://www.zhihu.com/question/12643944008/answer/1967646052258682210?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1761903375,
+      "authority": "4"
+    },
+    "law-to-cs:t4#2": {
+      "id": "law-to-cs:t4#2",
+      "author": "Harry Zhu",
+      "quote": "题主问的“转行做程序员”，那么就是说不是科班出身了，那么我主要从现实一点的简单一点的路径给点建议，仅作参考： 1）既然不是科班出身，那么我们就不要上来就挑战高难度了吧，就不要说啃完龙书、虎书、花书再去996，对吧，那样，头发白了还没有入职呢！所以我建议，避开要求C/C++程序员的职位，避开要求Java程序员的职位，然后把自己就定义成为打酱油、摸鱼、回家陪女友的程序员； 2）有了上面的定位就好说了，",
+      "upvotes": 41,
+      "url": "https://www.zhihu.com/question/418998508/answer/1449705416?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1711453036,
+      "authority": "4"
+    },
+    "law-to-cs:t4#3": {
+      "id": "law-to-cs:t4#3",
+      "author": "晨星",
+      "quote": "我给你说条很多非科班的人走的路。 首先别交任何钱给任何培训机构。学习一点编程基础就行了，看看runoob上的入门资料，很快。别学什么引擎，毛用没有还打击积极性。 接着大大方方的在简历上写明你的专业，写明你真实的学习内容，别编项目。 然后投简历，别选大公司高大上职位哪怕只是初级职位，认清现状。投一些相对规模大一点的外包公司，做一点初级的基础工作累积经验，熟悉计算机科班人员的各种套路和方法。外包要求相",
+      "upvotes": 10,
+      "url": "https://www.zhihu.com/question/641916244/answer/3387144155?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1707043741,
+      "authority": "4"
+    },
+    "demo-sophomore:c1": {
+      "id": "demo-sophomore:c1",
+      "author": "CodeCrafter",
+      "quote": "・技术选型：我这个需求，用Java的Spring Boot还是用C++的brpc？用MySQL还是用Redis，还是两个都要？为什么？ ・系统设计：我的服务要分成几个模块？模块之间怎么通信？用HTTP还是RPC？API接口怎么设计才合理？数据库的表结构怎么设计才范式？ ・开发实现：除了核心逻辑，你还得处理日志、配置、错误处理、单元测试。代码不能只有你一个人能看懂，得有良好的风格和注释。 ・部署运维",
+      "upvotes": 264,
+      "url": "https://www.zhihu.com/question/629431288/answer/1970976124860367420?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1762697327,
+      "authority": "4"
+    },
+    "demo-sophomore:c1#2": {
+      "id": "demo-sophomore:c1#2",
+      "author": "阿泽讲物理",
+      "quote": "2025年第十一届数维杯大学生数学建模挑战赛（秋季赛）：2025年11月14日09:00-11月18日10:00举行。为了更好的帮助参赛同学了解竞赛的赛制及赛题特点，给大家分享的是多次参加数学建模比赛的大佬经验，希望能给即将参加数维杯秋季赛的你，从中得到一些启发。 01 竞赛回顾 这位大佬说参加过国赛，美赛，数维杯等数学建模类比赛，前前后后总共打了快10次。第一次参加的数学建模比赛是“数维杯”。大",
+      "upvotes": 12,
+      "url": "https://www.zhihu.com/question/455128207/answer/1958262801794598323?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1759666234,
+      "authority": "4"
+    },
+    "demo-sophomore:c1#3": {
+      "id": "demo-sophomore:c1#3",
+      "author": "xiaokang",
+      "quote": "题主已经有了C++基础和一定的算法能力，接下来最应该做的就是通过几个C++硬核项目来提升自己的系统架构能力和工程实践经验。这样不仅能让你在技术上有质的飞跃，未来找工作时也会更有底气。 注意：下面有 11个 C++ 硬核实战项目推荐！文末有项目链接！！ 为什么建议选择项目而不是竞赛？ 1. 竞赛的天花板已经比较明确 从题主的描述来看： ・蓝桥杯省三的水平 ・ACM实验室中游水平 ・估计没机会打XCP",
+      "upvotes": 8,
+      "url": "https://www.zhihu.com/question/629431288/answer/1984363123600291571?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1766650302,
+      "authority": "4"
+    },
+    "demo-sophomore:c4": {
+      "id": "demo-sophomore:c4",
+      "author": "spicemonkeyKing",
+      "quote": "比赛期间 1.时间节点 一般每年的一月份（也可能是去年的十二月份），大部分赛题公布并开始报名，三月中旬报名截止。五月底之前提交初赛文档，一般六月中下旬出初赛结果。初赛主要是文档初筛，通过者能够参加分赛区的决赛。分赛区决赛往往在七月中下旬，每个杯赛晋级全国总决赛的名额，大概为20%，这里竞争就非常激烈了。如果你所参加的杯赛有20支队伍进入分赛区决赛，往往要前四名才能晋级全国总决赛。全国总决赛在八月中",
+      "upvotes": 519,
+      "url": "https://zhuanlan.zhihu.com/p/675793420?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1747060731,
+      "authority": "4"
+    },
+    "demo-sophomore:c4#2": {
+      "id": "demo-sophomore:c4#2",
+      "author": "某科学的抠",
+      "quote": "大学数模获奖成绩还可以，准备在备考考研前记录一下自己的数模经历。 获奖证书 参赛经历 我从大一上开始参加数模比赛，共参加了8次数模比赛，部分获奖如下： ①2021年高教社杯数学建模竞赛成功参赛奖 ②2021年认证杯M奖 ③2022年美国大学生数学建模竞赛M奖 ④2022年高教社杯数学建模竞赛全国一等奖 2021年国赛时做偏题了（C题第一问用时间序列改动了原始数据），连省三都没有，emo了大半个学期",
+      "upvotes": 380,
+      "url": "https://zhuanlan.zhihu.com/p/596737110?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1719543452,
+      "authority": "4"
+    },
+    "demo-sophomore:c4#3": {
+      "id": "demo-sophomore:c4#3",
+      "author": "楠赋澈985硕士",
+      "quote": "我们大概分工是: 应用统计学和工程造价负责数据处理，建模，封面制作，视频剪辑，SPSS软件学习和R语言学习。交通运输工程负责Python编程做大数据挖掘以及调查问卷设计，图表制作。经济学负责抽样板块和描述性统计。市场营销负责描述性统计和全文审核，格式排版，摘要等，也就是文书这个板块。全员实地调查分工，共同修改全文和结论，建议等。 分工大概板块有: 编程，调查方案设计，调查问卷设计，数学模型建立与求",
+      "upvotes": 144,
+      "url": "https://zhuanlan.zhihu.com/p/429175485?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1699532169,
+      "authority": "4"
+    },
+    "demo-graduate:c3": {
+      "id": "demo-graduate:c3",
+      "author": "真实故事计划",
+      "quote": "零存款的生活状态正在不同收入的一线城市外来年轻人中蔓延。从月入不过万到年薪几十万，收入的刻度向上攀升，银行存款的数字却总在零点徘徊。 0是一条水平线。年轻人在线上走钢丝，稍不留神就会跌落。保持不负债，是一种技术。下一笔工资到账前的几天，存款总是逼近归零。工资按时到账，一线生活得以有惊无险地续命。不储蓄的另一面，是安全感和选择权的丧失。 漂在一线城市的青年与金钱的关系，映射出人与城市的复杂共生。工资",
+      "upvotes": 34,
+      "url": "https://zhuanlan.zhihu.com/p/2033129352188145725?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1777516043,
+      "authority": "4"
+    },
+    "demo-graduate:c3#2": {
+      "id": "demo-graduate:c3#2",
+      "author": "zhigkcbkK",
+      "quote": "一、你这问题出在哪儿？就俩字：房租 月薪两万，在深圳算不错了。但你干了什么？7000块租了个南山区的一居室。 占比35%什么概念？国际上有个通用标准叫房租收入比—— ・30%以内：健康 ・30%-40%：压力边缘 ・40%以上：危险 你直接干到35%，相当于你每天一睁眼，先欠房东233块钱，然后才能喘气吃饭。 你问为什么存不下钱？大头都被房东收走了，你拿什么存？ 二、南山7000块的房子，到底值不",
+      "upvotes": 33,
+      "url": "https://www.zhihu.com/question/1967191200395146310/answer/2017628202101659015?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1773820049,
+      "authority": "4"
+    },
+    "demo-graduate:c3#3": {
+      "id": "demo-graduate:c3#3",
+      "author": "低代码Helms",
+      "quote": "先说一个反直觉的事实：大多数人离开大城市，不是被赶走的，是算完账之后主动走的。留下来需要过三道坎，这三道坎在2026年对普通人来说几乎是数学题级别的难度。 第一道坎是居住。房价高是表面，本质是\"定居成本\"高。在大城市买一套能安家的房子，对普通家庭意味着掏空六个钱包外加三十年房贷；不买的话，租金又跟着核心地段年年涨。很多年轻人不是没能力在大城市赚钱，是赚的钱在扣掉房租和日常开销之后，根本攒不下\"留下",
+      "upvotes": 9,
+      "url": "https://www.zhihu.com/question/2063357904019896221/answer/2068400352362238441?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1785925073,
+      "authority": "4"
+    },
+    "demo-graduate:c4": {
+      "id": "demo-graduate:c4",
+      "author": "人性商战小张",
+      "quote": "第一点，见识过城市的繁华，体会过世间的人情冷暖。更加懂得美好的生活来之不易。 第二点，把学习到的先进思想，带回老家，发展自己，拓展业务。 第三点，大城市让你增长阅历，看清自己在社会的上的真实价值。更加懂得实力的重要性。",
+      "upvotes": 4,
+      "url": "https://www.zhihu.com/question/2044846229553682294/answer/2045027996294284407?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1780352669,
+      "authority": "3"
+    },
+    "demo-graduate:c4#2": {
+      "id": "demo-graduate:c4#2",
+      "author": "职业规划师王静",
+      "quote": "3、选择面窄，跳槽难。一旦不适应现有工作，同城可选岗位极少，很容易被困住。 四道自测题，直接帮你缩小答案 1）你的专业 / 目标行业，高度依赖一线城市产业生态吗？【最重要】 👉 适合优先冲北上广：互联网、AI、投行、高端咨询、品牌公关、传媒、生物医药研发、涉外法务、头部事务所审计、奢侈品、高端设计。这类行业小城市缺少上下游产业链，回老家几乎没有对口成长岗位。 👉 不硬需要一线，省会 / 老家就",
+      "upvotes": 3,
+      "url": "https://www.zhihu.com/question/2011895059709179407/answer/2070069158331541337?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1786322947,
+      "authority": "4"
+    },
+    "demo-graduate:c4#3": {
+      "id": "demo-graduate:c4#3",
+      "author": "灰白兔",
+      "quote": "加班常态化、节奏快、竞争激烈，精神内耗重，私人时间少，容易疲惫。 3. 孤独感强、归属感弱 远离家人，人脉从零积累，漂泊感明显。 适合人群 • 无家庭牵绊、不想早结婚生子； • 想深耕专业、快速攒职场经验、后期跳槽增值； • 能接受加班、抗压能力强、不甘心安稳； • 家庭无法提供房车支持，但愿意靠自己打拼。 二、小城市（三四线/县城、家乡城市） 优势 1. 生活成本极低 房租便宜、日常消费低，容易",
+      "upvotes": 2,
+      "url": "https://www.zhihu.com/question/2021959766256219474/answer/2025154655156548915?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1775614495,
+      "authority": "2"
+    },
+    "demo-pivot:c3": {
+      "id": "demo-pivot:c3",
+      "author": "独元殇",
+      "quote": "如果你只是一个已经工作的普通码农的话，那么其实学学 Vibe coding 的技巧，以及简单看几个科普的文章，然后用 claude code 或者 codex 做几个项目就 OK 了。 但是如果你是想进入大厂、尤其是一些待遇特别好的外企的话，AI 的底层基础还是得好好学的。没错 没错 ，就是 面试造火箭，工作打螺丝，卷吧 ~ AI 素养成招聘考核标准，2025 年世经论坛数据显示，相关从业者薪资溢",
+      "upvotes": 81,
+      "url": "https://zhuanlan.zhihu.com/p/2041722648405825198?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1779564612,
+      "authority": "4"
+    },
+    "demo-pivot:c3#2": {
+      "id": "demo-pivot:c3#2",
+      "author": "AI掘金情报局",
+      "quote": "告诉你一个业内人死都不会说出来的真相：现在的 AI 行业，需要的不是天天搞理论的研究员，而是能把大模型跟实际业务场景结合起来、能帮企业真正赚到钱的工程落地人才！ 这就是为什么我一个大专生，能在转行 AI 大模型应用开发后，直接拿下 39K 的高薪～ 因为我当时把精力 100% 砸在了如何用大模型帮公司降本增效上！ 这条路的门槛压根没你想象得那么高！我能拿 39K，你完全也可以闭眼复制我的路线！ 大",
+      "upvotes": 6,
+      "url": "https://www.zhihu.com/question/51039416/answer/2063613258125390592?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1784783740,
+      "authority": "4"
+    },
+    "demo-pivot:c3#3": {
+      "id": "demo-pivot:c3#3",
+      "author": "卷毛的技术笔记",
+      "quote": "去年这个时候，我还在每天写CRUD接口。不是说CRUD不好——毕竟9年了，写起来又快又稳——但我心里清楚，纯CRUD开发的天花板快到了。 转折点是有次面试，面试官问我：”你们有没有用AI做点什么？”我说没有。他没说什么，但那个沉默让我很难受。回来后我查了一下——好家伙，Spring AI已经1.0 GA了，MCP协议有5800多个Server了，AI Agent的生态在Java圈已经成型了。 我决",
+      "upvotes": 2,
+      "url": "https://zhuanlan.zhihu.com/p/2072620084930024601?utm_medium=openapi_platform&utm_source=cf621feb3f2d",
+      "retrievedAt": "2026-09-12T00:51:27.632Z",
+      "status": "verified",
+      "editTime": 1786931455,
+      "authority": "4"
+    }
+  },
+  "cases": {
+    "law-to-cs": {
+      "label": "law-to-cs",
+      "anchors": [
+        "law-to-cs:t1",
+        "law-to-cs:t2",
+        "law-to-cs:t3",
+        "law-to-cs:t4"
+      ],
+      "paths": []
+    },
+    "kaoyan-second": {
+      "label": "kaoyan-second",
+      "anchors": [
+        "kaoyan-second:t1",
+        "kaoyan-second:t2",
+        "kaoyan-second:t3",
+        "kaoyan-second:t4"
+      ],
+      "paths": []
+    },
+    "demo-sophomore": {
+      "label": "demo-sophomore",
+      "anchors": [
+        "demo-sophomore:c1",
+        "demo-sophomore:c2",
+        "demo-sophomore:c3",
+        "demo-sophomore:c4"
+      ],
+      "paths": [
+        "path-slow-down",
+        "path-lateral-move",
+        "path-part-time-pivot"
+      ]
+    },
+    "demo-graduate": {
+      "label": "demo-graduate",
+      "anchors": [
+        "demo-graduate:c1",
+        "demo-graduate:c2",
+        "demo-graduate:c3",
+        "demo-graduate:c4"
+      ],
+      "paths": [
+        "path-stable-track",
+        "path-stay-and-deepen",
+        "path-lateral-move"
+      ]
+    },
+    "demo-pivot": {
+      "label": "demo-pivot",
+      "anchors": [
+        "demo-pivot:c1",
+        "demo-pivot:c2",
+        "demo-pivot:c3",
+        "demo-pivot:c4"
+      ],
+      "paths": [
+        "path-full-time-pivot",
+        "path-part-time-pivot",
+        "path-cross-field"
+      ]
+    }
+  },
+  "anchorPaths": {
+    "demo-sophomore:c1": "path-slow-down",
+    "demo-sophomore:c2": "path-lateral-move",
+    "demo-sophomore:c3": "path-part-time-pivot",
+    "demo-sophomore:c4": "path-lateral-move",
+    "demo-graduate:c1": "path-stable-track",
+    "demo-graduate:c2": "path-stable-track",
+    "demo-graduate:c3": "path-stay-and-deepen",
+    "demo-graduate:c4": "path-lateral-move",
+    "demo-pivot:c1": "path-full-time-pivot",
+    "demo-pivot:c2": "path-part-time-pivot",
+    "demo-pivot:c3": "path-cross-field",
+    "demo-pivot:c4": "path-cross-field"
+  }
+}
