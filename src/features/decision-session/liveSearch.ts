@@ -2,6 +2,7 @@ import { createZhihuClient, type ZhihuConfig, type ZhihuSearchItem } from '@/cor
 import { cleanText } from '@/core/zhihu/snippets';
 import { stableHash } from '@/core/run/deterministic';
 
+import type { ExperienceSearch } from '@/features/experience/retrieve';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
 /**
@@ -56,16 +57,20 @@ export function searchItemToSource(item: ZhihuSearchItem, retrievedAt: string): 
 }
 
 /**
- * 用一个知乎配置做一次检索，返回来源列表。
+ * 用一个知乎配置做一次检索，返回来源列表（共享实现）。
  *
  * 失败时返回空数组（不抛）：调用方据此降到 `offline` 并**诚实地**
  * 说「当前没有可核对的来源」，而不是把上游错误包装成「没找到相关内容」。
  */
-export function liveSearchWith(config: ZhihuConfig): (query: string) => Promise<readonly KnowledgeSource[]> {
-  return async (query: string) => {
+function searchSources(
+  config: ZhihuConfig,
+  query: string,
+  count: number,
+): Promise<readonly KnowledgeSource[]> {
+  return (async () => {
     try {
       const client = createZhihuClient(config);
-      const result = await client.search(query, 10);
+      const result = await client.search(query, count);
       if (!result.ok) {
         return [];
       }
@@ -76,5 +81,21 @@ export function liveSearchWith(config: ZhihuConfig): (query: string) => Promise<
     } catch {
       return [];
     }
-  };
+  })();
+}
+
+/** 旧主流程入口：固定取 10 条。 */
+export function liveSearchWith(config: ZhihuConfig): (query: string) => Promise<readonly KnowledgeSource[]> {
+  return (query: string) => searchSources(config, query, 10);
+}
+
+/**
+ * 经验引擎入口（Phase 4 / P0-C）。
+ *
+ * 与 `liveSearchWith` 的唯一差别是数量可调 —— 字段转换**复用同一个
+ * `searchItemToSource`**，不复制第二份。经验检索默认取 8 条：
+ * 多 intent 去重后通常还剩得下足够样本，又比 10 条省一点传输。
+ */
+export function experienceSearchWith(config: ZhihuConfig): ExperienceSearch {
+  return (query: string, count = 8) => searchSources(config, query, count);
 }
