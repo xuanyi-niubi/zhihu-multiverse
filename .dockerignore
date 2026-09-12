@@ -1,0 +1,57 @@
+# 依赖与构建产物（容器内会重新装、重新构建）
+node_modules
+.next
+out
+build
+dist
+
+# ⚠️ 密钥：绝不能进镜像层。运行时通过 env_file / compose 的 environment 注入。
+.env
+.env.*
+!.env.example
+
+# 本机 agent 摘要与个人底稿（不属于产品代码，也不需要进镜像）
+AGENTS.md
+草稿*.txt
+黑客松规则.txt
+work/
+work-verify/
+exports/
+
+# 运行时数据：账号记忆等本地落盘内容。
+#
+# 这个目录必须是空的进镜像 —— 容器里的记忆靠挂载卷提供（见 docker-compose.yml）。
+# 若把宿主上的 data/ 带进镜像，等于把开发机上的测试数据发给所有用户。
+#
+# ⚠️ 必须写 `/data/` 而不是 `data/`：
+# 裸写 `data/` 会被当作可匹配**任意层级**的模式，于是把 `src/data/`
+# （剧本、角色、场景、真实知乎快照）一起排除，构建时报
+# `Module not found: Can't resolve '@/data/...'`。
+# 这与 `.gitignore` 里踩过的坑完全相同（那边已用 `/data/` 修好，这边漏了）。
+/data/
+
+# 版本控制与编辑器
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.swp
+.DS_Store
+Thumbs.db
+
+# 文档（README 与计划书留在仓库即可，镜像里用不到）
+# 注意：这会连 docs/ 一起排除。部署脚本与 nginx.conf 是在**服务器上**
+# 从 git 仓库直接使用的，不经过镜像，所以排除它们不影响部署。
+*.md
+!README.md
+
+# 测试与 CI（生产镜像不需要；若将来想在镜像内跑测试，删掉 tests 这行）
+tests
+vitest.config.ts
+coverage
+
+# 日志与临时文件
+*.log
+npm-debug.log*
+*.tsbuildinfo

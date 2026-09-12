@@ -1,0 +1,84 @@
+# 知乎平行宇宙 · 生产编排
+#
+# 用法：
+#   cp .env.production.example .env.production   # 填真实值
+#   docker compose up -d --build
+#   docker compose logs -f
+#
+# ---------------------------------------------------------------------------
+# ⚠️ 不要加 `deploy.replicas` 或 `scale`。
+#
+# OAuth 会话存在 Node 进程内存里（src/core/oauth/zhihu.ts 的 `sessions` Map）。
+# 起多个副本时，用户在 A 副本拿到的会话 Cookie 会被负载均衡轮询到 B 副本，
+# B 副本内存里没有这个会话，于是 /api/oauth/session 返回未授权 ——
+# 表现为「刚授权成功，刷新就掉了」。
+#
+# 需要横向扩展的话，先把会话层换成 Redis 或数据库。
+# ---------------------------------------------------------------------------
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zhihu-multiverse:latest
+    container_name: zhihu-multiverse
+    restart: unless-stopped
+
+    # 只监听回环，由宿主 Nginx 反代。不直接把 3000 暴露到公网。
+    ports:
+      - '127.0.0.1:3000:3000'
+
+    env_file:
+      - .env.production
+
+    environment:
+      NODE_ENV: production
+      # 容器内监听全部网卡（配合上面的端口映射）
+      HOSTNAME: 0.0.0.0
+      PORT: '3000'
+      # 让 Next 信任反代传来的协议头。
+      # 关键：OAuth 会话 Cookie 的 Secure 属性依赖 x-forwarded-proto，
+      # 若 Nginx 没传这个头，HTTPS 站点会下发出不带 Secure 的 Cookie。
+      NEXT_TRUST_PROXY: 'true'
+      # 跨周期记忆的落盘位置。必须是可写路径 ——
+      # 根文件系统是只读的（见下方 read_only），所以这里指向挂载卷。
+      MEMORY_DIR: /app/data/memory
+
+    volumes:
+      # 账号记忆持久化。
+      #
+      # 为什么必须挂卷：根文件系统 read_only（见下），不挂的话记忆写不进去，
+      # 服务会静默降级成「每次都是第一次玩」——功能看起来在，实际不生效。
+      #
+      # 用命名卷而不是 bind mount：避免宿主目录权限问题，
+      # 且 docker compose down 不会误删数据（除非显式 -v）。
+      - memory-data:/app/data
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+    # 只读根文件系统（Next standalone 不需要写工作目录）。
+    # 账号记忆通过上面的 memory-data 卷落盘，不受只读限制影响 ——
+    # 被显式挂载的卷在 read_only 下依然是可写的。
+    read_only: true
+    tmpfs:
+      - /tmp
+
+volumes:
+  memory-data:
+    driver: local
