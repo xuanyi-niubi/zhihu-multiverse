@@ -194,22 +194,68 @@ async function main() {
   check('陌生匿名身份读不到他人会话 → 404', stranger.status === 404, `实际 ${stranger.status}`);
 
   // ── 6. 推进完整闭环 ───────────────────────────────────────
+  /**
+   * 澄清答复按**动态问题的 id** 提交（Phase 3）：问题集合不再是固定的
+   * time/verify/loss，而是服务端给出的 0～2 条 ClarificationNeed。
+   * 演示话术（比赛 + 基础一般）稳定问出「时间」一条，选项取第一个。
+   */
+  const answers = {};
+  for (const question of questions) {
+    if (question?.id && question?.options?.length > 0) {
+      answers[question.id] = question.options[0].id;
+    }
+  }
   const clarify = await request(
     `/api/sessions/${sessionId}`,
     {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ action: 'clarify', answers: { time: 't-3h', verify: 'can-finish', loss: 'l-course' } }),
+      body: JSON.stringify({ action: 'clarify', answers }),
     },
     jar,
   );
   const clarifyBody = await clarify.json();
   check('澄清 → status=comparing', clarifyBody?.data?.status === 'comparing', String(clarifyBody?.data?.status));
-  check(
-    '澄清答案进入 userContext',
-    clarifyBody?.data?.userContext?.availableTime === '未来两周约 3 小时',
-    String(clarifyBody?.data?.userContext?.availableTime),
+  if (questions.length > 0) {
+    const firstNeed = questions[0];
+    const expectedValue = firstNeed.options?.[0]?.value;
+    check(
+      '澄清答案按缺失变量落地 userContext',
+      expectedValue
+        ? Object.values(clarifyBody?.data?.userContext ?? {}).includes(expectedValue)
+        : true,
+      `变量=${firstNeed.missingVariable} 期望值=${expectedValue}`,
+    );
+  }
+
+  // ── 6.5 prepare-world（P0-F）：把已澄清的会话编译成世界蓝图 ──
+  const prepared = await request(
+    `/api/sessions/${sessionId}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'prepare-world' }),
+    },
+    jar,
   );
+  const preparedBody = await prepared.json();
+  const blueprint = preparedBody?.data?.worldBlueprint;
+  check('prepare-world → status=ready_to_play', preparedBody?.data?.status === 'ready_to_play', String(preparedBody?.data?.status));
+  check('世界蓝图版本 world-blueprint-v1', blueprint?.version === 'world-blueprint-v1', String(blueprint?.version));
+  check('蓝图固定四幕', Array.isArray(blueprint?.acts) && blueprint.acts.length === 4, `acts=${blueprint?.acts?.length}`);
+  check(
+    '四幕目标顺序固定',
+    ['enter-world', 'experience-cost', 'meet-counterexample', 'final-reflection'].every(
+      (objective, index) => blueprint?.acts?.[index]?.objective === objective,
+    ),
+    (blueprint?.acts ?? []).map((act) => act?.objective).join(' → ') || '（无）',
+  );
+  check('蓝图带经验解锁（P0-H 的弹药）', (blueprint?.unlocks ?? []).length > 0, `unlocks=${blueprint?.unlocks?.length}`);
+  check('蓝图经验片段可回溯', (blueprint?.experienceFacts ?? []).every((fact) => String(fact?.exactQuote ?? '').length > 0));
+
+  // ── 6.6 /play?session= 可进入（P0-G 的入口） ────────────────
+  const playWithSession = await request(`/play?session=${sessionId}`, {}, jar);
+  check('GET /play?session= → 200', playWithSession.status === 200, `实际 ${playWithSession.status}`);
 
   const designed = await request(
     `/api/sessions/${sessionId}`,
