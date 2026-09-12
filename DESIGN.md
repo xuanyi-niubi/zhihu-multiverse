@@ -855,34 +855,51 @@ DialogueBox（内容自然撑开）。禁止在根节点使用 `h-screen + overf
 
 **横向溢出**：< 600px 必须零横向滚动。
 
-### 7.11 经验驱动世界蓝图：迁移说明（进行中）
+### 7.11 经验驱动世界蓝图：已落地的增量重构
 
 > 本节记录一次**增量重构**的边界与状态。原则是**先加适配层，不一次删除旧实现**。
+> **当前状态（2026-09-12）：裁剪版 P0-A～P0-H 全部落地**，新链由
+> `tests/fullPersonalizedRun.test.ts`（§29 技术身份证）与 smoke 35 项断言端到端锁定。
 
 #### 三条主轴的现状
 
 | 主轴 | 位置 | 角色 |
 |---|---|---|
-| `DecisionSession` | `src/features/decision-session/` | **后台业务主轴**：问题 → 澄清 → 路径 → 未知 → 实验 |
-| Play（推演舱） | `src/app/play/page.tsx` | **前台游戏主轴**：多幕剧本 + 裁决 + 遗物 |
+| `DecisionSession` | `src/features/decision-session/` | **后台业务主轴**：问题 → 动态澄清 → prepare-world → 蓝图 → 实验 |
+| Play（推演舱） | `src/app/play/page.tsx` | **前台游戏主轴**：多幕剧本 + 裁决 + 遗物；`/play?session=<id>` 消费世界蓝图 |
+| 经验引擎 | `src/features/experience/` | **新链**：检索 → 逐字片段 → 经历 → 动态路径 → 差异对照 |
+| 世界编译 | `src/features/game-world/` | **经验 → 游戏**：`compileWorld`（纯函数）+ DM 上下文切片 + 解锁注入 |
 | 首页 | `src/app/page.tsx` | 双入口：投币进游戏 / 先看现实对照 |
 
-#### 目标：Experience Engine
+#### 已落地的 Experience Engine（P0-A～P0-H）
 
 把「真实知乎经历」从**证据展示**升级为**可编译进游戏的领域模型**：
 
 ```text
-ProblemFrame（分离现实事实与叙事推断）
-  → 动态澄清
-  → 多意图检索（similar / alternative / counterexample）
-  → ExperienceFact（精确片段，不是「一条回答=一个 Fact」）
-  → ExperienceCase（把同一来源的片段拼成「一个人的经历」）
-  → ExperiencePath（动态路径，增量替换固定走法表）
-  → UserDifference（与你的差异；含 unknown）
-  → WorldBlueprint（三幕 + 终局：把经验编译成游戏，而不是报告）
-  → Play 消费 Blueprint
-  → Experience Unlock Choice（经验解锁新的选择项）
+ProblemFrame（分离现实事实与叙事推断）            frame.ts
+  → 动态澄清 0～2 条（说过的不重复问）            clarification.ts
+  → 多意图检索（similar / alternative / counterexample，预算 3–4、并发 ≤2）  queryPlan.ts / retrieve.ts
+  → 检索结果落盘缓存（TTL 12h，进程重启不烧配额）  searchCache.ts
+  → ExperienceFact（逐字片段；AI 只有提议权）      extract.ts / validate.ts
+  → ExperienceCase（把同一来源的片段拼成「一个人的经历」）  cases.ts
+  → ExperiencePath（模型只分组不创作；验证不过回落 legacy 聚类）  pathSynthesis.ts / legacyAdapter.ts
+  → UserDifference（数值算术 / 逐字命中，否则 unknown）  compare.ts
+  → WorldBlueprint（纯函数编译：进入世界 → 体验代价 → 遇见反例 → 终局反思）  game-world/compileWorld.ts
+  → /play?session=<id> 消费 Blueprint（LOAD_WORLD_BLUEPRINT，与 memory 同模式异步装载）
+  → DmTurnInput.worldContext（本幕冲突 + 可引用原文 + 差异 + 现实边界；sourceFacts 转引用片段，整局不再逐幕搜索）
+  → Experience Unlock Choice（选项 <3 才注入、无检定、带【经验解锁】徽标可回溯原文）
 ```
+
+每一步的**纪律落点在代码里**，不靠约定：
+
+| 纪律 | 执行点 | 锁定测试 |
+|---|---|---|
+| AI 改写一个字就拒绝 | `validate.ts` 逐字子串校验，无模糊修复 | `experienceQuoteIntegrity.test.ts` |
+| 不重复问已说过的 | 澄清候选完全来自 `frame.unknowns` | `dynamicClarification.test.ts` |
+| 不引入成功率 / 匹配度 | `pathSynthesis.ts` 禁词表，命中即整条 fallback | `pathSynthesis.test.ts` |
+| 差异不能明确比较就是 unknown | `compare.ts` 只做数值算术与逐字命中 | `userDifference.test.ts` |
+| 没有事实不伪造世界 | `compileWorld.ts` 空内容留空 + 冲突文案如实说「没有找到」 | `worldBlueprint.test.ts` |
+| 旧路径零回归 | 无 session 参数时 `/play` 行为不变；旧固定三问仍是旧会话的 fallback | smoke 35 项断言 |
 
 #### 迁移期纪律（不可违反）
 

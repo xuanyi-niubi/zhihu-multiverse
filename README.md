@@ -21,6 +21,24 @@
 
 两条路**共用同一批真实知乎来源**。旁路是给「想先看清现实再进宇宙」的人准备的。
 
+### 新链：两条路合成一条（已落地）
+
+2026-09-12 起新主链端到端可用（smoke 35 项断言覆盖）：
+
+```text
+输入真实困惑（POST /api/sessions）
+  → 0～2 条动态澄清（说过的不重复问）
+  → PATCH prepare-world：多意图知乎检索（相似 / 替代 / 反例，预算 ≤4、结果落盘缓存）
+  → 逐字经验片段（AI 只有提议权，validator 逐字校验，改一个字就丢）
+  → 经历聚合 → 动态路径（模型只分组；禁词即整条 fallback，legacy 聚类兜底）
+  → 用户差异（与你相同 / 不同 / 还不知道，绝不出匹配度）
+  → WorldBlueprint（固定四幕：进入世界 → 体验代价 → 遇见反例 → 终局反思）
+  → /play?session=<id>：AI DM 在蓝图里创作（本幕冲突、可引用原文、现实边界全部来自蓝图）
+  → 一条真实经验解锁一个此前不存在的选项（【经验解锁】徽标，可回溯原文）
+```
+
+预置剧本与证据网格路线保留为离线兜底；两条路共用同一套「不替玩家编答案」纪律。
+
 ### 一条贯穿两条路的纪律：不替玩家编答案
 
 这个作品最容易犯、也最致命的错误，是把有限轶事包装成对个人的预测。
@@ -320,11 +338,14 @@ x-boss-source: model | fallback | cached      x-trace-id: tr-...
 当前实测（`scripts/test-stats.json`）：
 
 ```
-58 个测试文件 · 984 个用例 · 通过 984 · 失败 0
+71 个测试文件 · 1101 个用例 · 通过 1101 · 失败 0
 ```
 
 | 测试文件 | 覆盖内容 |
 |---|---|
+| `tests/fullPersonalizedRun.test.ts` | **新主链技术身份证**：陌生问题 → 动态澄清 → 三视角检索 → 逐字片段 → 动态路径 → 差异含 unknown → 四幕蓝图 → 经验解锁 → DM 上下文逐字引用（全 fake 注入，不碰真网络） |
+| `tests/experienceQuoteIntegrity.test.ts` | 片段诚信底线：AI 改写一个字就拒绝、scripted 来源不进经验层、标点替换不命中 |
+| `tests/dynamicClarification.test.ts` | 动态澄清：0/1/2 条、**用户说过的绝不重复问**、每条问题都说清它改变什么 |
 | `tests/dmParse.test.ts` | 27 类畸形模型输出语料，逐条断言**永不抛异常** |
 | `tests/zhihuOAuth.test.ts` | 本地地址拒判、授权 URL 字段、凭证串位拦截、诊断不泄露明文、会话 Cookie |
 | `tests/memoryStore.test.ts` | url_token 抽取、路径穿越防护、输入钳制、损坏恢复、**写失败不谎报成功**、遗言两步封存 |
@@ -412,13 +433,31 @@ src/
 │   │   ├── domain.ts         # EvidenceFact / PathCluster / RealityExperiment / DecisionSession
 │   │   ├── facts.ts          # 快照 → 可追溯事实（只记原文写出的值，不造精度）
 │   │   ├── routes.ts         # 问题专属路径聚类（按问题类型 + 走法信号）
-│   │   ├── clarify.ts        # 三个澄清问题 + 7 天实验生成
+│   │   ├── clarify.ts        # 固定三问 + 7 天实验生成（已降级为旧会话的 fallback）
 │   │   ├── understood.ts     # 「我听懂的是」（确定性复述，不经模型）
 │   │   ├── store.ts          # Repository 接口 + 文件 / 内存实现
 │   │   ├── service.ts        # 五步闭环用例
 │   │   ├── liveSearch.ts     # 知乎实时检索适配（来源层）
 │   │   ├── api.ts            # 统一 ApiResult 与状态码
 │   │   └── components/       # UnderstandingPanel / PathCardView / EvidenceDrawer / ExperimentCard
+│   ├── experience/           # 经验引擎（新主链）：问题框定 / 动态澄清 / 多意图检索
+│   │   ├── frame.ts          # ProblemFrame：区分「用户原话（hard）」与「解析推断」
+│   │   ├── clarification.ts  # 动态澄清（0～2 条，说过不问）
+│   │   ├── queryPlan.ts      # 检索计划：三种强制意图，预算 3–4
+│   │   ├── retrieve.ts       # 多意图检索执行：并发 ≤2、去重合并、封顶 12
+│   │   ├── searchCache.ts    # 检索结果落盘缓存（TTL 12h，重启不烧配额）
+│   │   ├── extract.ts        # 经验片段提取（模型只有提议权）
+│   │   ├── validate.ts       # 逐字校验：exactQuote 必须是原文子串，不过即丢
+│   │   ├── cases.ts          # 片段 → 经历（只 group / sort，不发明内容）
+│   │   ├── pathSynthesis.ts  # 动态路径：模型只分组，验证不过回落 legacy
+│   │   ├── legacyAdapter.ts  # 固定走法表 → ExperiencePath 的 fallback 桥
+│   │   └── compare.ts        # 用户差异：数值算术 / 逐字命中，否则 unknown
+│   ├── game-world/           # 世界蓝图编译层：经验 → 游戏
+│   │   ├── domain.ts         # WorldBlueprint / WorldActSpec / ExperienceChoiceUnlock
+│   │   ├── compileWorld.ts   # 纯函数编译：固定四幕 + 解锁 + 现实边界
+│   │   ├── dmContext.ts      # 每幕世界上下文切片 + 解锁时机（纯函数）
+│   │   └── experienceUnlock.ts # 经验解锁注入规则（选项 <3 才插入）
+│   ├── reality-memory/       # 现实记忆领域契约（实验观察，跨局回读）
 │   └── run/                  # 证据契约、知识来源、现实清单等运行层契约
 ├── app/
 │   ├── page.tsx              # 命运发令台（街机控制台 + 人生裂缝大厅）
@@ -436,7 +475,7 @@ src/
 │       ├── dm/route.ts       # AI DM 接口（永远 200 + 合法关卡）
 │       ├── mesh/route.ts     # 证据网格（含黄金案例快照反查）
 │       ├── sessions/route.ts # 建会话 / 列会话
-│       ├── sessions/[id]/route.ts # 读会话 / 推进流程 / 删除
+│       ├── sessions/[id]/route.ts # 读会话 / 推进流程（含 prepare-world 编译世界蓝图）/ 删除
 │       ├── boss/evaluate/route.ts # 终局判卷
 │       ├── commitment/route.ts    # 承诺与回执
 │       ├── profile/ · report/ · health/ · memory/ · settings/
