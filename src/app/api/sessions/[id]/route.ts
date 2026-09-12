@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
+import { createProviderRouter } from '@/agents/providerRouter';
+import { tieredProvidersFromConfig, TIERED_ROUTING } from '@/agents/tieredRouting';
 import { fail, newTrace, ok, readBody } from '@/features/decision-session/api';
+import { experienceSearchWith, liveSearchWith } from '@/features/decision-session/liveSearch';
 import {
   answerFollowUp,
   applyClarify,
@@ -8,11 +11,14 @@ import {
   commitExperiment,
   designExperiment,
   loadOwnedSession,
+  prepareExperienceSession,
   questionsForSession,
   selectUnknown,
 } from '@/features/decision-session/service';
 import { FileDecisionSessionRepository, isSessionId } from '@/features/decision-session/store';
-import { readOwnSettings } from '@/features/run/identity';
+import { withExperienceSearchCache } from '@/features/experience/searchCache';
+import { readOwnSettings, zhihuConfigForIdentity } from '@/features/run/identity';
+import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
 
 import type { DecisionSession } from '@/features/decision-session/domain';
 
@@ -50,6 +56,11 @@ function viewOf(session: DecisionSession, ownerId: string) {
     retrievalRun: session.retrievalRun,
     evidenceFacts: session.evidenceFacts,
     pathClusters: session.pathClusters,
+    /** 经验引擎产物（P0-C~F）：路径、差异与世界蓝图都在这里。 */
+    experienceFacts: session.experienceFacts ?? [],
+    experienceCases: session.experienceCases ?? [],
+    experiencePaths: session.experiencePaths ?? [],
+    worldBlueprint: session.worldBlueprint ?? null,
     selectedUnknown: session.selectedUnknown,
     experiment: session.experiment,
     followUp: session.followUp,
@@ -121,6 +132,49 @@ export async function PATCH(request: Request, context: { params: { id: string } 
         (session.clarificationNeeds ?? []).length > 0
           ? applyDynamicClarification(session, answers)
           : applyClarify(session, answers);
+      break;
+    }
+    case 'prepare-world': {
+      /**
+       * prepare-world（P0-F）：把已澄清的会话编译成世界蓝图。
+       *
+       * 澄清没答完就 400 —— 蓝图消费的是用户补进 frame 的硬条件，
+       * 跳过澄清等于让系统继续靠猜。
+       */
+      if ((session.clarificationNeeds ?? []).length > 0) {
+        return fail({
+          code: 'bad-request',
+          message: '还有澄清问题没有回答，先回答它们再生成世界。',
+          traceId: trace.traceId,
+        });
+      }
+      if (!session.problemFrame) {
+        return fail({ code: 'bad-request', message: '这个会话缺少问题框定，无法生成世界。', traceId: trace.traceId });
+      }
+
+      // 与 POST /api/sessions 同一模式：检索与模型能力由用户自己的凭证决定
+      const { identity: own, stored } = readOwnSettings(request);
+      const zhihu = zhihuConfigForIdentity(stored);
+      const modelConfig = resolveModelConfigForRequest(request);
+      const router = modelConfig
+        ? createProviderRouter({
+            providers: tieredProvidersFromConfig({
+              apiKey: modelConfig.apiKey,
+              baseUrl: modelConfig.baseUrl,
+              jsonMode: modelConfig.jsonMode,
+              timeoutMs: modelConfig.timeoutMs,
+              temperature: modelConfig.temperature,
+              maxTokens: modelConfig.maxTokens,
+            }),
+            routing: TIERED_ROUTING,
+          })
+        : null;
+
+      next = await prepareExperienceSession(session, {
+        // 多意图检索 + 持久化缓存：同一问题整局只搜一次（Phase 5）
+        ...(zhihu ? { search: withExperienceSearchCache(experienceSearchWith(zhihu)) } : {}),
+        ...(router ? { router } : {}),
+      });
       break;
     }
     case 'select-unknown': {

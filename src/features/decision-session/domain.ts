@@ -1,5 +1,12 @@
 import type { PlayerProfile } from '@/core/dm/profile';
-import type { ClarificationNeed, ProblemFrame } from '@/features/experience/domain';
+import type { WorldBlueprint } from '@/features/game-world/domain';
+import type {
+  ClarificationNeed,
+  ExperienceCase,
+  ExperienceFact,
+  ExperiencePath,
+  ProblemFrame,
+} from '@/features/experience/domain';
 
 /**
  * DecisionSession 领域模型（重构方案 §5.1 / §6.1）。
@@ -182,6 +189,8 @@ export type SessionStatus =
   | 'clarifying'
   | 'retrieving'
   | 'comparing'
+  /** 经验引擎已完成检索与合成，世界蓝图就绪，可进入 /play。 */
+  | 'ready_to_play'
   | 'choosing_unknown'
   | 'designing_experiment'
   | 'committed';
@@ -255,6 +264,17 @@ export interface DecisionSession {
   readonly retrievalRun: RetrievalRun | null;
   readonly evidenceFacts: readonly EvidenceFact[];
   readonly pathClusters: readonly PathCluster[];
+  /**
+   * 经验引擎产物（Phase 6-8 / P0-C~E）。
+   *
+   * 由 `prepareExperienceSession()` 在 prepare-world 时填充；
+   * Phase 3 之前落盘的旧会话没有这些字段（运行时按 `?? []` 防御）。
+   */
+  readonly experienceFacts: readonly ExperienceFact[];
+  readonly experienceCases: readonly ExperienceCase[];
+  readonly experiencePaths: readonly ExperiencePath[];
+  /** 世界蓝图（P0-F）：prepare-world 成功后非空。 */
+  readonly worldBlueprint: WorldBlueprint | null;
   /** 用户选中的「最想先弄清的那个未知」。 */
   readonly selectedUnknown: string | null;
   readonly experiment: RealityExperiment | null;

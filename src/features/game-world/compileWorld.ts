@@ -1,0 +1,196 @@
+import type {
+  ExperienceChoiceUnlock,
+  WorldActSpec,
+  WorldBlueprint,
+} from '@/features/game-world/domain';
+import type {
+  ExperienceFact,
+  ExperiencePath,
+  ProblemFrame,
+  UnknownVariable,
+} from '@/features/experience/domain';
+
+/**
+ * 世界蓝图编译（Phase 10 / P0-F）。
+ *
+ * ## 这是「经验」与「游戏」之间的那道编译层
+ *
+ * 以前：用户输入 → AI 直接写剧情（现实由模型临场发明）。
+ * 现在：用户输入 → 经验引擎 → WorldBlueprint → AI DM。
+ * AI 之后只能在蓝图**里面**创作，不能重新发明现实。
+ *
+ * ## 纯函数、零模型
+ *
+ * 同样的 (frame, paths, facts) 必得同样的蓝图 —— 这让「进入游戏前」
+ * 的世界结构可测试、可复现。DM 的叙事创作发生在蓝图之后。
+ *
+ * ## 固定的是结构，不是内容
+ *
+ * 每局都是四幕：进入世界 → 体验代价 → 遇见反例 → 终局反思。
+ * 幕里的**事实引用**全部来自真实检索片段；没有事实就如实留空，
+ * 绝不伪造 —— 空内容的蓝图仍然成立，只是「这一局没有可引用的真实经验」。
+ */
+
+export interface CompileWorldBlueprintInput {
+  readonly sessionId: string;
+  readonly frame: ProblemFrame;
+  readonly paths: readonly ExperiencePath[];
+  readonly facts: readonly ExperienceFact[];
+}
+
+/** DM 不允许越过的现实边界。固定不变 —— 它们是产品的宪法条款。 */
+const FORBIDDEN_CLAIMS: readonly string[] = [
+  '不得把模拟结局写成现实预测',
+  '不得宣称成功概率',
+  '不得编造知乎来源',
+  '不得把 parser-synthesis 当成用户明确事实',
+  '不得替玩家做最终决定',
+];
+
+/** 每幕引用的事实数上限：DM prompt 的预算纪律从这里开始。 */
+const FACTS_PER_ACT = 4;
+
+/** 从片段里截第一小句做解锁的短标签（≤12 字）。 */
+function shortLabel(quote: string): string {
+  const head = quote.split(/[。；;，,！!？?]/)[0] ?? quote;
+  return [...head].slice(0, 12).join('');
+}
+
+function factsByIds(facts: readonly ExperienceFact[], ids: readonly string[]): readonly ExperienceFact[] {
+  const byId = new Map(facts.map((fact) => [fact.id, fact]));
+  return ids.map((id) => byId.get(id)).filter((fact): fact is ExperienceFact => fact !== undefined);
+}
+
+/** 解锁项：一条真实行动经验 → 一个此后才出现的游戏选择。 */
+function unlocksOf(paths: readonly ExperiencePath[], facts: readonly ExperienceFact[]): readonly ExperienceChoiceUnlock[] {
+  const unlocks: ExperienceChoiceUnlock[] = [];
+  paths.slice(0, 3).forEach((path, index) => {
+    // 优先行动类片段；没有行动就退而取条件片段（仍然真实）
+    const candidates = [
+      ...factsByIds(facts, path.supportingFactIds).filter((fact) => fact.type === 'action'),
+      ...factsByIds(facts, path.supportingFactIds).filter((fact) => fact.type === 'condition'),
+    ];
+    const source = candidates[0];
+    if (!source) {
+      return;
+    }
+    const label = shortLabel(source.exactQuote);
+    unlocks.push({
+      id: `unlock-${path.id}`,
+      label,
+      description: source.exactQuote,
+      sourceFactIds: [source.id],
+      choice: {
+        text: `按「${label}」的路子先试一小步`,
+        hint: '这个选项来自一条真实经验 —— 你可以选择不参考它。',
+        tags: { efficiency: 'indirect' },
+      },
+      availableFromAct: Math.min(2 + index, 3),
+    });
+  });
+  return unlocks;
+}
+
+function actsOf(
+  paths: readonly ExperiencePath[],
+  facts: readonly ExperienceFact[],
+  unlocks: readonly ExperienceChoiceUnlock[],
+): readonly WorldActSpec[] {
+  const primary = paths[0];
+  const enterFacts = primary
+    ? factsByIds(facts, primary.supportingFactIds).slice(0, FACTS_PER_ACT)
+    : [];
+
+  const costFacts = [
+    // 代价优先取主路径的支持片段里的 cost，其次其它路径的 cost
+    ...factsByIds(facts, primary?.supportingFactIds ?? []).filter((fact) => fact.type === 'cost'),
+    ...facts.filter((fact) => fact.type === 'cost'),
+  ]
+    .filter((fact, index, all) => all.findIndex((item) => item.id === fact.id) === index)
+    .slice(0, FACTS_PER_ACT);
+
+  const counterFacts = [
+    // 反例优先：各路径明确引用的对立片段，其次检索里的 reflection
+    ...factsByIds(facts, paths.flatMap((path) => path.opposingFactIds)),
+    ...facts.filter((fact) => fact.type === 'reflection'),
+  ]
+    .filter((fact, index, all) => all.findIndex((item) => item.id === fact.id) === index)
+    .slice(0, FACTS_PER_ACT);
+
+  const unlockFor = (act: number): readonly string[] =>
+    unlocks.filter((unlock) => unlock.availableFromAct === act).map((unlock) => unlock.id);
+
+  return [
+    {
+      act: 1,
+      objective: 'enter-world',
+      titleHint: primary ? `一个关于「${primary.label}」的开始` : '一个还没有经验的开始',
+      conflict: primary ? primary.summary : '还没有找到走过这条路的人，这一局只能靠假设推进。',
+      primaryPathIds: primary ? [primary.id] : [],
+      experienceFactIds: enterFacts.map((fact) => fact.id),
+      unlockIds: [],
+    },
+    {
+      act: 2,
+      objective: 'experience-cost',
+      titleHint: '真实出现过的代价',
+      conflict:
+        costFacts.length > 0
+          ? '走这条路的人提到过这些代价，现在轮到你了。'
+          : '目前没有找到这条路上被明确写下代价的经历 —— 这本身就是风险。',
+      primaryPathIds: primary ? [primary.id] : [],
+      experienceFactIds: costFacts.map((fact) => fact.id),
+      unlockIds: unlockFor(2),
+    },
+    {
+      act: 3,
+      objective: 'meet-counterexample',
+      titleHint: '另一个人的另一种结果',
+      conflict:
+        counterFacts.length > 0
+          ? '有人走过相似的路，但走向了不同的结果。'
+          : '没有找到反例经历 —— 记住，没有反例不等于没有风险。',
+      primaryPathIds: paths.slice(1, 3).map((path) => path.id),
+      experienceFactIds: counterFacts.map((fact) => fact.id),
+      unlockIds: unlockFor(3),
+    },
+    {
+      act: 4,
+      objective: 'final-reflection',
+      titleHint: '你现在最需要弄清什么',
+      conflict: '这一局结束了，真正的问题才刚开始。',
+      primaryPathIds: [],
+      experienceFactIds: [],
+      unlockIds: [],
+    },
+  ];
+}
+
+/** 终局反思的关键未知：优先用户自己的缺口（priority 1），其次路径上的分歧。 */
+function keyUnknownOf(frame: ProblemFrame, paths: readonly ExperiencePath[]): UnknownVariable | null {
+  const frameUnknowns = [...frame.unknowns].sort((left, right) => left.priority - right.priority);
+  if (frameUnknowns[0]) {
+    return frameUnknowns[0];
+  }
+  const pathUnknown = paths.flatMap((path) => path.unknowns).sort((left, right) => left.priority - right.priority)[0];
+  return pathUnknown ?? null;
+}
+
+/**
+ * 编译世界蓝图。**纯函数**：同输入必得同输出。
+ */
+export function compileWorldBlueprint(input: CompileWorldBlueprintInput): WorldBlueprint {
+  const unlocks = unlocksOf(input.paths, input.facts);
+  return {
+    version: 'world-blueprint-v1',
+    sessionId: input.sessionId,
+    problemFrame: input.frame,
+    centralTension: input.frame.centralTension,
+    paths: input.paths,
+    keyUnknown: keyUnknownOf(input.frame, input.paths),
+    acts: actsOf(input.paths, input.facts, unlocks),
+    experienceFacts: input.facts,
+    unlocks,
+    forbiddenClaims: FORBIDDEN_CLAIMS,
+  };
+}

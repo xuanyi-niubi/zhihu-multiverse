@@ -1,12 +1,21 @@
 import { extractProfile, type PlayerProfile } from '@/core/dm/profile';
 import { answerValuesFor, clarificationNeedsFor } from '@/features/experience/clarification';
 import { buildProblemFrame } from '@/features/experience/frame';
+import { buildExperienceCases } from '@/features/experience/cases';
+import { extractExperienceFacts } from '@/features/experience/extract';
+import { legacyExperiencePaths } from '@/features/experience/legacyAdapter';
+import { buildSearchPlan } from '@/features/experience/queryPlan';
+import { retrieveExperienceSources, type ExperienceSearch } from '@/features/experience/retrieve';
+import { synthesizeExperiencePaths } from '@/features/experience/pathSynthesis';
+import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
 import { caseSources, matchDemoCase } from '@/data/demoCases';
 import { contextFrom, clarifyQuestions, experimentFor } from '@/features/decision-session/clarify';
-import { toEvidenceFacts } from '@/features/decision-session/facts';
+import { factTypeOf, relevanceOf, toEvidenceFacts } from '@/features/decision-session/facts';
 import { clusterPaths, detectProblemType } from '@/features/decision-session/routes';
 import { newSessionId } from '@/features/decision-session/store';
+import { validateExtractedFact } from '@/features/experience/validate';
 
+import type { ProviderRouter } from '@/agents/providerRouter';
 import type {
   DecisionSession,
   PathCluster,
@@ -15,7 +24,7 @@ import type {
   UserContext,
 } from '@/features/decision-session/domain';
 import type { DecisionSessionRepository } from '@/features/decision-session/store';
-import type { ProblemFrame } from '@/features/experience/domain';
+import type { ExperienceFact, ProblemFrame } from '@/features/experience/domain';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
 /**
@@ -274,6 +283,11 @@ export async function createSession(input: CreateSessionInput): Promise<Decision
     retrievalRun,
     evidenceFacts: paths.facts,
     pathClusters: paths.clusters,
+    // 经验引擎产物（P0-C~F）：prepare-world 时填充；建会话时为空
+    experienceFacts: [],
+    experienceCases: [],
+    experiencePaths: [],
+    worldBlueprint: null,
     selectedUnknown: null,
     experiment: null,
     followUp: null,
@@ -383,6 +397,130 @@ function appendAnsweredStatements(
 /** 第四步：选中「最想先弄清的那个未知」。 */
 export function selectUnknown(session: DecisionSession, unknown: string): DecisionSession {
   return touch(session, { selectedUnknown: unknown, status: 'choosing_unknown' });
+}
+
+/* -------------------------------------------------------------------------- */
+/* 经验引擎：prepare-world（Phase 8-10 / P0-C~F）                               */
+/* -------------------------------------------------------------------------- */
+
+export interface PrepareExperienceSessionDeps {
+  /**
+   * 经验检索能力（多意图）。缺省时**不发起任何网络请求**，
+   * 改从会话已有的 legacy 证据（黄金案例 / 上一次检索）桥接 ——
+   * 这让无 key 的演示与离线兜底同样能拿到世界蓝图。
+   */
+  readonly search?: ExperienceSearch;
+  /** 模型路由；null / 缺省 = 无模型（fallback 提取 + legacy 聚类）。 */
+  readonly router?: ProviderRouter | null;
+}
+
+/**
+ * 把 legacy 证据（`EvidenceFact`）桥接成经验片段。
+ *
+ * 桥接是**有纪律的**：仍然走 `validateExtractedFact`（verified + 逐字），
+ * 只不过「原文」就是 legacy 事实里的 verbatim quote —— 零模型、零检索时
+ * 黄金案例的快照证据依然能编译出世界蓝图。
+ */
+function experienceFactsFromLegacy(session: DecisionSession): readonly ExperienceFact[] {
+  const frame = session.problemFrame;
+  const question = frame?.rawQuestion ?? session.question;
+  return (session.evidenceFacts ?? []).flatMap((fact) => {
+    const source = {
+      id: fact.sourceId,
+      author: fact.author ?? '匿名用户',
+      quote: fact.quote,
+      upvotes: null,
+      url: fact.sourceUrl,
+      retrievedAt: fact.retrievedAt,
+      status: 'verified' as const,
+      editTime: null,
+      authority: null,
+    };
+    const type = fact.factType === 'opinion' ? ('reflection' as const) : fact.factType;
+    return [
+      validateExtractedFact({
+        source,
+        exactQuote: fact.quote,
+        type,
+        id: `fact:${fact.sourceId}:${fact.id}`,
+        relevance: relevanceOf(question, fact.quote),
+      }),
+    ].filter((item): item is ExperienceFact => item !== null);
+  });
+}
+
+/**
+ * prepare-world：把一个已澄清的会话编译成可进入的世界。
+ *
+ * ```text
+ * SearchPlan → 多意图检索 → 逐字片段 → 经历 → 动态路径 → WorldBlueprint
+ * ```
+ *
+ * 与 createSession 的分工：create 只框定问题与澄清（轻），
+ * 检索与合成的重活全部在这一步 —— 用户回答完澄清之后才发生。
+ */
+export async function prepareExperienceSession(
+  session: DecisionSession,
+  deps: PrepareExperienceSessionDeps = {},
+): Promise<DecisionSession> {
+  const frame = session.problemFrame;
+  if (!frame) {
+    return session;
+  }
+
+  let facts: readonly ExperienceFact[];
+  if (deps.search) {
+    const plan = buildSearchPlan({ frame });
+    const retrieved = await retrieveExperienceSources({ plan, search: deps.search });
+    const extracted = await extractExperienceFacts({
+      sources: retrieved.sources.map((item) => item.source),
+      question: frame.rawQuestion,
+      purposes: [...new Set(retrieved.sources.flatMap((item) => item.purposes))],
+      router: deps.router ?? null,
+    });
+    facts = extracted.facts;
+  } else {
+    // 无检索能力：从 legacy 证据桥接（黄金案例 / 上一次实时检索的产物）
+    facts = experienceFactsFromLegacy(session);
+  }
+
+  const cases = buildExperienceCases(facts);
+  const caseIdByFactId = new Map<string, string>();
+  for (const experienceCase of cases) {
+    for (const fact of [
+      ...experienceCase.conditions,
+      ...experienceCase.actions,
+      ...experienceCase.costs,
+      ...experienceCase.outcomes,
+      ...experienceCase.reflections,
+    ]) {
+      caseIdByFactId.set(fact.id, experienceCase.id);
+    }
+  }
+
+  const synthesized = await synthesizeExperiencePaths({
+    frame,
+    cases,
+    facts,
+    router: deps.router ?? null,
+    legacyCluster: ({ question }) =>
+      legacyExperiencePaths({ question, facts, caseIdByFactId }),
+  });
+
+  const blueprint = compileWorldBlueprint({
+    sessionId: session.id,
+    frame,
+    paths: synthesized.paths,
+    facts,
+  });
+
+  return touch(session, {
+    experienceFacts: facts,
+    experienceCases: cases,
+    experiencePaths: synthesized.paths,
+    worldBlueprint: blueprint,
+    status: 'ready_to_play',
+  });
 }
 
 /** 第五步：设计实验。 */
