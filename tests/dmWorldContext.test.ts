@@ -164,3 +164,24 @@ describe('选项来源（§16）', () => {
     expect(text).toContain('choices[0] 稳妥');
   });
 });
+
+/**
+ * §35：刘看山全局只出现三次。
+ * 第一次在会话页（我去找找…）、第三次在终局（他们的路你已经看到了），
+ * 第二次就发生在反例出现的那一刻 —— 它必须在 DM 的第三幕纪律里，
+ * 否则模型不会主动让这个角色出现。
+ */
+describe('刘看山的三次出现（§35）', () => {
+  it('第三幕纪律里带第二次出现的台词（反例那一刻）', () => {
+    const text = formatDmUserMessage(
+      normalizeDmInput(baseInput({ worldContext: { ...WORLD, actObjective: 'meet-counterexample' } })),
+    );
+    expect(text).toContain('等等。这个人的结果和前面完全相反。');
+    expect(text).toContain('刘看山');
+  });
+
+  it('非反例幕不出现这句台词（只在那一刻出现）', () => {
+    const text = formatDmUserMessage(normalizeDmInput(baseInput({ worldContext: WORLD })));
+    expect(text).not.toContain('等等。这个人的结果和前面完全相反。');
+  });
+});
