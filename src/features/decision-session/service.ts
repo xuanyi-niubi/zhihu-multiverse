@@ -8,6 +8,7 @@ import { buildSearchPlan } from '@/features/experience/queryPlan';
 import { retrieveExperienceSources, type ExperienceSearch } from '@/features/experience/retrieve';
 import { synthesizeExperiencePaths } from '@/features/experience/pathSynthesis';
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
+import { withUnlockTitles } from '@/features/game-world/unlockTitles';
 import { caseSources, matchDemoCase } from '@/data/demoCases';
 import { contextFrom, clarifyQuestions, experimentFor } from '@/features/decision-session/clarify';
 import { experimentFromUnknown } from '@/features/decision-session/experiment';
@@ -700,12 +701,24 @@ export async function prepareExperienceSession(
       legacyExperiencePaths({ question, facts, caseIdByFactId }),
   });
 
-  const blueprint = compileWorldBlueprint({
+  const compiled = compileWorldBlueprint({
     sessionId: session.id,
     frame,
     paths: synthesized.paths,
     facts,
   });
+
+  /**
+   * 行动式标题（§24）：只改**标题**，正文仍是逐字片段。
+   * 模型不可用 / 标题不合规时原样保留 —— 不编一个凑数的。
+   */
+  const unlocks = await withUnlockTitles({
+    unlocks: compiled.unlocks,
+    facts,
+    router: deps.router ?? null,
+  });
+  const blueprint =
+    unlocks === compiled.unlocks ? compiled : { ...compiled, unlocks };
 
   return touch(session, {
     ...(liveRun ? { retrievalRun: liveRun } : {}),

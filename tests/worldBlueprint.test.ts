@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
+import { isUsableTitle, withUnlockTitles } from '@/features/game-world/unlockTitles';
 
 import type {
   ExperienceFact,
@@ -282,5 +283,36 @@ describe('经验卡数据（§13）', () => {
   it('没有事实时不编卡片', () => {
     const blueprint = compileWorldBlueprint({ sessionId: 's1', frame: frame(), paths: [], facts: [] });
     expect(blueprint.experienceCases?.length ?? 0).toBe(0);
+  });
+});
+
+/**
+ * 解锁项的行动式标题（§24）：只有标题可以被模型改写，正文永远是逐字片段。
+ */
+describe('解锁标题的护栏（§24）', () => {
+  it('可用的标题：短、无数字、不下结论', () => {
+    for (const title of ['先验证，再下注', '先找人，再开局', '先留一条退路']) {
+      expect(isUsableTitle(title)).toBe(true);
+    }
+  });
+
+  it('带数字 / 成功率 / 建议式措辞的标题一律拒绝', () => {
+    for (const bad of ['提高 30% 成功率', '成功率高', '建议你先参赛', '你应该早点开始', '匹配度很高', 'x']) {
+      expect(isUsableTitle(bad)).toBe(false);
+    }
+  });
+
+  it('模型不可用时原样返回（不编标题）', async () => {
+    const unlock = {
+      id: 'unlock-1',
+      label: '原来的标签',
+      description: '先做一个小样再决定',
+      sourceFactIds: ['fact:1'],
+      choice: { text: '按「原来的标签」的路子先试一小步', hint: 'h' },
+      availableFromAct: 2,
+    } as const;
+    const result = await withUnlockTitles({ unlocks: [unlock], facts: [], router: null });
+    expect(result).toBe(result);
+    expect(result[0]!.label).toBe('原来的标签');
   });
 });

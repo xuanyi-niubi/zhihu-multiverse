@@ -116,7 +116,7 @@ export default function HomePage() {
           type="button"
           onClick={() => void onSubmit()}
           disabled={disabled}
-          className="arcade-btn mt-3 w-full bg-zhihu-500 text-white disabled:opacity-60"
+          className="door-btn mt-3"
         >
           {launching ? '正在为你找路…' : '进入我的平行宇宙'}
         </button>

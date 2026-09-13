@@ -3,14 +3,14 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '知乎平行宇宙 · 校园人生 Roguelike 推演机',
+  title: '知乎平行宇宙 · 由真实人生经验驱动的互动人生实验',
   description:
     '把知乎 15 年的真实问答转化为带数值博弈、属性检定与卡牌遗物的文字 Roguelike。用 3 分钟的平行推演，跨越现实中 3 年的人生迷茫。',
   keywords: ['知乎', 'Roguelike', 'D20', '人生推演', '平行宇宙', '校园'],
   authors: [{ name: 'Zhihu Multiverse Team' }],
   openGraph: {
-    title: '知乎平行宇宙 · 校园人生 Roguelike 推演机',
-    description: '用 3 分钟的平行推演，跨越现实中 3 年的人生迷茫。',
+    title: '知乎平行宇宙 · 由真实人生经验驱动的互动人生实验',
+    description: '说出一个真实困惑，系统去寻找真正走过不同道路的人，把他们的经历编译成一局属于你的互动故事。',
     type: 'website',
     locale: 'zh_CN',
   },
