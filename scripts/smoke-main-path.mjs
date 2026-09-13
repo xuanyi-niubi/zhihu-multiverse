@@ -23,6 +23,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 
 const PORT = Number(process.env.SMOKE_PORT ?? 3210);
 const EXTERNAL = process.env.SMOKE_BASE_URL ?? null;
@@ -239,6 +240,27 @@ async function main() {
     '会话页暴露 /play?session= 入口',
     sessionPageSource.includes('data-destination="play-session"') && sessionPageSource.includes('/play?session=${'),
     'data-destination=play-session',
+  );
+
+  /**
+   * ── 6.55 P0-9：Experience Unlock 的来源必须可感知 ──────────
+   *
+   * 「经验解锁」是这次迭代的 WOW Point，但如果选项底部仍统一写
+   * 「剧本模拟」，玩家就不会意识到这个选项是**从真实经历长出来的**。
+   * 契约是源码级的：角标文案 + 来源弹层 + 从蓝图取片段（不新增 API）。
+   */
+  const playPageSource = await readFile(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
+  check('解锁选项标注「来自知乎真实经历」', playPageSource.includes('来自知乎真实经历'), '角标文案已就位');
+  check('普通选项仍标「剧本模拟」', playPageSource.includes('剧本模拟'), '未误改普通选项');
+  check(
+    '接入了来源弹层（P0-9）',
+    playPageSource.includes('ExperienceSourceModal') && playPageSource.includes('experienceFactsFor('),
+    '来源弹层 + 片段解析',
+  );
+  check(
+    '来源片段从蓝图现取（不新增 API）',
+    playPageSource.includes('blueprint.experienceFacts.filter'),
+    'worldBlueprint.experienceFacts',
   );
 
   // ── 6.6 prepare-world（P0-F）：把已澄清的会话编译成世界蓝图 ──

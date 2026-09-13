@@ -35,6 +35,7 @@ import { ClarityRadar } from '@/components/ClarityRadar';
 import { EngineStatusBar } from '@/components/EngineStatusBar';
 import { AxisHUD } from '@/components/AxisHUD';
 import { EventCard } from '@/components/EventCard';
+import { ExperienceSourceModal } from '@/components/game/ExperienceSourceModal';
 import { WorldlineRail, worldlineStateOf } from '@/components/worldline/Worldline';
 import { CommitPicker, type CommitCandidate } from '@/components/CommitPicker';
 import { axisCapsFor } from '@/core/decision/axis';
@@ -93,6 +94,7 @@ import {
 import { fetchDmTurn, fetchProfile, fetchRunReport } from '@/core/dmClient';
 import { unlockForTurn, worldContextForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
 import type { WorldBlueprint } from '@/features/game-world/domain';
+import type { ExperienceFact } from '@/features/experience/domain';
 
 import type { DmSource } from '@/core/dm/generate';
 import type { PlayerProfile } from '@/core/dm/profile';
@@ -1100,14 +1102,74 @@ function riskBandLabel(difficulty: number): string {
   return '门槛很高';
 }
 
+/**
+ * 从本局蓝图里取出这条选项引用的真实经验片段（P0-9）。
+ *
+ * **纯函数、无 I/O**：片段一直在 `worldBlueprint.experienceFacts` 里，
+ * 选项只带 `sourceFactIds`，所以来源弹层不需要任何新接口。
+ * 找不到就返回空数组 —— 不编造一段原文来填满弹层。
+ */
+function experienceFactsFor(
+  choice: ScenarioChoice | null,
+  blueprint: WorldBlueprint | null | undefined,
+): readonly ExperienceFact[] {
+  if (!choice || !blueprint) {
+    return [];
+  }
+  const ids = choice.sourceFactIds ?? [];
+  if (ids.length === 0) {
+    return [];
+  }
+  const wanted = new Set(ids);
+  return blueprint.experienceFacts.filter((fact) => wanted.has(fact.id));
+}
+
+/** 蓝图里已算好的「与你的差异」（P0-9 弹层第二块）。 */
+function differencesFor(blueprint: WorldBlueprint | null | undefined) {
+  if (!blueprint) {
+    return [];
+  }
+  // 取全部路径上出现过的差异，去重后给弹层展示
+  const seen = new Set<string>();
+  const out: { variable: string; relation: 'same' | 'different' | 'unknown'; userValue?: string; experienceValue?: string }[] = [];
+  for (const path of blueprint.paths) {
+    for (const diff of path.differencesFromUser) {
+      if (seen.has(diff.variable)) {
+        continue;
+      }
+      seen.add(diff.variable);
+      out.push({
+        variable: diff.variable,
+        relation: diff.relation,
+        ...(diff.userValue ? { userValue: diff.userValue } : {}),
+        ...(diff.experienceValue ? { experienceValue: diff.experienceValue } : {}),
+      });
+    }
+  }
+  return out;
+}
 function ChoiceCard({
   choice,
   onSelect,
+  onOpenExperienceSource,
 }: {
   readonly choice: ScenarioChoice;
   readonly onSelect: (choice: ScenarioChoice) => void;
+  /**
+   * 打开「这条选择来自哪里」的来源弹层（P0-9）。
+   *
+   * 只有**经验解锁**的选项会用到它 —— 普通选项的角标仍是「剧本模拟」。
+   */
+  readonly onOpenExperienceSource?: (choice: ScenarioChoice) => void;
 }) {
   const isRisk = Boolean(choice.check);
+  /**
+   * 这条选项是不是**被真实经历解锁**出来的。
+   *
+   * 判定依据是 `experienceUnlockId`（由 `injectExperienceUnlock` 打上），
+   * 不看文案 —— 文案可以被改写，标记不会。
+   */
+  const isExperienceUnlock = Boolean(choice.experienceUnlockId);
   const ref = React.useRef<HTMLButtonElement | null>(null);
   const frameRef = React.useRef<number | null>(null);
 
@@ -1172,10 +1234,46 @@ function ChoiceCard({
 
       <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-white/10 pt-2">
         <span className="flex min-w-0 items-center gap-1.5">
-          {/* 明确标注这是剧本文案：我们还没有真实聚合数据，不能让它看起来像社区统计 */}
-          <span className="shrink-0 rounded border border-white/12 px-1 py-px font-mono text-[9px] tracking-wider text-slate-500">
-            剧本模拟
-          </span>
+          {/*
+            P0-9：**经验解锁的角标不能写「剧本模拟」**。
+
+            它确实是从知乎真实经历长出来的，标成剧本模拟会造成语义冲突：
+            同一张卡上既说「来自真实经历」又说「剧本模拟」。
+            普通选项保持原样 —— 明确标注这是剧本文案，
+            我们还没有真实聚合数据，不能让它看起来像社区统计。
+          */}
+          {isExperienceUnlock ? (
+            <>
+              <span className="shrink-0 rounded border border-zhihu-500/45 bg-zhihu-500/10 px-1 py-px font-mono text-[9px] tracking-wider text-zhihu-200">
+                来自知乎真实经历
+              </span>
+              {onOpenExperienceSource ? (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    // 拦住冒泡：查看来源不该顺手把这一选项选中
+                    event.stopPropagation();
+                    onOpenExperienceSource(choice);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onOpenExperienceSource(choice);
+                    }
+                  }}
+                  className="shrink-0 cursor-pointer rounded border border-white/12 px-1 py-px font-mono text-[9px] tracking-wider text-slate-400 transition-colors duration-150 hover:border-zhihu-500/50 hover:text-zhihu-200"
+                >
+                  查看原文
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="shrink-0 rounded border border-white/12 px-1 py-px font-mono text-[9px] tracking-wider text-slate-500">
+              剧本模拟
+            </span>
+          )}
           <span className="truncate text-[11px] text-slate-500">{choice.ghostEchoStat}</span>
         </span>
         <span
@@ -1309,6 +1407,13 @@ function PlayScreen() {
    */
   const [meshOpen, setMeshOpen] = React.useState(false);
   const [mesh, setMesh] = React.useState<EvidenceMesh | null>(null);
+  /**
+   * 「这条选择来自哪里」的来源弹层（P0-9）。
+   *
+   * 存的是**被点开的那条选项**，不是片段本身 —— 片段按 `sourceFactIds`
+   * 从蓝图里现取，这样即使蓝图在过程中更新，弹层显示的也永远是最新事实。
+   */
+  const [sourceChoice, setSourceChoice] = React.useState<ScenarioChoice | null>(null);
   const [constraints, setConstraints] = React.useState<ConstraintProfile>(() => loadConstraints());
   const [exploredPathIds, setExploredPathIds] = React.useState<readonly string[]>([]);
   /** 运行模式（v2 §11）：由服务端真实能力决定，界面不自己拼条件。 */
@@ -2381,7 +2486,12 @@ function PlayScreen() {
               ) : (
                 <div className="grid grid-cols-1 gap-3">
                   {currentTurn.choices.map((choice) => (
-                    <ChoiceCard key={choice.id} choice={choice} onSelect={handleSelect} />
+                    <ChoiceCard
+                      key={choice.id}
+                      choice={choice}
+                      onSelect={handleSelect}
+                      onOpenExperienceSource={setSourceChoice}
+                    />
                   ))}
                 </div>
               )
@@ -2600,6 +2710,17 @@ function PlayScreen() {
         open={state.phase === 'checking' && state.lastCheck !== null}
         result={state.lastCheck}
         onConfirm={() => dispatch({ type: 'RESOLVE_DICE' })}
+      />
+
+      {/*
+        P0-9 的来源弹层：把「这条选择来自哪段真实经历」摊开。
+        片段按 `sourceFactIds` 从本局蓝图里现取 —— **不需要新 API**。
+      */}
+      <ExperienceSourceModal
+        open={sourceChoice !== null}
+        onClose={() => setSourceChoice(null)}
+        facts={experienceFactsFor(sourceChoice, state.worldBlueprint)}
+        differences={differencesFor(state.worldBlueprint)}
       />
 
       <SceneTransition
