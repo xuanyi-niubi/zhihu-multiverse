@@ -226,12 +226,12 @@ export default function FateConsolePage() {
   );
 
   /**
-   * 现实对照：把当前输入的那句话交给决策会话，跳到 `/session/[id]`。
+   * 个性化主链：把当前输入交给决策会话，先澄清条件，再生成世界。
    *
-   * 与 `launch` 刻意分开：那条路进游戏，这条去看真实经历。
-   * 两者共用首页同一个输入框，因此不增加任何输入负担。
+   * 与 `launch` 刻意分开：`launch` 是跳过澄清的旧入口；这条路径会让
+   * 真实经历参与世界蓝图和经验解锁，因此是自定义问题的默认入口。
    */
-  const openRealityCheck = React.useCallback(
+  const openPersonalizedRun = React.useCallback(
     async (goalText: string) => {
       const trimmed = goalText.trim();
       if (trimmed.length === 0 || launching) {
@@ -250,7 +250,7 @@ export default function FateConsolePage() {
           return;
         }
       } catch {
-        // 静默失败：用户可以改用「投币开始推演」，不阻断主流程
+        // 静默失败：用户仍可用下方旧入口直接推演，不阻断页面
       } finally {
         setLaunching(false);
       }
@@ -430,7 +430,7 @@ export default function FateConsolePage() {
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
                       event.preventDefault();
-                      startCustomRun(goal);
+                      void openPersonalizedRun(goal);
                     }
                   }}
                   placeholder="例如：大三法学，想转计算机，但怕脱产找不到工作"
@@ -537,8 +537,8 @@ export default function FateConsolePage() {
             <div className="order-first flex flex-wrap items-center gap-4 lg:order-none">
               <button
                 type="button"
-                onClick={() => startCustomRun(goal)}
-                disabled={launching}
+                onClick={() => void openPersonalizedRun(goal)}
+                disabled={launching || goal.trim().length === 0}
                 className="arcade-btn bg-zhihu-500 text-white disabled:opacity-70"
               >
                 <span aria-hidden="true" className="text-lg">
@@ -548,23 +548,17 @@ export default function FateConsolePage() {
               </button>
 
               {/*
-                现实对照（上轮重构留下的成果，定位为**旁路**而非替代）：
-                不推演，先把知乎上真实走过的 2～3 条路摆出来
-                —— 每条都标了他们当时的条件、与你的差异、证据分歧、以及当前未知。
-
-                与「投币开始推演」并列而不是取代它：这个产品的本体是游戏，
-                这一条是给「想先看清现实再进宇宙」的人准备的入口。
+                旧的直达路径保留为明确的降级入口：它不做条件澄清，也不会先把
+                真实经历编译进世界蓝图。评委与新用户默认走上面的个性化主链。
               */}
-              {goal.trim().length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => void openRealityCheck(goal)}
-                  disabled={launching}
-                  className="btn-ghost text-xs disabled:opacity-50"
-                >
-                  先看现实里别人怎么走的
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => startCustomRun(goal)}
+                disabled={launching}
+                className="btn-ghost text-xs disabled:opacity-50"
+              >
+                跳过澄清，直接推演
+              </button>
 
               {/*
                 双牌对比直达：不推演、只算账。
