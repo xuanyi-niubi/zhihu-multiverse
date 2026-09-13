@@ -19,8 +19,11 @@ import { FileDecisionSessionRepository, isSessionId } from '@/features/decision-
 import { withExperienceSearchCache } from '@/features/experience/searchCache';
 import { memoryEntriesFromResult } from '@/features/reality-memory/service';
 import { FileRealityMemoryRepository } from '@/features/reality-memory/store';
-import { readOwnSettings, zhihuConfigForIdentity } from '@/features/run/identity';
-import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
+import { readOwnSettings } from '@/features/run/identity';
+import {
+  resolveModelConfigForRequest,
+  resolveZhihuConfigForRequest,
+} from '@/features/run/keyResolution';
 
 import type { DecisionSession } from '@/features/decision-session/domain';
 import type { ExperimentResult } from '@/features/reality-memory/domain';
@@ -157,7 +160,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
 
       // 与 POST /api/sessions 同一模式：检索与模型能力由用户自己的凭证决定
       const { identity: own, stored } = readOwnSettings(request);
-      const zhihu = zhihuConfigForIdentity(stored);
+      const zhihu = resolveZhihuConfigForRequest(request);
       const modelConfig = resolveModelConfigForRequest(request);
       const router = modelConfig
         ? createProviderRouter({

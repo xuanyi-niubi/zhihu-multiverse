@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -129,5 +132,42 @@ describe('secretOriginFor：account > app > none', () => {
     } finally {
       writeSettings(identity.key, { modelApiKey: '' });
     }
+  });
+});
+
+/**
+ * 统一层纪律：路由**不允许**自己读账号配置。
+ *
+ * 旧注释里写过「改这一处即等于八处同时修好 —— 不会出现某个路由忘了改、
+ * 结果还在用共享 key 的漏网」。这条测试就是那个保证本身：只要有人把
+ * `zhihuConfigForIdentity` / `modelConfigForIdentity` 直接写进路由文件，
+ * 它就会红。
+ */
+describe('路由必须走统一层取凭证', () => {
+  const ROUTES = [
+    'src/app/api/dm/route.ts',
+    'src/app/api/mesh/route.ts',
+    'src/app/api/health/route.ts',
+    'src/app/api/sessions/route.ts',
+    'src/app/api/sessions/[id]/route.ts',
+    'src/app/api/profile/route.ts',
+    'src/app/api/report/route.ts',
+    'src/app/api/boss/evaluate/route.ts',
+    'src/app/api/zhihu/hot/route.ts',
+  ] as const;
+
+  it('没有任何路由直接调用 identity 的配置函数', () => {
+    const offenders: string[] = [];
+    for (const route of ROUTES) {
+      const full = join(process.cwd(), route);
+      if (!existsSync(full)) {
+        continue;
+      }
+      const source = readFileSync(full, 'utf8');
+      if (source.includes('zhihuConfigForIdentity') || source.includes('modelConfigForIdentity')) {
+        offenders.push(route);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

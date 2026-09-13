@@ -9,7 +9,8 @@ import { createOpenAiCompatibleClient } from '@/core/dm/provider';
 import { observedClaimsOf } from '@/features/reality-memory/service';
 import { FileRealityMemoryRepository } from '@/features/reality-memory/store';
 import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
-import { readOwnSettings, zhihuConfigForIdentity } from '@/features/run/identity';
+import { readOwnSettings } from '@/features/run/identity';
+import { resolveZhihuConfigForRequest } from '@/features/run/keyResolution';
 
 import type { RealityMemoryEntry } from '@/features/reality-memory/domain';
 
@@ -67,7 +68,8 @@ export async function POST(request: Request): Promise<Response> {
    *
    * 这不是缺陷：方案 §6.6 明确要求「黄金问题使用审核过的来源快照，保证稳定」。
    */
-  const zhihu = zhihuConfigForIdentity(stored);
+  /** 知乎凭证同样走三级来源（account > app > none），不自己读账号配置。 */
+  const zhihu = resolveZhihuConfigForRequest(request);
   const liveSearch = zhihu ? liveSearchWith(zhihu) : undefined;
 
   /**
