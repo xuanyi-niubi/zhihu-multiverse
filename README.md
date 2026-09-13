@@ -338,7 +338,7 @@ x-boss-source: model | fallback | cached      x-trace-id: tr-...
 当前实测（`scripts/test-stats.json`）：
 
 ```
-71 个测试文件 · 1101 个用例 · 通过 1101 · 失败 0
+75 个测试文件 · 1180 个用例 · 通过 1180 · 失败 0
 ```
 
 | 测试文件 | 覆盖内容 |
@@ -429,14 +429,15 @@ x-boss-source: model | fallback | cached      x-trace-id: tr-...
 ```
 src/
 ├── features/
-│   ├── decision-session/     # 现实对照（旁路）：来源 → 事实 → 问题专属路径 → 实验
+│   ├── decision-session/     # 新主链状态中心：来源 → 事实 → 路径 → 世界蓝图 → 实验
 │   │   ├── domain.ts         # EvidenceFact / PathCluster / RealityExperiment / DecisionSession
 │   │   ├── facts.ts          # 快照 → 可追溯事实（只记原文写出的值，不造精度）
 │   │   ├── routes.ts         # 问题专属路径聚类（按问题类型 + 走法信号）
 │   │   ├── clarify.ts        # 固定三问 + 7 天实验生成（已降级为旧会话的 fallback）
 │   │   ├── understood.ts     # 「我听懂的是」（确定性复述，不经模型）
 │   │   ├── store.ts          # Repository 接口 + 文件 / 内存实现
-│   │   ├── service.ts        # 五步闭环用例
+│   │   ├── service.ts        # 五步闭环用例（create 只框定问题，检索推迟到 prepare-world）
+│   │   ├── experiment.ts     # 未知驱动的现实实验（P1-1：类型决定实验形态）
 │   │   ├── liveSearch.ts     # 知乎实时检索适配（来源层）
 │   │   ├── api.ts            # 统一 ApiResult 与状态码
 │   │   └── components/       # UnderstandingPanel / PathCardView / EvidenceDrawer / ExperimentCard
@@ -454,15 +455,16 @@ src/
 │   │   └── compare.ts        # 用户差异：数值算术 / 逐字命中，否则 unknown
 │   ├── game-world/           # 世界蓝图编译层：经验 → 游戏
 │   │   ├── domain.ts         # WorldBlueprint / WorldActSpec / ExperienceChoiceUnlock
-│   │   ├── compileWorld.ts   # 纯函数编译：固定四幕 + 解锁 + 现实边界
+│   │   ├── compileWorld.ts   # 纯函数编译：固定四幕（反例幕有四轮来源优先级）+ 解锁 + 现实边界
 │   │   ├── dmContext.ts      # 每幕世界上下文切片 + 解锁时机（纯函数）
+│   │   ├── questView.ts      # 终局现实支线视图模型（P1-2：回顾条目必须有出处）
 │   │   └── experienceUnlock.ts # 经验解锁注入规则（选项 <3 才插入）
 │   ├── reality-memory/       # 现实记忆领域契约（实验观察，跨局回读）
 │   └── run/                  # 证据契约、知识来源、现实清单等运行层契约
 ├── app/
 │   ├── page.tsx              # 命运发令台（街机控制台 + 人生裂缝大厅）
 │   ├── play/page.tsx         # ★ 推演舱（HUD + 舞台 + 对话框）
-│   ├── session/[id]/page.tsx # 现实对照：澄清 → 路径 → 证据 → 实验
+│   ├── session/[id]/page.tsx # 世界生成中转站：澄清 → prepare-world → 进入世界（路径与证据折叠在下方）
 │   ├── journal/page.tsx      # 选择日志（我在纠结什么、做了什么、结果如何）
 │   ├── compare/page.tsx      # 双牌对比：同一份证据、两组条件
 │   ├── archive/page.tsx      # 推演档案
@@ -492,7 +494,8 @@ src/
 │   ├── DiceModal.tsx         # 命运掷骰 / 现实裁决演出
 │   ├── FateTree.tsx          # SVG 命运树
 │   ├── InventoryBar.tsx      # 三槽位遗物栏
-│   └── SourceBadge.tsx       # 知乎溯源角标
+│   ├── SourceBadge.tsx       # 知乎溯源角标
+│   └── game/                 # ExperienceSourceModal（经验解锁来源）/ RealityQuestPanel（终局现实支线）
 ├── core/
 │   ├── evidence/             # 检索规划 / 证据网格 / 事实强度
 │   ├── decision/             # 四轴 / 裁决 / 认知账本 / 承诺
