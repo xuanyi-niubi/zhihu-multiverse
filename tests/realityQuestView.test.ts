@@ -30,7 +30,6 @@ const ACTS: readonly WorldActSpec[] = [
   act({ act: 1, objective: 'enter-world', experienceFactIds: ['f1'] }),
   act({ act: 2, objective: 'experience-cost', experienceFactIds: ['f2'] }),
   act({ act: 3, objective: 'meet-counterexample', experienceFactIds: ['f3'] }),
-  act({ act: 4, objective: 'final-reflection' }),
 ];
 
 function blueprint(overrides: Partial<WorldBlueprint> = {}): WorldBlueprint {

@@ -37,6 +37,7 @@ import { AxisHUD } from '@/components/AxisHUD';
 import { EventCard } from '@/components/EventCard';
 import { ExperienceSourceModal } from '@/components/game/ExperienceSourceModal';
 import { RealityQuestPanel } from '@/components/game/RealityQuestPanel';
+import { SessionEndgame } from '@/components/game/SessionEndgame';
 import { WorldlineRail, worldlineStateOf } from '@/components/worldline/Worldline';
 import { CommitPicker, type CommitCandidate } from '@/components/CommitPicker';
 import { axisCapsFor } from '@/core/decision/axis';
@@ -1827,6 +1828,33 @@ function PlayScreen() {
    *
    * 网格代码一行未删 —— legacy 推演与蓝图加载失败时的降级路径仍然用它。
    */
+  /**
+   * 终局回顾用：这一局玩家做过的每个行动（方案 §22 的轻量回顾）。
+   *
+   * 从 `state.log` 里取「第 N 幕：<行动>」这几行并剥掉前缀 —— log 是本局
+   * 行动的既有事实源，不为回顾再存一份平行数据。
+   */
+  const sessionSteps = React.useMemo(
+    () =>
+      state.log
+        .map((line) => /^第 \d+ 幕：(.+)$/.exec(line)?.[1] ?? null)
+        .filter((step): step is string => step !== null),
+    [state.log],
+  );
+
+  /**
+   * 终局回顾用：真实经验**替你 unlocks 出来的行动**里，你实际用过的那些
+   * （方案 §14/§15：成长 = 你离开时多看见了几个可行动选项）。
+   */
+  const sessionCards = React.useMemo(() => {
+    const blueprint = sessionView?.worldBlueprint;
+    if (!blueprint) {
+      return [];
+    }
+    const used = new Set(usedUnlockIds);
+    return blueprint.unlocks.filter((unlock) => used.has(unlock.id)).map((unlock) => unlock.choice.text);
+  }, [sessionView?.worldBlueprint, usedUnlockIds]);
+
   const evidenceDrawerEntry = React.useMemo(
     () => (mesh && !sessionView?.worldBlueprint ? { onOpenEvidence: () => setMeshOpen(true) } : {}),
     [mesh, sessionView?.worldBlueprint],
@@ -2264,8 +2292,25 @@ function PlayScreen() {
   const rescueAvailable = state.phase !== 'ended' && state.stats.bond >= 30 && sanCritical;
   const isEnded = state.phase === 'ended';
 
-  /** 第四幕 = 终局 Boss：隐藏普通选项，改用终端。 */
+  /** 最后一幕（legacy 路径用它挂终端 Boss）。 */
   const isFinalAct = currentTurn.turnIndex >= state.totalActs;
+
+  /**
+   * 是否跑在**新主链**（?session= 且世界蓝图已到位）。
+   *
+   * 刻意不用 `state.scenarioId === AI_DM_SCENARIO_ID` 判定：legacy 的
+   * `/play?scenario=ai-dm&goal=` 用的是同一个 scenarioId，用它会把旧路径
+   * 一起改掉。蓝图存在与否才是新主链的可靠标志。
+   */
+  const isSessionMode = Boolean(sessionView?.worldBlueprint);
+
+  /**
+   * 是否用「终端输入 + 判卷」收尾（产品减法方案 §20 之后只剩 legacy 路径）。
+   *
+   * 新主链最后一幕是**反例幕**，玩家必须能正常做选择；终局也不再判卷，
+   * 而是把问题重写后交还现实（见 SessionEndgame）。
+   */
+  const usesTerminalEnding = isFinalAct && !isSessionMode;
 
   /**
    * 终端 Boss 的提交状态。
@@ -2367,24 +2412,48 @@ function PlayScreen() {
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-ink-950">
-      <GameHud
-        stats={state.stats}
-        turnIndex={state.turnIndex}
-        totalTurns={state.totalActs}
-        seed={state.seed}
-        sceneName={scene.name}
-        timeLabel={scene.timeLabel}
-        dmSource={state.dmSource}
-        equippedCount={equippedCount}
-        pendingCount={state.pendingActivated.length}
-        hitKey={state.hitKey}
-        onOpenFate={() => setFateOpen(true)}
-        onOpenInventory={() => setInventoryOpen(true)}
-        {...evidenceDrawerEntry}
-        onQuit={() => {
-          window.location.href = '/';
-        }}
-      />
+      {/*
+        新主链不显示 HUD（产品减法方案 §3 / §17 / §42）：属性条、遗物、命途、
+        骰面、引擎状态都属于旧机制。这里只留一行幕次进度 —— 玩家需要知道
+        「我在第几幕」，不需要知道 SAN 是多少。
+      */}
+      {!isSessionMode ? (
+        <GameHud
+          stats={state.stats}
+          turnIndex={state.turnIndex}
+          totalTurns={state.totalActs}
+          seed={state.seed}
+          sceneName={scene.name}
+          timeLabel={scene.timeLabel}
+          dmSource={state.dmSource}
+          equippedCount={equippedCount}
+          pendingCount={state.pendingActivated.length}
+          hitKey={state.hitKey}
+          onOpenFate={() => setFateOpen(true)}
+          onOpenInventory={() => setInventoryOpen(true)}
+          {...evidenceDrawerEntry}
+          onQuit={() => {
+            window.location.href = '/';
+          }}
+        />
+      ) : (
+        <div className="px-3 pt-3 sm:px-5">
+          <div className="mx-auto flex w-full max-w-[920px] items-center justify-between gap-3">
+            <span className="font-mono text-[10px] tracking-[0.25em] text-slate-500">
+              第 {currentTurn.turnIndex} / {state.totalActs} 幕
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = '/';
+              }}
+              className="font-mono text-[10px] text-slate-600 transition-colors duration-150 hover:text-slate-300"
+            >
+              换一个问题
+            </button>
+          </div>
+        </div>
+      )}
 
       {/*
         v3 §11 布局的第一层：Worldline Rail。
@@ -2406,8 +2475,8 @@ function PlayScreen() {
         </div>
       ) : null}
 
-      {/* 隐藏信号条：只给定性告警，不露后台数值 */}
-      {!isEnded ? (
+      {/* 隐藏信号条：只给定性告警，不露后台数值（旧机制，新主链不展示） */}
+      {!isEnded && !isSessionMode ? (
         <div className="px-3 pt-1.5 sm:px-5">
           <HiddenSignalStrip
             world={state.world}
@@ -2439,7 +2508,7 @@ function PlayScreen() {
         {isActBeat && currentTurn.act ? <ActTitleOverlay act={currentTurn.act} /> : null}
         <DamageFloat items={state.floats} />
 
-        {sanCritical ? (
+        {sanCritical && !isSessionMode ? (
           <div aria-hidden="true" className="alert-vignette animate-alert-pulse" />
         ) : null}
       </div>
@@ -2449,6 +2518,17 @@ function PlayScreen() {
         {isEnded ? (
           <div className="px-3 pb-5 sm:px-5">
             <div className="mx-auto w-full max-w-[920px]">
+              {isSessionMode ? (
+                <SessionEndgame
+                  originalQuestion={sessionView?.question ?? effectiveGoal}
+                  keyUnknown={sessionView?.worldBlueprint?.keyUnknown?.label ?? null}
+                  experiment={sessionView?.experiment ?? null}
+                  steps={sessionSteps}
+                  cards={sessionCards}
+                />
+              ) : null}
+
+              {!isSessionMode ? (
               <EndgamePass
                 seed={state.seed}
                 scenarioTitle={scenario.title}
@@ -2483,6 +2563,7 @@ function PlayScreen() {
                   dispatch({ type: 'RESTART', seed: createSeed() });
                 }}
               />
+              ) : null}
 
               {/*
                 P1-2：终局第一屏是**现实交接**，不是报告。
@@ -2517,6 +2598,7 @@ function PlayScreen() {
                 它们回答的是「这一局玩得怎么样」，不是「你现在该验证什么」——
                 放在首屏会把真正该带走的问题淹掉；删掉又少了对结局的解释。
               */}
+              {!isSessionMode ? (
               <details className="group mt-4">
                 <summary className="cursor-pointer list-none rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-2 text-[11px] font-semibold text-slate-400 transition-colors duration-150 hover:border-white/20 hover:text-slate-200">
                   查看完整报告（结局判卷 · 四维结算 · 赛博契约）
@@ -2561,6 +2643,7 @@ function PlayScreen() {
               />
                 </div>
               </details>
+              ) : null}
             </div>
           </div>
         ) : state.dmLoading ? (
@@ -2585,8 +2668,8 @@ function PlayScreen() {
               source={<SourceBadge source={currentTurnSource} />}
             >
             {state.phase === 'choices' ? (
-              isFinalAct ? (
-                /* 第四幕：隐藏普通选项，改用终端 —— 结局取决于玩家自己写下的方案 */
+              usesTerminalEnding ? (
+                /* legacy：最后一幕隐藏普通选项，改用终端 —— 结局取决于玩家自己写下的方案 */
                 <BossTerminal
                   question={`${currentTurn.title}：${currentTurn.storyText ?? ''}`.slice(0, 160)}
                   minLength={BOSS_ANSWER_MIN}
@@ -2626,8 +2709,10 @@ function PlayScreen() {
                   {state.outcomeDetail}
                 </p>
 
-                {/* 判卷分解：把「为什么是这个结局」摊开，避免黑箱判卷感 */}
-                {state.boss ? <BossVerdictPanel verdict={state.boss} className="w-full" /> : null}
+                {/* 判卷分解：把「为什么是这个结局」摊开，避免黑箱判卷感（旧机制） */}
+                {state.boss && !isSessionMode ? (
+                  <BossVerdictPanel verdict={state.boss} className="w-full" />
+                ) : null}
 
                 <button
                   type="button"
@@ -2640,7 +2725,7 @@ function PlayScreen() {
               </div>
             ) : null}
 
-            {state.phase === 'critical' ? (
+            {state.phase === 'critical' && !isSessionMode ? (
               <div className="rounded-2xl border border-relic-danger/45 bg-relic-danger/[0.07] p-4">
                 <p className="font-mono text-[11px] tracking-widest text-rose-400">SAN CRITICAL</p>
                 <h3 className="mt-1 text-lg font-black text-rose-300">心智即将归零</h3>
@@ -2686,6 +2771,7 @@ function PlayScreen() {
       </div>
 
       {/* 抽屉：命途 / 遗物 */}
+      {!isSessionMode ? (
       <Drawer
         open={fateOpen}
         title="命途"
@@ -2699,6 +2785,9 @@ function PlayScreen() {
         />
       </Drawer>
 
+      ) : null}
+
+      {!isSessionMode ? (
       <Drawer
         open={inventoryOpen}
         title="知乎遗物"
@@ -2724,6 +2813,7 @@ function PlayScreen() {
           </button>
         ) : null}
       </Drawer>
+      ) : null}
 
       {/*
         证据网格抽屉：AI 自由推演时，这里能看到「每一个数值的出处」。
@@ -2819,11 +2909,13 @@ function PlayScreen() {
       </Drawer>
 
       {/* 演出层 */}
+      {!isSessionMode ? (
       <DiceModal
         open={state.phase === 'checking' && state.lastCheck !== null}
         result={state.lastCheck}
         onConfirm={() => dispatch({ type: 'RESOLVE_DICE' })}
       />
+      ) : null}
 
       {/*
         P0-9 的来源弹层：把「这条选择来自哪段真实经历」摊开。

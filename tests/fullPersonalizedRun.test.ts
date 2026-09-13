@@ -201,14 +201,13 @@ describe('④ 路径与差异', () => {
 });
 
 describe('⑤ 世界蓝图：结构固定、解锁就绪', () => {
-  it('四幕结构 + 反例幕 + keyUnknown + 至少一个经验解锁', async () => {
+  it('三幕结构 + 反例幕 + keyUnknown + 至少一个经验解锁', async () => {
     const { blueprint } = await runFullChain();
     expect(blueprint.version).toBe('world-blueprint-v1');
     expect(blueprint.acts.map((act) => act.objective)).toEqual([
       'enter-world',
       'experience-cost',
       'meet-counterexample',
-      'final-reflection',
     ]);
     expect(blueprint.acts[2]!.experienceFactIds.length).toBeGreaterThan(0);
     expect(blueprint.unlocks.length).toBeGreaterThan(0);

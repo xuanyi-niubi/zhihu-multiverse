@@ -48,7 +48,6 @@ function blueprint(): WorldBlueprint {
       { act: 1, objective: 'enter-world', titleHint: '进入', conflict: 'c1', primaryPathIds: [], experienceFactIds: ['f1'], unlockIds: [] },
       { act: 2, objective: 'experience-cost', titleHint: '代价', conflict: 'c2', primaryPathIds: [], experienceFactIds: ['f2'], unlockIds: [] },
       { act: 3, objective: 'meet-counterexample', titleHint: '反例', conflict: 'c3', primaryPathIds: [], experienceFactIds: ['f3'], unlockIds: [] },
-      { act: 4, objective: 'final-reflection', titleHint: '反思', conflict: 'c4', primaryPathIds: [], experienceFactIds: ['f4'], unlockIds: [] },
     ],
     experienceFacts: [],
     unlocks: [],
@@ -61,12 +60,11 @@ function blueprintIndexForPlayTurn(turnIndex: number): number {
   return Math.max(0, turnIndex - 1);
 }
 
-describe('Play 1 基 → 蓝图 0 基 的四个映射', () => {
+describe('Play 1 基 → 蓝图 0 基 的三个映射', () => {
   const cases: readonly { readonly turnIndex: number; readonly objective: string }[] = [
     { turnIndex: 1, objective: 'enter-world' },
     { turnIndex: 2, objective: 'experience-cost' },
     { turnIndex: 3, objective: 'meet-counterexample' },
-    { turnIndex: 4, objective: 'final-reflection' },
   ];
 
   for (const item of cases) {
@@ -139,8 +137,8 @@ describe('源码层的契约（防止有人把换算删掉）', () => {
 /**
  * P0-2：Session 模式必须严格跑蓝图幕数（固定 4），而不是 AI 预算的 7～8 幕。
  *
- * 症状：蓝图只有四幕，而 `runBudgetFor` 给出 7～8 幕，
- * 于是**第五幕之后一直重复 `final-reflection`** —— 拖沓且重复。
+ * 症状：蓝图只有三幕，而 `runBudgetFor` 给出 7～8 幕，
+ * 于是最后一幕之后一直重复同一段反思 —— 拖沓且重复。
  */
 describe('Session 幕数绑定蓝图（P0-2）', () => {
   it('reducer 装载蓝图时同时写入 totalActs', () => {
@@ -157,15 +155,15 @@ describe('Session 幕数绑定蓝图（P0-2）', () => {
     expect(legacyBudget).toBeGreaterThan(blueprintRead);
   });
 
-  it('蓝图固定四幕（编译契约，smoke 也断言了同一件事）', () => {
-    // 幕数绑定只有在蓝图确实是四幕时才有意义
-    expect(blueprint().acts).toHaveLength(4);
+  it('蓝图固定三幕（编译契约，smoke 也断言了同一件事）', () => {
+    // 幕数绑定只有在蓝图确实是三幕时才有意义
+    expect(blueprint().acts).toHaveLength(3);
   });
 
-  it('第五幕及以后在蓝图里不存在（所以不能再跑下去）', () => {
+  it('第四幕及以后在蓝图里不存在（所以不能再跑下去）', () => {
     const acts = blueprint().acts;
-    expect(acts.find((act) => act.act === 5)).toBeUndefined();
-    // 且第四幕就是终局反思，不是「重复的终局反思」
-    expect(acts.filter((act) => act.objective === 'final-reflection')).toHaveLength(1);
+    expect(acts.find((act) => act.act === 4)).toBeUndefined();
+    // 第三幕就是反例幕，且只有一次（终局不再靠「再演一幕」）
+    expect(acts.filter((act) => act.objective === 'meet-counterexample')).toHaveLength(1);
   });
 });

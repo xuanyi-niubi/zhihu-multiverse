@@ -227,7 +227,6 @@ describe('接线：有蓝图走未知驱动，无蓝图保留旧模板', () => {
         { act: 1, objective: 'enter-world', titleHint: '进入', conflict: 'c1', primaryPathIds: [], experienceFactIds: [], unlockIds: [] },
         { act: 2, objective: 'experience-cost', titleHint: '代价', conflict: 'c2', primaryPathIds: [], experienceFactIds: [], unlockIds: [] },
         { act: 3, objective: 'meet-counterexample', titleHint: '反例', conflict: 'c3', primaryPathIds: [], experienceFactIds: [], unlockIds: [] },
-        { act: 4, objective: 'final-reflection', titleHint: '反思', conflict: 'c4', primaryPathIds: [], experienceFactIds: [], unlockIds: [] },
       ],
       experienceFacts: [],
       unlocks: [],

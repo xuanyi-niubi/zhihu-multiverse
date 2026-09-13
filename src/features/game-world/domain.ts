@@ -73,10 +73,13 @@ export interface ExperienceChoiceUnlock {
 /**
  * 一幕的规格。
  *
- * 四类目标对应「让人亲身体会」的四种方式：
- * 进入世界 / 体会代价 / 遇到反例 / 终局反思。
+ * 三类目标对应「让人亲身体会」的三种方式：
+ * 走进去 / 代价出现 / 反例出现。
  * 注意第三类是**反例**而不是「成功案例」——
  * 只给成功样本的推演是在替玩家打气，不是帮他判断。
+ *
+ * 没有第四幕「终局反思」：终局不是再演一幕，而是把玩家原来的问题
+ * 重写成一个他必须自己回到现实去验证的问题。
  */
 export interface WorldActSpec {
   readonly act: number;
@@ -84,8 +87,7 @@ export interface WorldActSpec {
   readonly objective:
     | 'enter-world'
     | 'experience-cost'
-    | 'meet-counterexample'
-    | 'final-reflection';
+    | 'meet-counterexample';
 
   readonly titleHint: string;
 

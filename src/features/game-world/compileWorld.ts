@@ -26,7 +26,10 @@ import type {
  *
  * ## 固定的是结构，不是内容
  *
- * 每局都是四幕：进入世界 → 体验代价 → 遇见反例 → 终局反思。
+ * 每局都是三幕：走进去 → 代价出现 → 反例出现。
+ *
+ * 第三幕结束后不再有「终局反思幕」——终局交还给现实：把用户原来的问题
+ * 重写成一个他必须自己去验证的问题（见 `RealityQuestPanel` 与 keyUnknown）。
  * 幕里的**事实引用**全部来自真实检索片段；没有事实就如实留空，
  * 绝不伪造 —— 空内容的蓝图仍然成立，只是「这一局没有可引用的真实经验」。
  */
@@ -220,16 +223,6 @@ function actsOf(
       primaryPathIds: paths.slice(1, 3).map((path) => path.id),
       experienceFactIds: counterFacts.map((fact) => fact.id),
       unlockIds: unlockFor(3),
-    },
-    {
-      act: 4,
-      objective: 'final-reflection',
-      evidenceRole: 'reflection',
-      titleHint: '你现在最需要弄清什么',
-      conflict: '这一局结束了，真正的问题才刚开始。',
-      primaryPathIds: [],
-      experienceFactIds: [],
-      unlockIds: [],
     },
   ];
 }

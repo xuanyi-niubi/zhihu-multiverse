@@ -36,8 +36,7 @@ export interface DmWorldContext {
   readonly actObjective:
     | 'enter-world'
     | 'experience-cost'
-    | 'meet-counterexample'
-    | 'final-reflection';
+    | 'meet-counterexample';
   readonly actConflict: string;
   readonly keyUnknown: string | null;
   readonly sourceFacts: readonly {
@@ -70,8 +69,8 @@ const MAX_CONTEXT_DIFFERENCES = 4;
 /**
  * 取某一幕的世界上下文。**纯函数**。
  *
- * turnIndex 是 0 基（第 1 幕 = 0）；超过四幕时钳到终局反思 ——
- * AI 动态幕可能跑到 7-8 幕，那些幕都按「final-reflection」处理。
+ * turnIndex 是 0 基（第 1 幕 = 0）；超过三幕时钳到最后一幕（反例幕）——
+ * AI 动态幕可能跑到 7-8 幕，那些幕都按「meet-counterexample」处理。
  */
 export function worldContextForTurn(
   blueprint: WorldBlueprint,
@@ -109,7 +108,7 @@ export function worldContextForTurn(
   return {
     sessionId: blueprint.sessionId,
     centralTension: blueprint.centralTension,
-    actObjective: actSpec?.objective ?? 'final-reflection',
+    actObjective: actSpec?.objective ?? 'meet-counterexample',
     actConflict: actSpec?.conflict ?? '',
     keyUnknown: blueprint.keyUnknown?.label ?? null,
     sourceFacts,

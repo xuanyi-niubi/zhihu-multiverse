@@ -88,7 +88,7 @@ export function normalizeDmInput(raw: unknown): DmTurnInput {
       .map((item) => {
         const entry = isRecord(item) ? item : {};
         return {
-          turnIndex: num(entry.turnIndex, 1, 1, 4),
+          turnIndex: num(entry.turnIndex, 1, 1, 3),
           choiceText: str(entry.choiceText, '未知选择', 60),
           outcome: str(entry.outcome, '', 60),
         };
@@ -141,11 +141,10 @@ function normalizeWorldContext(raw: Record<string, unknown>): DmWorldContext {
     'enter-world',
     'experience-cost',
     'meet-counterexample',
-    'final-reflection',
   ];
   const objective = OBJECTIVES.includes(raw.actObjective as DmWorldContext['actObjective'])
     ? (raw.actObjective as DmWorldContext['actObjective'])
-    : 'final-reflection';
+    : 'meet-counterexample';
 
   const sourceFacts = array(raw.sourceFacts)
     .slice(0, 6)

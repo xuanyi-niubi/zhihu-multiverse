@@ -322,10 +322,10 @@ async function main() {
     `pathClusters=${preparedPathCount} provenance=${preparedBody?.data?.retrievalRun?.provenance}`,
   );
   check('世界蓝图版本 world-blueprint-v1', blueprint?.version === 'world-blueprint-v1', String(blueprint?.version));
-  check('蓝图固定四幕', Array.isArray(blueprint?.acts) && blueprint.acts.length === 4, `acts=${blueprint?.acts?.length}`);
+  check('蓝图固定三幕', Array.isArray(blueprint?.acts) && blueprint.acts.length === 3, `acts=${blueprint?.acts?.length}`);
   check(
-    '四幕目标顺序固定',
-    ['enter-world', 'experience-cost', 'meet-counterexample', 'final-reflection'].every(
+    '三幕目标顺序固定',
+    ['enter-world', 'experience-cost', 'meet-counterexample'].every(
       (objective, index) => blueprint?.acts?.[index]?.objective === objective,
     ),
     (blueprint?.acts ?? []).map((act) => act?.objective).join(' → ') || '（无）',

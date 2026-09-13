@@ -163,8 +163,8 @@ describe('没有反例：第三幕留空，不伪造', () => {
   });
 });
 
-describe('evidenceRole：四幕各自的证据角色可断言', () => {
-  it('Act1=support / Act2=cost / Act3=counterexample（有反例时）/ Act4=reflection', () => {
+describe('evidenceRole：三幕各自的证据角色可断言', () => {
+  it('Act1=support / Act2=cost / Act3=counterexample（有反例时）', () => {
     const blueprint = compile(
       [path({ opposingFactIds: ['fact:counter'] })],
       [
@@ -177,7 +177,6 @@ describe('evidenceRole：四幕各自的证据角色可断言', () => {
       'support',
       'cost',
       'counterexample',
-      'reflection',
     ]);
   });
 });

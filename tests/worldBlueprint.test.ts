@@ -64,20 +64,19 @@ function frame(overrides: Partial<ProblemFrame> = {}): ProblemFrame {
   };
 }
 
-describe('固定结构：四幕不可多不可少', () => {
-  it('总是 4 个 act spec，objective 顺序固定', () => {
+describe('固定结构：三幕不可多不可少', () => {
+  it('总是 3 个 act spec，objective 顺序固定', () => {
     const blueprint = compileWorldBlueprint({
       sessionId: 's1',
       frame: frame(),
       paths: [path()],
       facts: [fact('fact:1', 'action', '报名参加了比赛，边做边学')],
     });
-    expect(blueprint.acts).toHaveLength(4);
+    expect(blueprint.acts).toHaveLength(3);
     expect(blueprint.acts.map((act) => act.objective)).toEqual([
       'enter-world',
       'experience-cost',
       'meet-counterexample',
-      'final-reflection',
     ]);
     expect(blueprint.version).toBe('world-blueprint-v1');
     expect(blueprint.sessionId).toBe('s1');
@@ -166,9 +165,9 @@ describe('终局反思', () => {
 });
 
 describe('诚信：没有事实不伪造', () => {
-  it('空路径 + 空片段 → 四幕仍在，但全部留空且 unlock 为空', () => {
+  it('空路径 + 空片段 → 三幕仍在，但全部留空且 unlock 为空', () => {
     const blueprint = compileWorldBlueprint({ sessionId: 's1', frame: frame(), paths: [], facts: [] });
-    expect(blueprint.acts).toHaveLength(4);
+    expect(blueprint.acts).toHaveLength(3);
     for (const act of blueprint.acts) {
       expect(act.experienceFactIds).toHaveLength(0);
       expect(act.unlockIds).toHaveLength(0);
@@ -233,7 +232,7 @@ describe('P0-8：解锁只从行动经验生成', () => {
     const blueprint = compileWith([fact('fact:cond', 'condition', '家里能支持我两年不赚钱。')]);
     expect(blueprint.unlocks).toHaveLength(0);
     // 蓝图本身仍然成立：四幕、没有解锁、Act 里也没有 unlockIds
-    expect(blueprint.acts).toHaveLength(4);
+    expect(blueprint.acts).toHaveLength(3);
     expect(blueprint.acts.every((act) => act.unlockIds.length === 0)).toBe(true);
   });
 

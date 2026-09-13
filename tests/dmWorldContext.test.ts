@@ -56,7 +56,7 @@ describe('normalize：worldContext / experienceUnlock 安全钳制', () => {
     expect(input.worldContext?.sourceFacts[0]!.quote).toContain('30 个小时');
   });
 
-  it('超过 6 条事实 → 截断；烂 objective → 回落 final-reflection', () => {
+  it('超过 6 条事实 → 截断；烂 objective → 回落最后一幕（反例幕）', () => {
     const input = normalizeDmInput(
       baseInput({
         worldContext: {
@@ -71,7 +71,7 @@ describe('normalize：worldContext / experienceUnlock 安全钳制', () => {
         },
       }),
     );
-    expect(input.worldContext?.actObjective).toBe('final-reflection');
+    expect(input.worldContext?.actObjective).toBe('meet-counterexample');
     expect(input.worldContext?.sourceFacts).toHaveLength(6);
   });
 
@@ -122,11 +122,12 @@ describe('prompt：世界蓝图块', () => {
     expect(text).not.toContain('不得虚构反例');
   });
 
-  it('终局反思幕不引入新的现实主张', () => {
+  it('第三幕同时承担反例与收束（终幕纪律不再单独一幕）', () => {
     const text = formatDmUserMessage(
-      normalizeDmInput(baseInput({ worldContext: { ...WORLD, actObjective: 'final-reflection' } })),
+      normalizeDmInput(baseInput({ worldContext: { ...WORLD, actObjective: 'meet-counterexample' } })),
     );
-    expect(text).toContain('本幕不引入新的现实主张');
+    expect(text).toContain('本幕是最后一幕');
+    expect(text).toContain('不再引入新的现实主张');
   });
 
   /**

@@ -196,8 +196,8 @@ describe('世界上下文切片', () => {
     expect(context.forbiddenClaims.length).toBeGreaterThan(0);
   });
 
-  it('超出四幕的动态幕钳到终局反思', () => {
+  it('超出三幕的动态幕钳到最后一幕（反例幕）', () => {
     const blueprint = compileWorldBlueprint({ sessionId: 's1', frame, paths, facts });
-    expect(worldContextForTurn(blueprint, 7).actObjective).toBe('final-reflection');
+    expect(worldContextForTurn(blueprint, 7).actObjective).toBe('meet-counterexample');
   });
 });

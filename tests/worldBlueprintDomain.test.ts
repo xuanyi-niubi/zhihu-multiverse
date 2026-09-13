@@ -89,8 +89,8 @@ describe('WorldBlueprint 形状与纪律', () => {
     expect(blueprint().keyUnknown).toBeNull();
   });
 
-  it('四类幕目标都合法', () => {
-    const objectives = ['enter-world', 'experience-cost', 'meet-counterexample', 'final-reflection'] as const;
+  it('三类幕目标都合法', () => {
+    const objectives = ['enter-world', 'experience-cost', 'meet-counterexample'] as const;
     for (const objective of objectives) {
       expect(act({ objective }).objective).toBe(objective);
     }
