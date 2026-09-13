@@ -342,7 +342,7 @@ x-boss-source: model | fallback | cached      x-trace-id: tr-...
 当前实测（`scripts/test-stats.json`）：
 
 ```
-76 个测试文件 · 1191 个用例 · 通过 1191 · 失败 0
+76 个测试文件 · 1193 个用例 · 通过 1193 · 失败 0
 ```
 
 | 测试文件 | 覆盖内容 |
