@@ -226,6 +226,14 @@ export interface CreateSessionInput {
   readonly profileAnalysis?: string | null;
   /** 把实时检索推迟到 `prepare-world`（P0-5）。默认 false，保持旧行为。 */
   readonly deferRetrieval?: boolean;
+  /**
+   * 上一次会话里**实验观测到**的事实（P1-3）。
+   *
+   * 它们会被写成 `origin: 'experiment-observed'` 的硬条件 ——
+   * 与「用户自己说的时间」同属可信证据，但来源可区分：
+   * 自我估计可以被现实推翻，观测到的不会。
+   */
+  readonly observedClaims?: readonly string[];
   readonly liveSearch?: (query: string) => Promise<readonly KnowledgeSource[]>;
 }
 
@@ -245,7 +253,33 @@ export async function createSession(input: CreateSessionInput): Promise<Decision
    */
   const profile = input.profile ?? extractProfile(question);
   const profileAnalysis = input.profileAnalysis ?? null;
-  const problemFrame = buildProblemFrame({ question, profile, analysis: profileAnalysis });
+  const framed = buildProblemFrame({ question, profile, analysis: profileAnalysis });
+
+  /**
+   * 现实记忆回灌（P1-3）。
+   *
+   * 上一次会话里**实验观测到**的事实，在这里变成硬条件：
+   * `origin: 'experiment-observed'`（不是 parser-synthesis），
+   * 因此它可以参与判断，而解析推断不行。
+   *
+   * 最典型的一条：「你说每周能挤出 8 小时，但七天记录的中位数是 3 小时」——
+   * 下一次会话该按 3 小时算，而不是继续相信那个自我估计。
+   * 没有观测记忆时这一步是恒等变换（既有会话行为零变化）。
+   */
+  const problemFrame: ProblemFrame = input.observedClaims?.length
+    ? {
+        ...framed,
+        constraints: [
+          ...framed.constraints,
+          ...input.observedClaims.map((claim, index) => ({
+            id: `observed-${index}`,
+            text: `上一局真实观测到：${claim}`,
+            origin: 'experiment-observed' as const,
+            hard: true,
+          })),
+        ],
+      }
+    : framed;
 
   /**
    * 动态澄清（Phase 3）：需要问什么、还是什么都不用问。

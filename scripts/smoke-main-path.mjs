@@ -378,6 +378,38 @@ async function main() {
   const days = dueAt ? (Date.parse(dueAt) - Date.now()) / 86_400_000 : NaN;
   check('认领后写入约 7 天后的回访', days > 6.9 && days < 7.1, `dueAt=${dueAt}`);
 
+  /**
+   * ── 6.9 P1-3：回访结果变成跨会话的现实记忆 ─────────────────
+   *
+   * 产品此前会问用户结果，但不因此变聪明。带结构化 result 的回访
+   * 必须留下**观测到的**事实（实际投入 / 产出），且置信度是
+   * observed-once —— 不是用户随口的自我估计。
+   */
+  const followedUp = await request(
+    `/api/sessions/${sessionId}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        action: 'follow-up',
+        outcome: 'done',
+        note: '比预想的难，但确实做完了。',
+        result: {
+          status: 'completed',
+          observations: ['前三天没记录，后面补上了'],
+          actualTime: '一周实际投入 3 小时',
+          producedArtifact: '一个能跑的小样',
+          hitSuccessSignal: true,
+          hitStopSignal: false,
+          whatChanged: '我以为每周能挤出 8 小时，实际只有 3 小时。',
+          newUnknowns: ['早上还是晚上更容易投入'],
+        },
+      }),
+    },
+    jar,
+  );
+  check('回访带结构化结果 → 200', followedUp.status === 200, `实际 ${followedUp.status}`);
+
   // ── 7. 选择日志能看到它 ───────────────────────────────────
   const journal = await request('/api/sessions', {}, jar);
   const journalBody = await journal.json();
@@ -386,6 +418,24 @@ async function main() {
     '选择日志列出该会话',
     Boolean(listedEntry),
     `共 ${journalBody?.data?.sessions?.length ?? 0} 条`,
+  );
+
+  const memory = journalBody?.data?.realityMemory ?? [];
+  const observed = memory.find((item) => item.claim?.includes('实际投入'));
+  check(
+    '回访观测被记成跨会话记忆（P1-3）',
+    Boolean(observed),
+    `记忆 ${memory.length} 条`,
+  );
+  check(
+    '记忆置信度是「观测到一次」而不是「用户说的」',
+    observed?.confidence === 'observed-once' && observed?.source === 'experiment-observed',
+    `confidence=${observed?.confidence} source=${observed?.source}`,
+  );
+  check(
+    '记忆里没有推断出来的人格评价',
+    memory.every((item) => !/执行力|自律|风险偏好|意志力|性格/.test(String(item?.claim ?? ''))),
+    '未出现人格推断',
   );
 
   /**

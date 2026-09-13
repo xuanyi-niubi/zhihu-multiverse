@@ -58,6 +58,21 @@ const OUTCOME_LABEL: Readonly<Record<NonNullable<JournalEntry['followUp']>['outc
   'changed-plan': '改了计划',
 };
 
+/** 跨会话的现实记忆（P1-3）：现实里验证过的事实。 */
+interface MemoryEntry {
+  readonly id: string;
+  readonly claim: string;
+  readonly source: 'user-stated' | 'experiment-observed';
+  readonly confidence: 'stated' | 'observed-once' | 'observed-repeatedly';
+  readonly sessionId: string;
+}
+
+const CONFIDENCE_LABEL: Readonly<Record<MemoryEntry['confidence'], string>> = {
+  stated: '你自己说的',
+  'observed-once': '验证过一次',
+  'observed-repeatedly': '反复验证过',
+};
+
 function dayOf(iso: string): string {
   const parsed = Date.parse(iso);
   if (!Number.isFinite(parsed)) {
@@ -90,6 +105,7 @@ function JournalStep({
 
 export default function JournalPage() {
   const [entries, setEntries] = React.useState<readonly JournalEntry[] | null>(null);
+  const [memory, setMemory] = React.useState<readonly MemoryEntry[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -97,11 +113,15 @@ export default function JournalPage() {
     void (async () => {
       try {
         const response = await fetch('/api/sessions', { signal: controller.signal });
-        const payload = (await response.json()) as { ok?: boolean; data?: { sessions?: JournalEntry[] } };
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: { sessions?: JournalEntry[]; realityMemory?: MemoryEntry[] };
+        };
         if (controller.signal.aborted) {
           return;
         }
         setEntries(payload.ok ? (payload.data?.sessions ?? []) : []);
+        setMemory(payload.ok ? (payload.data?.realityMemory ?? []) : []);
       } catch {
         if (!controller.signal.aborted) {
           setError('读取日志失败，请刷新重试。');
@@ -127,6 +147,30 @@ export default function JournalPage() {
         <p role="alert" className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/[0.08] px-3 py-2 text-[12px] text-rose-200">
           {error}
         </p>
+      ) : null}
+
+      {/*
+        跨会话记忆（P1-3）：现实里验证过的事。
+        它与下面的会话记录刻意分开 —— 会话是「我当时怎么想」，
+        记忆是「现实已经告诉过我什么」。后者在下一局会被当成硬条件。
+      */}
+      {memory.length > 0 ? (
+        <section className="mt-5 rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.04] p-3.5">
+          <h2 className="text-[12px] font-semibold text-emerald-100">现实已经告诉过我的</h2>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {memory.slice(-6).map((item) => (
+              <li key={item.id} className="flex flex-wrap items-baseline gap-x-2 text-[12px] leading-relaxed">
+                <span className="min-w-0 text-slate-200">{item.claim}</span>
+                <span className="shrink-0 font-mono text-[10px] text-emerald-300/80">
+                  {CONFIDENCE_LABEL[item.confidence]}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+            这些来自你做过的实验，不是我们的判断。下一次提问时，它们会被当成已知条件。
+          </p>
+        </section>
       ) : null}
 
       {entries === null && !error ? (

@@ -6,8 +6,12 @@ import { createSession } from '@/features/decision-session/service';
 import { FileDecisionSessionRepository } from '@/features/decision-session/store';
 import { extractProfile, generateProfile } from '@/core/dm/profile';
 import { createOpenAiCompatibleClient } from '@/core/dm/provider';
+import { observedClaimsOf } from '@/features/reality-memory/service';
+import { FileRealityMemoryRepository } from '@/features/reality-memory/store';
 import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
 import { readOwnSettings, zhihuConfigForIdentity } from '@/features/run/identity';
+
+import type { RealityMemoryEntry } from '@/features/reality-memory/domain';
 
 /**
  * 决策会话集合接口（重构方案 §6.2 / §6.4）。
@@ -44,6 +48,19 @@ export async function POST(request: Request): Promise<Response> {
    * **不要求登录** —— 方案 §2.4：不要求登录后才能获得第一次价值。
    */
   const { identity, stored } = readOwnSettings(request);
+
+  /**
+   * 现实记忆（P1-3）：这个身份已经**观测到**的事实，这一局当硬条件用。
+   *
+   * 读取失败就是空数组 —— 记忆是加分项，不该让「新建会话」失败。
+   */
+  let observedClaims: readonly string[] = [];
+  try {
+    const memory = await new FileRealityMemoryRepository().listByOwner(identity.key);
+    observedClaims = observedClaimsOf(memory);
+  } catch {
+    observedClaims = [];
+  }
 
   /**
    * 实时检索能力由**用户自己的**知乎凭证提供；没有就只走黄金案例快照。
@@ -100,6 +117,12 @@ export async function POST(request: Request): Promise<Response> {
      * 澄清后的条件。
      */
     deferRetrieval: true,
+    /**
+     * 现实记忆回灌（P1-3）：上一局**实验观测到**的事实，这一局当硬条件用。
+     *
+     * 读取失败就当没有记忆 —— 记忆是加分项，不该让「新建会话」失败。
+     */
+    ...(observedClaims.length > 0 ? { observedClaims } : {}),
     ...(liveSearch ? { liveSearch } : {}),
   });
 
@@ -131,6 +154,17 @@ export async function GET(request: Request): Promise<Response> {
   const trace = newTrace();
   const { identity } = readOwnSettings(request);
   const sessions = await repository.listByOwner(identity.key);
+
+  /**
+   * 跨会话的现实记忆（P1-3）：日志页要能回答
+   * 「现实里验证过的事，有哪些已经被记住」。读不到就是空数组。
+   */
+  let realityMemory: readonly RealityMemoryEntry[] = [];
+  try {
+    realityMemory = await new FileRealityMemoryRepository().listByOwner(identity.key);
+  } catch {
+    realityMemory = [];
+  }
 
   const headers: Record<string, string> = { 'cache-control': 'no-store' };
   // 与 POST 同理：首次访问的匿名身份要写回，否则日志页永远读不到自己的会话
@@ -168,6 +202,8 @@ export async function GET(request: Request): Promise<Response> {
               }
             : null,
         })),
+        /** 跨会话记忆：现实里验证过的事（P1-3）。 */
+        realityMemory,
       },
       meta: { traceId: trace.traceId },
     },
