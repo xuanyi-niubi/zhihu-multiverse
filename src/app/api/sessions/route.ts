@@ -10,7 +10,9 @@ import { observedClaimsOf } from '@/features/reality-memory/service';
 import { FileRealityMemoryRepository } from '@/features/reality-memory/store';
 import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
 import { readOwnSettings } from '@/features/run/identity';
-import { resolveZhihuConfigForRequest } from '@/features/run/keyResolution';
+import { appSessionQuota } from '@/core/usage/rateLimit';
+import { appSessionLlmBudget } from '@/core/usage/budget';
+import { resolveZhihuConfigForRequest, secretOriginFor } from '@/features/run/keyResolution';
 
 import type { RealityMemoryEntry } from '@/features/reality-memory/domain';
 
@@ -83,6 +85,27 @@ export async function POST(request: Request): Promise<Response> {
    * `fetchProfile(goal)` 一次 —— 档案跟着会话走，只有一份。
    */
   const modelConfig = resolveModelConfigForRequest(request);
+
+  /**
+   * App provider 的开局配额（产品化方案 §7 / §45）。
+   *
+   * 只在这一局**会用服务器 key** 时计入：用户自带 key 时花的是他自己的钱，
+   * 没有理由限制他。两道闸（每局调用数 / 每身份局数）见 `src/core/usage/`。
+   */
+  const origin = secretOriginFor(request);
+  const usesAppProvider = origin.model === 'app' || origin.zhihu === 'app';
+  if (usesAppProvider) {
+    const quota = appSessionQuota.consume(identity.key);
+    if (!quota.allowed) {
+      trace.note('app-quota-exceeded');
+      return fail({
+        code: 'quota-exceeded',
+        message: quota.reason ?? '这一小时的开局次数用完了，稍后再试。',
+        traceId: trace.traceId,
+      });
+    }
+  }
+
   let profile = extractProfile(question);
   let profileAnalysis: string | null = null;
   if (modelConfig) {
@@ -127,6 +150,16 @@ export async function POST(request: Request): Promise<Response> {
     ...(observedClaims.length > 0 ? { observedClaims } : {}),
     ...(liveSearch ? { liveSearch } : {}),
   });
+
+  /**
+   * 档案这一步的模型调用记入**本局预算**（方案 §8 的「调用 1：理解」）。
+   *
+   * 用 sessionId 做键，与后面 `/api/dm` 的叙事调用共享同一个池子 ——
+   * 单局上限才有意义（少记一次会让上限虚高）。
+   */
+  if (usesAppProvider && modelConfig) {
+    appSessionLlmBudget.consume(session.id);
+  }
 
   await repository.create(session);
 

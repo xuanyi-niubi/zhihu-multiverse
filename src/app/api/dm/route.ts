@@ -12,6 +12,7 @@ import {
   secretOriginFor,
 } from '@/features/run/keyResolution';
 import { createTrace } from '@/core/observability';
+import { appSessionLlmBudget } from '@/core/usage/budget';
 import { createZhihuClient } from '@/core/zhihu/client';
 import { buildSearchQuery } from '@/core/zhihu/query';
 import { toDmSnippets } from '@/core/zhihu/snippets';
@@ -105,7 +106,27 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
-    const config = resolveModelConfigForRequest(request);
+    const resolvedConfig = resolveModelConfigForRequest(request);
+    const origin = secretOriginFor(request);
+
+    /**
+     * App provider 的**每局调用预算**（方案 §7 / §8 / §45）。
+     *
+     * 只有花服务器 key 时才计数；用满就把这一回合降级成离线叙事 ——
+     * **绝不中断这一局**（用户看到的是叙事风格变化，不是报错）。
+     */
+    let config = resolvedConfig;
+    let budgetReason: string | null = null;
+    if (resolvedConfig && origin.model === 'app') {
+      const budgetKey = input.worldContext?.sessionId ?? `goal:${input.goal.slice(0, 60)}`;
+      const budget = appSessionLlmBudget.consume(budgetKey);
+      if (!budget.allowed) {
+        config = null;
+        budgetReason = budget.reason;
+        trace.note('app-budget-exhausted');
+      }
+    }
+
     const client = config ? createOpenAiCompatibleClient(config) : null;
 
     const generateStartedAt = Date.now();
@@ -139,14 +160,22 @@ export async function POST(request: Request): Promise<Response> {
 
     // 来源与修复信息进日志（只记 code，不记玩家原文与模型原文）
     trace.note(result.source);
-    for (const diagnostic of [...preDiagnostics, ...result.diagnostics]) {
+    /** 预算耗尽的说明（如实告诉调用方：这一回合走的是离线叙事）。 */
+    const budgetDiagnostic: DmDiagnostic | null = budgetReason
+      ? { stage: 'provider', code: 'app-budget-exhausted', message: budgetReason }
+      : null;
+    const diagnostics: readonly DmDiagnostic[] = budgetDiagnostic
+      ? [...preDiagnostics, ...result.diagnostics, budgetDiagnostic]
+      : [...preDiagnostics, ...result.diagnostics];
+
+    for (const diagnostic of diagnostics) {
       trace.note(diagnostic.code);
     }
 
     trace.finish({
       source: result.source,
       snippetCount: input.zhihuSnippets.length,
-      diagnosticCount: preDiagnostics.length + result.diagnostics.length,
+      diagnosticCount: diagnostics.length,
     });
 
     // 经验解锁（P0-H）：把 Session 蓝图派生的新选项织进本幕（不足 3 项才注入）
@@ -172,7 +201,7 @@ export async function POST(request: Request): Promise<Response> {
         plotProvider: directed.plotProvider,
         // 第一回合解析出的处境档案回传前端，后续回合由前端带回来
         profile: result.profile,
-        diagnostics: [...preDiagnostics, ...result.diagnostics],
+        diagnostics,
       },
       {
         status: 200,
