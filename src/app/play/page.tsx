@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 import { Portrait } from '@/components/characters/Portrait';
+import { PortraitLayer } from '@/components/characters/PortraitLayer';
 import { DialogueBox } from '@/components/DialogueBox';
 import { BossTerminal, BossVerdictPanel, verdictLines } from '@/components/BossTerminal';
 import { RealityChecklist } from '@/components/RealityChecklist';
@@ -37,6 +38,11 @@ import { AxisHUD } from '@/components/AxisHUD';
 import { EventCard } from '@/components/EventCard';
 import { ExperienceSourceModal } from '@/components/game/ExperienceSourceModal';
 import { SessionEndgame } from '@/components/game/SessionEndgame';
+import {
+  SessionPlayScreen,
+  type SessionActObjective,
+  type SessionPlayView,
+} from '@/components/game/SessionPlayScreen';
 import { ExperienceCardPanel, cardDataFrom } from '@/components/game/ExperienceCardPanel';
 import { WorldlineRail, worldlineStateOf } from '@/components/worldline/Worldline';
 import { CommitPicker, type CommitCandidate } from '@/components/CommitPicker';
@@ -1298,45 +1304,6 @@ const STAT_LABEL: Record<TargetStat, string> = {
   bond: '羁绊',
 };
 
-function PortraitLayer({
-  stage,
-  speaker,
-}: {
-  readonly stage: readonly CharacterOnStage[];
-  readonly speaker: SpeakerId | null;
-}) {
-  const positions: Record<StageSlot, string> = {
-    left: 'left-[2%] sm:left-[6%]',
-    center: 'left-1/2 -translate-x-1/2',
-    right: 'right-[2%] sm:right-[6%]',
-  };
-
-  return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[74%]">
-      {stage.map((member) => {
-        const character = getCharacter(member.speaker);
-
-        return (
-          <div
-            key={member.speaker}
-            className={[
-              // 窄屏把立绘缩到 0.82，优先保证 HUD 与对话框完整
-              'absolute bottom-0 h-full w-[46%] max-w-[320px] origin-bottom scale-[0.82] animate-portrait-in sm:w-[34%] sm:scale-100',
-              positions[member.slot],
-            ].join(' ')}
-          >
-            <Portrait
-              character={character}
-              expression={member.expression}
-              speaking={speaker === member.speaker}
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function ActTitleOverlay({ act }: { readonly act: ActCard | null }) {
   if (!act) {
     return null;
@@ -2456,6 +2423,109 @@ function PlayScreen() {
       sanHistory: state.sanHistory,
     });
   }, [isEnded, scenario.turns.length, state.log, state.sanHistory, state.status, state.turnIndex]);
+
+  /**
+   * 新主链的推演屏视图模型（方案 §32 / §47）。
+   *
+   * 把 reducer 状态**翻译**成 SessionPlayScreen 要的窄接口：屏幕组件不碰
+   * reducer、不碰旧 UI，只负责渲染这一幕。翻译放在页面里是刻意的 ——
+   * 这样 legacy 与新主链共用同一个 reducer 与同一套动作。
+   */
+  const sessionPlayView: SessionPlayView | null = React.useMemo(() => {
+    if (!isSessionMode || !sessionView) {
+      return null;
+    }
+    const blueprint = sessionView.worldBlueprint;
+    const blueprintIndex = Math.max(0, state.turnIndex - 1);
+    const actSpec = blueprint.acts[blueprintIndex] ?? blueprint.acts[blueprint.acts.length - 1];
+    const objective = (actSpec?.objective ?? 'meet-counterexample') as SessionActObjective;
+
+    return {
+      question: sessionView.question,
+      act: {
+        index: state.turnIndex,
+        total: state.totalActs,
+        objective,
+        subtitle: actSpec?.titleHint ?? '',
+      },
+      scene: { sceneId: state.sceneId, timeLabel: scene.timeLabel },
+      speaker: state.speaker,
+      stage: state.stage,
+      title: currentTurn.title ?? '',
+      storyText: state.dialogueText || (currentTurn.storyText ?? ''),
+      phase: state.phase,
+      choices: currentTurn.choices,
+      outcome:
+        state.phase === 'outcome' || state.phase === 'ended'
+          ? { title: state.outcomeTitle ?? '', detail: state.outcomeDetail ?? '' }
+          : null,
+      loading: state.dmLoading,
+      cards: sessionExperienceCards,
+      endgame: isEnded
+        ? {
+            originalQuestion: sessionView.question,
+            keyUnknown: blueprint.keyUnknown?.label ?? null,
+            experiment: sessionView.experiment ?? null,
+            steps: sessionSteps,
+            highlights: realityQuest?.seen ?? [],
+            unlockedActions: sessionCards,
+          }
+        : null,
+      source: {
+        open: sourceChoice !== null,
+        facts: experienceFactsFor(sourceChoice, state.worldBlueprint),
+        differences: differencesFor(state.worldBlueprint),
+      },
+    };
+  }, [
+    currentTurn.choices,
+    currentTurn.storyText,
+    currentTurn.title,
+    isEnded,
+    isSessionMode,
+    realityQuest,
+    scene.timeLabel,
+    sessionCards,
+    sessionExperienceCards,
+    sessionSteps,
+    sessionView,
+    sourceChoice,
+    state.dialogueText,
+    state.dmLoading,
+    state.outcomeDetail,
+    state.outcomeTitle,
+    state.phase,
+    state.sceneId,
+    state.speaker,
+    state.stage,
+    state.totalActs,
+    state.turnIndex,
+    state.worldBlueprint,
+  ]);
+
+  /**
+   * 新主链走自己的屏（方案 §32）：只渲染 幕 / 场景 / 叙事 / 选项 / 借来的经验 / 终局。
+   * 旧的整屏（含遗物、骰子、Boss、命途树、证据网格）在下面一行不改地保留给 legacy。
+   */
+  if (isSessionMode && sessionPlayView) {
+    return (
+      <SessionPlayScreen
+        view={sessionPlayView}
+        experienceOpen={experienceOpen}
+        onOpenExperience={() => setExperienceOpen(true)}
+        onCloseExperience={() => setExperienceOpen(false)}
+        onChoose={handleSelect}
+        onAdvance={() =>
+          dispatch({ type: state.phase === 'outcome' ? 'ADVANCE_ACT' : 'ADVANCE_BEAT' })
+        }
+        onQuit={() => {
+          window.location.href = '/';
+        }}
+        onOpenSource={setSourceChoice}
+        onCloseSource={() => setSourceChoice(null)}
+      />
+    );
+  }
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-ink-950">
