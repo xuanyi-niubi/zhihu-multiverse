@@ -1,4 +1,5 @@
 import { modelConfigForIdentity, readOwnSettings, resolveIdentity, zhihuConfigForIdentity } from '@/features/run/identity';
+import { appModelConfigFromEnv, appProviderStatus, appZhihuConfigFromEnv } from '@/config/serverEnv';
 
 import type { DmProviderConfig } from '@/core/dm/provider';
 import type { ZhihuConfig } from '@/core/zhihu/client';
@@ -6,24 +7,22 @@ import type { ZhihuConfig } from '@/core/zhihu/client';
 /**
  * 运行时的密钥解析：**只读「这个身份自己配置的 key」**。
  *
- * ## 2026-09-13 的关键修订
- *
- * 旧版优先级是「账号配置 > 环境变量」。那个「环境变量兜底」有一个
- * 在公开部署下**不可接受**的后果：
- *
- * > 部署者把自己的一把 key 放进服务端 env 后，**任何访问者都能白用它**
- * > —— 花的是部署者的钱，而且几乎无法察觉。
- *
- * 因此现在**彻底移除 env 兜底**：
+ * ## 三级来源：`account > app > none`（产品化方案 §5 / §6 / §43）
  *
  * | 情况 | 行为 |
  * |---|---|
- * | 已登录并配了自己的 key | 用他的 key |
- * | 未登录但配了自己的 key | 用他的 key（匿名身份隔离） |
- * | 都没配 | 返回 null → 调用方走 **DEMO MODE**（离线剧本 + 落盘快照） |
+ * | 用户自己配了 key（登录或匿名） | 用**他的** key —— 花他自己的钱，也最可预期 |
+ * | 用户没配，但服务器配了 `APP_LLM_*` / `APP_ZHIHU_ACCESS_SECRET` | 用 **App 的** key —— 普通用户打开即用 |
+ * | 两者都没有 | 返回 null → 调用方走离线兜底（离线剧本 + 落盘快照） |
  *
- * 部署者不配 env 不会让站点打不开：没有 key 只是没有实时 AI 与实时检索，
- * 而 DEMO MODE 本身是完全可玩的路径（这正是 v2 §11.2 的设计）。
+ * ### 为什么 App 兜底是安全的（与旧版 env 兜底的区别）
+ *
+ * 旧版的问题是「**无提示地**给所有访问者用部署者的 key，花他的钱且几乎无法察觉」。
+ * 现在 App key 是**产品的一部分**（打开即用），并且配套：
+ *
+ * 1. 用量预算（`src/core/usage/`）：每局 LLM 调用上限、每身份每小时/每天局数上限；
+ * 2. 服务端 key 永不下发到浏览器（见 `src/config/serverEnv.ts` 的闸门）；
+ * 3. `/api/health` 只报来源（`account` / `app` / `none`），不报值。
  *
  * ## 为什么统一改这一层
  *
@@ -41,33 +40,48 @@ export function identityCookieFor(request: Request): string | null {
   return resolveIdentity(request).setCookie;
 }
 
-/** 这一请求该用的模型配置；没配就是 null（调用方走离线兜底）。 */
-export function resolveModelConfigForRequest(request: Request): DmProviderConfig | null {
+/**
+ * 这一请求该用的模型配置：**用户自己的 > App 的 > null（离线兜底）**。
+ *
+ * `env` 可注入，便于测试三种来源；生产不传即读 `process.env`。
+ */
+export function resolveModelConfigForRequest(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+): DmProviderConfig | null {
   const { stored } = readOwnSettings(request);
-  return modelConfigForIdentity(stored);
+  return modelConfigForIdentity(stored) ?? appModelConfigFromEnv(env);
 }
 
-/** 这一请求该用的知乎配置；没配就是 null（检索走落盘快照 / 离线）。 */
-export function resolveZhihuConfigForRequest(request: Request): ZhihuConfig | null {
+/** 这一请求该用的知乎配置：同样 `account > app > null`。 */
+export function resolveZhihuConfigForRequest(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+): ZhihuConfig | null {
   const { stored } = readOwnSettings(request);
-  return zhihuConfigForIdentity(stored);
+  return zhihuConfigForIdentity(stored) ?? appZhihuConfigFromEnv(env);
 }
 
 /**
  * 配置来源：给健康检查与界面用，**只报来源不报值**。
  *
- * 只有两种取值了：`account`（这个身份自己配的）与 `none`（没配）。
- * 原来的 `env` 已移除 —— 保留一个永不出现的枚举值只会误导读者。
+ * - `account`：这个身份自己配的（优先）
+ * - `app`：服务器配的 App provider（兜底，普通用户打开即用）
+ * - `none`：都没配，走离线
  */
-export type SecretOrigin = 'account' | 'none';
+export type SecretOrigin = 'account' | 'app' | 'none';
 
-export function secretOriginFor(request: Request): {
+export function secretOriginFor(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+): {
   readonly model: SecretOrigin;
   readonly zhihu: SecretOrigin;
 } {
   const { stored } = readOwnSettings(request);
+  const app = appProviderStatus(env);
   return {
-    model: stored?.modelApiKey ? 'account' : 'none',
-    zhihu: stored?.zhihuAccessSecret ? 'account' : 'none',
+    model: stored?.modelApiKey ? 'account' : app.model ? 'app' : 'none',
+    zhihu: stored?.zhihuAccessSecret ? 'account' : app.zhihu ? 'app' : 'none',
   };
 }

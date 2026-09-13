@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { engineLights, modeMeta, modeOf, type RuntimeCapability } from '@/core/run/runtimeMode';
-import { resolveModelConfigForRequest, resolveZhihuConfigForRequest } from '@/features/run/keyResolution';
+import { resolveModelConfigForRequest, resolveZhihuConfigForRequest, secretOriginFor } from '@/features/run/keyResolution';
 import { resolveIdentity } from '@/features/run/identity';
 import { describeTiers, resolveTieredModels } from '@/agents/tieredRouting';
 
@@ -27,12 +27,14 @@ export async function GET(request: Request): Promise<Response> {
    * - 没配 key 的访客看到的是 DEMO（我们不会替他付账）；
    * - 自己在 `/settings` 填了 key 之后，同一个页面立刻变成 FULL。
    *
-   * 如果这里回退到 env，界面会宣称「AI 已接入」而实际上是部署者的 key ——
-   * 那既误导访客，也让部署者白白承担成本。
+   * 产品化方案 §5 之后，来源有三档：`account`（用户自己配的）> `app`
+   * （服务器配的，普通用户打开即用）> `none`（离线兜底）。这里只报**来源**，
+   * 永不回传 key 值；界面据此如实说明「这一局用的是谁的模型」。
    */
   const modelConfig = resolveModelConfigForRequest(request);
   const zhihuConfig = resolveZhihuConfigForRequest(request);
   const identity = resolveIdentity(request);
+  const secretOrigin = secretOriginFor(request);
 
   const capability: RuntimeCapability = {
     aiKey: modelConfig !== null,
@@ -56,6 +58,13 @@ export async function GET(request: Request): Promise<Response> {
       notice: meta.notice,
       evidenceCanJudge: meta.evidenceCanJudge,
       lights: engineLights(mode),
+      /**
+       * 密钥来源：`account` / `app` / `none`。
+       *
+       * 它决定界面该说「你在用自己的模型」还是「本局用服务器提供的模型」——
+       * 用户有权知道这一局花的是谁的钱。
+       */
+      secretOrigin,
       // 只报模型名与端点，不含密钥
       model: modelConfig ? { name: modelConfig.model, baseUrl: modelConfig.baseUrl } : null,
       zhihu: zhihuConfig ? { baseUrl: zhihuConfig.baseUrl } : null,

@@ -72,9 +72,21 @@ function readEnv(env: Record<string, string | undefined>, key: string): string |
  * 因为型号会过时：今天最快的模型半年后可能不是。
  */
 export function resolveTieredModels(env: Record<string, string | undefined> = process.env): TieredModels {
-  const base = readEnv(env, 'DM_MODEL') ?? 'deepseek-chat';
-  const fast = readEnv(env, 'DM_FAST_MODEL') ?? base;
-  const deep = readEnv(env, 'DM_DEEP_MODEL') ?? base;
+  /**
+   * 档位名来源顺序（产品化方案 §5 / §8）：
+   *
+   * ```text
+   * DM_*            —— 部署者显式指定的工作区配置（优先级最高，行为不变）
+   * APP_LLM_*       —— 服务器提供的 App provider
+   * deepseek-chat   —— 兜底默认
+   * ```
+   *
+   * 便宜的 fast 用于「理解」与单幕叙事，贵的 deep 用于世界编译；
+   * 两者相同即视为未分档（不制造两个同名 provider）。
+   */
+  const base = readEnv(env, 'DM_MODEL') ?? readEnv(env, 'APP_LLM_DEEP_MODEL') ?? 'deepseek-chat';
+  const fast = readEnv(env, 'DM_FAST_MODEL') ?? readEnv(env, 'APP_LLM_FAST_MODEL') ?? base;
+  const deep = readEnv(env, 'DM_DEEP_MODEL') ?? readEnv(env, 'APP_LLM_DEEP_MODEL') ?? base;
   return { fast, deep, tiered: fast !== deep };
 }
 
