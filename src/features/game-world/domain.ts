@@ -1,3 +1,4 @@
+import type { EncounterPlan } from '@/features/game-mechanics/domain';
 import type {
   ExperienceCase,
   ExperienceFact,
@@ -143,6 +144,17 @@ export interface WorldBlueprint {
   readonly experienceCases?: readonly ExperienceCase[];
 
   readonly unlocks: readonly ExperienceChoiceUnlock[];
+
+  /**
+   * 本局的 Encounter 计划（玩法线程 §34 / §69 / §82）。
+   *
+   * **可选**：旧 Blueprint snapshot 没有这个字段，仍继续有效；
+   * 运行时按 `?? []` 降级，不因为缺字段而崩。
+   *
+   * 它只描述「这一局用哪几种机制」以及每种机制引用的真实证据，
+   * 具体怎么画交给视觉线程（本线程不改任何视觉组件）。
+   */
+  readonly encounters?: readonly EncounterPlan[];
 
   /**
    * DM 不允许越过的现实边界。

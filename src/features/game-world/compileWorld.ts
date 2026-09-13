@@ -3,6 +3,7 @@ import type {
   WorldActSpec,
   WorldBlueprint,
 } from '@/features/game-world/domain';
+import { composeEncounters } from '@/features/game-mechanics/encounterComposer';
 import { buildExperienceCases } from '@/features/experience/cases';
 import type {
   ExperienceFact,
@@ -284,21 +285,42 @@ function keyUnknownOf(frame: ProblemFrame, paths: readonly ExperiencePath[]): Un
  */
 export function compileWorldBlueprint(input: CompileWorldBlueprintInput): WorldBlueprint {
   const unlocks = unlocksOf(input.paths, input.facts);
+  const cases = buildExperienceCases(input.facts);
+  const keyUnknown = keyUnknownOf(input.frame, input.paths);
+
+  /**
+   * Encounter 计划（玩法线程 §34 / §82）：**可选**、纯数据、零模型。
+   *
+   * 它不推翻现有三幕，也不强制每局都有 —— 证据不足时返回空数组，
+   * 蓝图照常成立（旧 snapshot 的 `encounters` 缺失同样是合法状态）。
+   * `unlocks` 直接复用现有 `ExperienceChoiceUnlock`（§35）。
+   */
+  const encounters = composeEncounters({
+    frame: input.frame,
+    cases,
+    facts: input.facts,
+    differences: input.paths.flatMap((path) => path.differencesFromUser),
+    paths: input.paths,
+    unlocks,
+    keyUnknown,
+  });
+
   return {
     version: 'world-blueprint-v1',
     sessionId: input.sessionId,
     problemFrame: input.frame,
     centralTension: input.frame.centralTension,
     paths: input.paths,
-    keyUnknown: keyUnknownOf(input.frame, input.paths),
+    keyUnknown,
     acts: actsOf(input.paths, input.facts, unlocks),
     experienceFacts: input.facts,
     /**
      * 卡片数据（§13）：把片段按来源聚成「一个人的一段经历」。
      * 只做分组，不新增内容 —— 与 Experience Engine 同一套 cases 规则。
      */
-    experienceCases: buildExperienceCases(input.facts),
+    experienceCases: cases,
     unlocks,
+    encounters,
     forbiddenClaims: FORBIDDEN_CLAIMS,
   };
 }
