@@ -61,6 +61,63 @@ function factsByIds(facts: readonly ExperienceFact[], ids: readonly string[]): r
   return ids.map((id) => byId.get(id)).filter((fact): fact is ExperienceFact => fact !== undefined);
 }
 
+function dedupeById(facts: readonly ExperienceFact[]): readonly ExperienceFact[] {
+  return facts.filter((fact, index, all) => all.findIndex((item) => item.id === fact.id) === index);
+}
+
+/** 路径标注的对立 case 对应的来源 id（`case:<sourceId>` → `sourceId`）。 */
+function opposingSourceIdsOf(paths: readonly ExperiencePath[]): ReadonlySet<string> {
+  const CASE_PREFIX = 'case:';
+  return new Set(
+    paths
+      .flatMap((path) => path.opposingCaseIds)
+      .map((id) => (id.startsWith(CASE_PREFIX) ? id.slice(CASE_PREFIX.length) : id)),
+  );
+}
+
+/**
+ * 第三幕（遇见反例）的事实来源优先级（P0-7）。
+ *
+ * ## 为什么要有这份优先级
+ *
+ * 「反例」必须是**真的反对这条走法**的经历。早先的实现把「其它任意
+ * reflection」当作反例兜底，于是第三幕可能拿一条支持性反思硬充反例 ——
+ * 玩家以为看到了不同的声音，其实只是换个说法的附和。
+ * 这个产品最不可替代的东西就是「我们主动去找反例」，破了这条就不剩什么了。
+ *
+ * 四轮优先级：
+ *
+ * 1. 路径聚类时明确标注的对立片段（`opposingFactIds`）；
+ * 2. 检索阶段**作为反例**找来的片段（`purpose: counterexample`）；
+ * 3. 检索阶段**作为失败经历**找来的片段（`purpose: failure`）；
+ * 4. 路径标注的对立 case 所属来源的片段。
+ *
+ * 四轮都没有 → **返回空**，不退化成「随便一条反思」。
+ * 空的时候文案会如实说明「这一局没有找到反例」——
+ * 承认没有，比编一个更像是这个产品该有的样子。
+ */
+export function counterexampleFacts(
+  paths: readonly ExperiencePath[],
+  facts: readonly ExperienceFact[],
+): readonly ExperienceFact[] {
+  const opposingSourceIds = opposingSourceIdsOf(paths);
+
+  const rounds: readonly (readonly ExperienceFact[])[] = [
+    factsByIds(facts, paths.flatMap((path) => path.opposingFactIds)),
+    facts.filter((fact) => fact.purposes.includes('counterexample')),
+    facts.filter((fact) => fact.purposes.includes('failure')),
+    facts.filter((fact) => opposingSourceIds.has(fact.sourceId)),
+  ];
+
+  for (const round of rounds) {
+    const picked = dedupeById(round).slice(0, FACTS_PER_ACT);
+    if (picked.length > 0) {
+      return picked;
+    }
+  }
+  return [];
+}
+
 /** 解锁项：一条真实行动经验 → 一个此后才出现的游戏选择。 */
 function unlocksOf(paths: readonly ExperiencePath[], facts: readonly ExperienceFact[]): readonly ExperienceChoiceUnlock[] {
   const unlocks: ExperienceChoiceUnlock[] = [];
@@ -109,13 +166,7 @@ function actsOf(
     .filter((fact, index, all) => all.findIndex((item) => item.id === fact.id) === index)
     .slice(0, FACTS_PER_ACT);
 
-  const counterFacts = [
-    // 反例优先：各路径明确引用的对立片段，其次检索里的 reflection
-    ...factsByIds(facts, paths.flatMap((path) => path.opposingFactIds)),
-    ...facts.filter((fact) => fact.type === 'reflection'),
-  ]
-    .filter((fact, index, all) => all.findIndex((item) => item.id === fact.id) === index)
-    .slice(0, FACTS_PER_ACT);
+  const counterFacts = counterexampleFacts(paths, facts);
 
   const unlockFor = (act: number): readonly string[] =>
     unlocks.filter((unlock) => unlock.availableFromAct === act).map((unlock) => unlock.id);
@@ -124,6 +175,7 @@ function actsOf(
     {
       act: 1,
       objective: 'enter-world',
+      evidenceRole: 'support',
       titleHint: primary ? `一个关于「${primary.label}」的开始` : '一个还没有经验的开始',
       conflict: primary ? primary.summary : '还没有找到走过这条路的人，这一局只能靠假设推进。',
       primaryPathIds: primary ? [primary.id] : [],
@@ -133,6 +185,7 @@ function actsOf(
     {
       act: 2,
       objective: 'experience-cost',
+      evidenceRole: 'cost',
       titleHint: '真实出现过的代价',
       conflict:
         costFacts.length > 0
@@ -145,11 +198,18 @@ function actsOf(
     {
       act: 3,
       objective: 'meet-counterexample',
+      /**
+       * `evidenceRole` 只在**真的有反例片段**时标注（P0-7）。
+       *
+       * 没有反例时留空 —— 让下游（DM / UI）能从「这一幕没有证据角色」
+       * 读出「本幕没有可引用的反例」，而不是把 support 错当成反例。
+       */
+      ...(counterFacts.length > 0 ? { evidenceRole: 'counterexample' as const } : {}),
       titleHint: '另一个人的另一种结果',
       conflict:
         counterFacts.length > 0
           ? '有人走过相似的路，但走向了不同的结果。'
-          : '没有找到反例经历 —— 记住，没有反例不等于没有风险。',
+          : '这一局没有找到真正的反例经历 —— 我们不会拿支持片段硬充。没有反例，不等于没有风险。',
       primaryPathIds: paths.slice(1, 3).map((path) => path.id),
       experienceFactIds: counterFacts.map((fact) => fact.id),
       unlockIds: unlockFor(3),
@@ -157,6 +217,7 @@ function actsOf(
     {
       act: 4,
       objective: 'final-reflection',
+      evidenceRole: 'reflection',
       titleHint: '你现在最需要弄清什么',
       conflict: '这一局结束了，真正的问题才刚开始。',
       primaryPathIds: [],

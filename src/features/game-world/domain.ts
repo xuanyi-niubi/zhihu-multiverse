@@ -89,6 +89,16 @@ export interface WorldActSpec {
 
   readonly titleHint: string;
 
+  /**
+   * 本幕引用的事实**扮演什么角色**（P0-7，可选）。
+   *
+   * 它存在的理由只有一个：让「第三幕是反例幕」这件事**可断言**。
+   * 有它之后，下游可以检查「这一幕引用的事实到底是支持、代价、
+   * 反例还是反思」，而不是靠幕序号猜。没有反例时不标 ——
+   * 留空本身就是「本幕没有反例证据」的诚实信号。
+   */
+  readonly evidenceRole?: 'support' | 'cost' | 'counterexample' | 'reflection';
+
   readonly conflict: string;
 
   readonly primaryPathIds: readonly string[];

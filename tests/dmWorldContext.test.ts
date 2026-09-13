@@ -103,4 +103,29 @@ describe('prompt：世界蓝图块', () => {
     expect(text).not.toContain('【本局世界蓝图】');
     expect(text).not.toContain('【经验解锁的新选择');
   });
+
+  /**
+   * P0-7：第三幕是反例幕，模型必须被告知「遇见不同的经验逻辑」，
+   * 且**没有真实反例时不得虚构** —— 否则它会自己编一个反例出来。
+   */
+  it('第三幕注入反例纪律（不得虚构反例）', () => {
+    const text = formatDmUserMessage(
+      normalizeDmInput(baseInput({ worldContext: { ...WORLD, actObjective: 'meet-counterexample' } })),
+    );
+    expect(text).toContain('本幕纪律');
+    expect(text).toContain('与前两幕不同的经验逻辑');
+    expect(text).toContain('不得虚构反例');
+  });
+
+  it('非反例幕不出现这条纪律（只有该幕需要）', () => {
+    const text = formatDmUserMessage(normalizeDmInput(baseInput({ worldContext: WORLD })));
+    expect(text).not.toContain('不得虚构反例');
+  });
+
+  it('终局反思幕不引入新的现实主张', () => {
+    const text = formatDmUserMessage(
+      normalizeDmInput(baseInput({ worldContext: { ...WORLD, actObjective: 'final-reflection' } })),
+    );
+    expect(text).toContain('本幕不引入新的现实主张');
+  });
 });

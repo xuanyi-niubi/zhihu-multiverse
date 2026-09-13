@@ -526,13 +526,26 @@ export function formatDmUserMessage(input: DmTurnInput): string {
    * 覆盖系统 prompt 里「改写自」的 legacy 规则）。
    */
   const world = input.worldContext;
+  /**
+   * 幕级纪律（P0-7）。
+   *
+   * 第三幕是「遇见反例」——它必须真的让玩家撞上一个**不同的经验逻辑**，
+   * 而不是把支持性内容换个说法再说一遍。没有真实反例时**不得虚构**：
+   * 如实演出「这一局没有找到反例」本身就是产品的诚实。
+   */
+  const actDiscipline =
+    world?.actObjective === 'meet-counterexample'
+      ? '本幕必须让玩家遇见一个与前两幕不同的经验逻辑。如果【允许引用的真实经验】里没有任何反例，不得虚构反例、不得拿支持性内容冒充 —— 如实呈现「我们没找到反例」这件事本身。'
+      : world?.actObjective === 'final-reflection'
+        ? '本幕不引入新的现实主张：只收敛玩家这一局真正看清了什么、以及还剩哪个未知必须由现实回答。'
+        : null;
   const worldBlock = world
     ? `
 【本局世界蓝图】
 核心矛盾：${world.centralTension || '（未提供）'}
 本幕目标：${world.actObjective}
 本幕冲突：${world.actConflict || '（未提供，请从核心矛盾长出来）'}
-${world.keyUnknown ? `玩家最大未知：${world.keyUnknown}\n` : ''}
+${actDiscipline ? `本幕纪律：${actDiscipline}\n` : ''}${world.keyUnknown ? `玩家最大未知：${world.keyUnknown}\n` : ''}
 【允许引用的真实经验（quote 必须逐字使用其中原文，禁止改写）】
 ${
   world.sourceFacts.length > 0
