@@ -135,8 +135,8 @@ async function main() {
   check('POST /api/sessions → 200', created.status === 200, `实际 ${created.status}`);
   check('建会话返回 id', typeof createdBody?.data?.id === 'string', String(createdBody?.data?.id));
   check(
-    '命中黄金案例给出问题专属路径',
-    Number(createdBody?.data?.pathCount) > 0,
+    '建会话时检索被推迟（P0-5：等澄清答完再检索，不烧配额）',
+    createdBody?.data?.provenance === 'deferred' && Number(createdBody?.data?.pathCount) === 0,
     `pathCount=${createdBody?.data?.pathCount} provenance=${createdBody?.data?.provenance}`,
   );
   check('匿名身份已下发 cookie', jar.size() > 0, `cookie 数 ${jar.size()}`);
@@ -310,6 +310,17 @@ async function main() {
   const preparedBody = await prepared.json();
   const blueprint = preparedBody?.data?.worldBlueprint;
   check('prepare-world → status=ready_to_play', preparedBody?.data?.status === 'ready_to_play', String(preparedBody?.data?.status));
+  /**
+   * P0-5 的另一半：检索虽然推迟了，但**没有被丢掉**。
+   * 黄金案例必须在 prepare-world 这一步补齐问题专属路径，
+   * 否则「推迟」就变成了「静默失效」。
+   */
+  const preparedPathCount = (preparedBody?.data?.pathClusters ?? []).length;
+  check(
+    'prepare-world 补齐问题专属路径（推迟不等于丢掉）',
+    preparedPathCount > 0 && preparedBody?.data?.retrievalRun?.provenance !== 'deferred',
+    `pathClusters=${preparedPathCount} provenance=${preparedBody?.data?.retrievalRun?.provenance}`,
+  );
   check('世界蓝图版本 world-blueprint-v1', blueprint?.version === 'world-blueprint-v1', String(blueprint?.version));
   check('蓝图固定四幕', Array.isArray(blueprint?.acts) && blueprint.acts.length === 4, `acts=${blueprint?.acts?.length}`);
   check(
@@ -343,7 +354,15 @@ async function main() {
     Boolean(experiment) && REQUIRED.every((field) => String(experiment[field] ?? '').length > 0),
     REQUIRED.filter((field) => !String(experiment?.[field] ?? '').length).join(',') || 'ok',
   );
-  check('时间盒跟着用户自述时间走', String(experiment?.timebox ?? '').includes('3 小时'), String(experiment?.timebox));
+  /**
+   * P1-1：实验的时间盒不能要求用户挤出他没说的时间。
+   * 示例问题里用户自述「未来两周约 3 小时」，实验必须看得见这个约束。
+   */
+  check(
+    '实验的时间盒看得见用户自述的可用时间',
+    String(experiment?.timebox ?? '').includes('3 小时'),
+    String(experiment?.timebox),
+  );
 
   const committed = await request(
     `/api/sessions/${sessionId}`,
