@@ -1714,9 +1714,26 @@ function PlayScreen() {
         ...(() => {
           const blueprint = currentSession?.worldBlueprint;
           if (!blueprint) return {};
-          const unlock = unlockForTurn(blueprint, turnIndex, usedUnlocks);
+
+          /**
+           * **索引基准转换（P0-1 修复）**。
+           *
+           * Play 的 `state.turnIndex` 是 **1 基**（1 = 第一幕）；
+           * 而 `worldContextForTurn` / `unlockForTurn` 的契约是 **0 基**
+           * （0 = 第一幕，内部 `currentAct = turnIndex + 1`）。
+           *
+           * 直接把 1 基值传进去，会让每一幕都错开一位：
+           * 游戏第一幕读到蓝图的「体会代价」幕，第二幕读到「遇到反例」幕，
+           * 第三幕就已经走到终局反思 —— 而第四幕读不到任何东西。
+           *
+           * 转换只在**这一层**做：两个函数保持它们的 0 基契约不变，
+           * 避免「到底谁负责换算」变成两处各写一半。
+           */
+          const blueprintTurnIndex = Math.max(0, turnIndex - 1);
+
+          const unlock = unlockForTurn(blueprint, blueprintTurnIndex, usedUnlocks);
           return {
-            worldContext: worldContextForTurn(blueprint, turnIndex),
+            worldContext: worldContextForTurn(blueprint, blueprintTurnIndex),
             ...(unlock ? { experienceUnlock: unlock } : {}),
           };
         })(),

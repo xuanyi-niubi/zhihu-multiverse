@@ -153,7 +153,13 @@ export async function POST(request: Request): Promise<Response> {
     const turn = injectExperienceUnlock({
       choices: directed.turn.choices,
       unlock: input.experienceUnlock ?? null,
-      act: input.turnIndex + 1,
+      /**
+       * `act` 是 **1 基**，而 `DmTurnInput.turnIndex` 本身就是 1 基。
+       *
+       * 原来写的是 `input.turnIndex + 1`（多加了 1），于是解锁项的
+       * `availableFromAct` 判定整体晚一幕生效 —— 与 P0-1 是同一类错位。
+       */
+      act: input.turnIndex,
     });
     const finalTurn = turn === directed.turn.choices ? directed.turn : { ...directed.turn, choices: turn };
 
