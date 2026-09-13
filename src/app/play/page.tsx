@@ -36,6 +36,7 @@ import { EngineStatusBar } from '@/components/EngineStatusBar';
 import { AxisHUD } from '@/components/AxisHUD';
 import { EventCard } from '@/components/EventCard';
 import { ExperienceSourceModal } from '@/components/game/ExperienceSourceModal';
+import { RealityQuestPanel } from '@/components/game/RealityQuestPanel';
 import { WorldlineRail, worldlineStateOf } from '@/components/worldline/Worldline';
 import { CommitPicker, type CommitCandidate } from '@/components/CommitPicker';
 import { axisCapsFor } from '@/core/decision/axis';
@@ -93,6 +94,7 @@ import {
 } from '@/data/prebuiltScenarios';
 import { fetchDmTurn, fetchProfile, fetchRunReport } from '@/core/dmClient';
 import { unlockForTurn, worldContextForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
+import { realityQuestViewOf } from '@/features/game-world/questView';
 import type { WorldBlueprint } from '@/features/game-world/domain';
 import type { ExperienceFact } from '@/features/experience/domain';
 
@@ -1509,19 +1511,32 @@ function PlayScreen() {
           setSessionLoadFailed(true);
           return;
         }
-        const payload = (await response.json()) as { data?: { id?: unknown; question?: unknown; profile?: unknown; profileAnalysis?: unknown; worldBlueprint?: unknown } };
+        const payload = (await response.json()) as { data?: { id?: unknown; question?: unknown; profile?: unknown; profileAnalysis?: unknown; worldBlueprint?: unknown; experiment?: unknown } };
         const data = payload?.data;
         const blueprint = data?.worldBlueprint as WorldBlueprint | undefined;
         if (!blueprint || typeof data?.id !== 'string' || typeof data?.question !== 'string') {
           setSessionLoadFailed(true);
           return;
         }
+        /**
+         * 现实实验（P1-2）：只在形状对得上时采纳。
+         *
+         * 会话里可能还没设计实验（`experiment: null`）—— 那时终局的
+         * Reality Quest 会如实说「还没有实验」，并给回去设计的入口，
+         * 而不是就地编一个七天计划。
+         */
+        const rawExperiment = data.experiment;
+        const experiment =
+          rawExperiment && typeof rawExperiment === 'object'
+            ? (rawExperiment as PlaySessionView['experiment'])
+            : null;
         const view: PlaySessionView = {
           id: data.id,
           question: data.question,
           profile: (data.profile as PlayerProfile | null) ?? null,
           profileAnalysis: typeof data.profileAnalysis === 'string' ? data.profileAnalysis : null,
           worldBlueprint: blueprint,
+          experiment,
         };
         setSessionView(view);
         dispatch({ type: 'LOAD_WORLD_BLUEPRINT', blueprint, sessionId: view.id });
@@ -1781,6 +1796,24 @@ function PlayScreen() {
       sourceUrl: fact.sourceUrl,
     }));
   }, [sessionView?.worldBlueprint, state.turnIndex]);
+
+  /**
+   * 终局「现实支线」的视图模型（P1-2）。
+   *
+   * 逻辑在 `game-world/questView.ts` 里（纯函数、可测）：回顾条目的
+   * 出处纪律与「没有实验就不给承诺」都在那里钉住，页面只负责渲染。
+   */
+  const realityQuest = React.useMemo(
+    () =>
+      realityQuestViewOf({
+        sessionId: sessionView?.id ?? '',
+        blueprint: sessionView?.worldBlueprint ?? null,
+        experiment: sessionView?.experiment ?? null,
+        usedUnlockIds,
+      }),
+    [sessionView, usedUnlockIds],
+  );
+
 
   const snapshotRef = React.useRef({ state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, blueprintSnippets, sessionView, usedUnlockIds });
   snapshotRef.current = { state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, blueprintSnippets, sessionView, usedUnlockIds };
@@ -2451,10 +2484,48 @@ function PlayScreen() {
                 }}
               />
 
-              <EndgameReport text={report} loading={reportLoading} source={reportSource} />
+              {/*
+                P1-2：终局第一屏是**现实交接**，不是报告。
+                玩家带走的问题（keyUnknown）在这一屏被明确交还给他，
+                并附上一条有停止信号的现实支线。
+              */}
+              {realityQuest ? (
+                <RealityQuestPanel
+                  keyUnknown={realityQuest.keyUnknown}
+                  experiment={sessionView?.experiment ?? null}
+                  seen={realityQuest.seen}
+                  claimed={
+                    realityQuest.candidate
+                      ? committedMap[realityQuest.candidate.id] !== undefined
+                      : false
+                  }
+                  claiming={
+                    realityQuest.candidate ? committingId === realityQuest.candidate.id : false
+                  }
+                  onClaim={() => {
+                    if (realityQuest.candidate) {
+                      return handleCommit(realityQuest.candidate);
+                    }
+                    return undefined;
+                  }}
+                  {...(realityQuest.designHref ? { designHref: realityQuest.designHref } : {})}
+                />
+              ) : null}
 
-              {/* 终局要交代清楚「为什么是这个结局」：判卷分解 + 可执行的下一步 */}
-              {state.boss ? <BossVerdictPanel verdict={state.boss} className="mt-4" /> : null}
+              {/*
+                P1-2：旧的「生成报告 → 一堆指标」折叠保留。
+                它们回答的是「这一局玩得怎么样」，不是「你现在该验证什么」——
+                放在首屏会把真正该带走的问题淹掉；删掉又少了对结局的解释。
+              */}
+              <details className="group mt-4">
+                <summary className="cursor-pointer list-none rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-2 text-[11px] font-semibold text-slate-400 transition-colors duration-150 hover:border-white/20 hover:text-slate-200">
+                  查看完整报告（结局判卷 · 四维结算 · 赛博契约）
+                </summary>
+                <div className="mt-3">
+                  <EndgameReport text={report} loading={reportLoading} source={reportSource} />
+
+                  {/* 终局要交代清楚「为什么是这个结局」：判卷分解 + 可执行的下一步 */}
+                  {state.boss ? <BossVerdictPanel verdict={state.boss} className="mt-4" /> : null}
 
               <RealityChecklist
                 items={checklist.items}
@@ -2488,6 +2559,8 @@ function PlayScreen() {
                 onSubmit={handleCommit}
                 onRemove={handleUncommit}
               />
+                </div>
+              </details>
             </div>
           </div>
         ) : state.dmLoading ? (

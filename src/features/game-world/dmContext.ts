@@ -1,3 +1,4 @@
+import type { RealityExperiment } from '@/features/decision-session/domain';
 import type { WorldBlueprint } from '@/features/game-world/domain';
 import type { PlayerProfile } from '@/core/dm/profile';
 
@@ -18,6 +19,14 @@ export interface PlaySessionView {
   readonly profile: PlayerProfile | null;
   readonly profileAnalysis: string | null;
   readonly worldBlueprint: WorldBlueprint;
+  /**
+   * 会话里已经设计好的现实实验（P1-2）。
+   *
+   * 终局要用它做「现实支线」的交接：未来 7 天做什么、成功信号、
+   * 停止信号。没设计过就是 null —— 那时终局不编一个计划，
+   * 而是把玩家送回会话页（见 `RealityQuestPanel`）。
+   */
+  readonly experiment: RealityExperiment | null;
 }
 
 /** 注入 DM prompt 的本幕世界上下文（长度有硬上限，防 prompt 爆炸）。 */

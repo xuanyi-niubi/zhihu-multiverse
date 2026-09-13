@@ -280,6 +280,23 @@ async function main() {
     'legacy 入口按蓝图存在与否收敛',
   );
 
+  /**
+   * ── 6.57 P1-2：终局是现实交接，不是报告 ─────────────────────
+   *
+   * 终局第一屏必须把「任何人替不了的那个问题」交还给玩家，
+   * 并给一条有停止信号的现实支线；旧的报告折叠保留。
+   */
+  check(
+    '终局渲染现实支线面板（P1-2）',
+    playPageSource.includes('RealityQuestPanel') && playPageSource.includes('realityQuestViewOf('),
+    '终局交接面板已接线',
+  );
+  check(
+    '旧报告折叠为「查看完整报告」',
+    playPageSource.includes('查看完整报告'),
+    '报告保留但不再占据首屏',
+  );
+
   // ── 6.6 prepare-world（P0-F）：把已澄清的会话编译成世界蓝图 ──
   const prepared = await request(
     `/api/sessions/${sessionId}`,

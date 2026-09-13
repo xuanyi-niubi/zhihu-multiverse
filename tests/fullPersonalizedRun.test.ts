@@ -11,6 +11,7 @@ import { synthesizeExperiencePaths } from '@/features/experience/pathSynthesis';
 import { legacyExperiencePaths } from '@/features/experience/legacyAdapter';
 import { compareUserToCase } from '@/features/experience/compare';
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
+import { experimentFromUnknown } from '@/features/decision-session/experiment';
 import { worldContextForTurn, unlockForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
 import { injectExperienceUnlock } from '@/features/game-world/experienceUnlock';
 import { normalizeDmInput } from '@/core/dm/input';
@@ -273,14 +274,30 @@ describe('⑥ DM 上下文与解锁选项', () => {
     expect(injected[2]!.check).toBeUndefined();
 
     // PlaySessionView：游戏端消费的最小视图形状成立
+    const experiment = blueprint.keyUnknown
+      ? experimentFromUnknown({
+          unknown: blueprint.keyUnknown,
+          frame: blueprint.problemFrame,
+          differences: blueprint.paths.flatMap((path) => path.differencesFromUser),
+          context: { goal: QUESTION, nonNegotiables: [], existingResources: [] },
+        })
+      : null;
+
     const view: PlaySessionView = {
       id: 'sess-e2e-1',
       question: QUESTION,
       profile,
       profileAnalysis: null,
       worldBlueprint: blueprint,
+      experiment,
     };
     expect(view.worldBlueprint.sessionId).toBe('sess-e2e-1');
+
+    // P1-2：终局的现实支线必须带停止信号；没有未知时就如实为 null（不编一个）
+    if (view.experiment) {
+      expect(view.experiment.stopSignal).toContain('停下');
+      expect(view.experiment.reducesUnknown).toBe(blueprint.keyUnknown?.label);
+    }
   });
 });
 
