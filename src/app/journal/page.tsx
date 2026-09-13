@@ -4,22 +4,27 @@ import * as React from 'react';
 import Link from 'next/link';
 
 /**
- * 选择日志（重构方案 §3.2 / §7.1）。
+ * 选择日志（重构方案 §3.2 / §7.1 / 收口方案 P1-4）。
  *
  * > 历史记忆，改名为「选择日志」。
  *
- * ## 它回答四个问题
+ * ## 它回答六个问题（按发生顺序）
  *
- * 1. 我曾经纠结什么
- * 2. 我做了什么实验
- * 3. 得到了什么真实结果
- * 4. 现在的判断如何变化
+ * 1. 当时我在纠结什么
+ * 2. 我看见了哪些真实经历
+ * 3. 我真正不知道什么
+ * 4. 我决定验证什么
+ * 5. 现实发生了什么
+ * 6. 我现在怎么看
  *
  * ## 与旧「命运档案馆」的区别
  *
  * 旧的是**战绩**（走了几幕、拿了几分、什么结局）；
- * 新的是**决策记录**（当时怎么想、做了什么、结果如何）。
- * 前者让人回味，后者让人复用 —— 而「真的帮到人」需要后者。
+ * 新的是**成长**（当时怎么想、看见了什么、做了什么、结果如何）。
+ * 因此这里刻意**不展示** SAN / SKILL / BOND / D20 / 世界线数值 ——
+ * 那些属于游戏过程，而日志属于成长。
+ *
+ * 没有数据的步骤**不渲染**：没看见就是没看见，不留一个空标签凑格式。
  */
 
 interface JournalEntry {
@@ -29,7 +34,16 @@ interface JournalEntry {
   readonly pathCount: number;
   readonly createdAt: string;
   readonly provenance: string;
-  readonly experiment: { readonly action: string } | null;
+  /** 经验引擎合成出的真实走法（P1-4）。 */
+  readonly experiencePathCount?: number;
+  readonly pathLabels?: readonly string[];
+  /** 这一局真正不知道的那个变量。 */
+  readonly keyUnknown?: string | null;
+  readonly experiment: {
+    readonly action: string;
+    readonly timebox?: string;
+    readonly successSignal?: string;
+  } | null;
   readonly followUp: {
     readonly dueAt: string;
     readonly answeredAt?: string;
@@ -51,6 +65,27 @@ function dayOf(iso: string): string {
   }
   const date = new Date(parsed);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * 日志里的一条「成长步骤」。
+ *
+ * 步骤标签刻意用**第一人称**：这份日志是给用户自己看的回溯，
+ * 不是系统对他的评估。没有数据的步骤由调用方直接不渲染。
+ */
+function JournalStep({
+  label,
+  children,
+}: {
+  readonly label: string;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[11px] leading-relaxed">
+      <span className="shrink-0 font-mono text-[10px] text-slate-600">{label}</span>
+      <span className="min-w-0 text-slate-400">{children}</span>
+    </p>
+  );
 }
 
 export default function JournalPage() {
@@ -112,52 +147,81 @@ export default function JournalPage() {
 
       {entries !== null && entries.length > 0 ? (
         <ol className="mt-5 flex flex-col gap-2.5">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Link
-                href={`/session/${entry.id}`}
-                className="block rounded-2xl border border-white/10 bg-ink-800/50 p-3.5 transition-colors duration-150 hover:border-zhihu-500/40"
-              >
-                <header className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-mono text-[10px] text-slate-500">{dayOf(entry.createdAt)}</span>
-                  <span className="font-mono text-[10px] text-slate-600">
-                    {entry.pathCount} 条路径
-                  </span>
-                </header>
+          {entries.map((entry) => {
+            const pathLabels = entry.pathLabels ?? [];
+            const reviewedAt = entry.followUp?.answeredAt ?? entry.followUp?.dueAt;
+            return (
+              <li key={entry.id}>
+                <Link
+                  href={`/session/${entry.id}`}
+                  className="block rounded-2xl border border-white/10 bg-ink-800/50 p-3.5 transition-colors duration-150 hover:border-zhihu-500/40"
+                >
+                  <header className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-mono text-[10px] text-slate-500">{dayOf(entry.createdAt)}</span>
+                    <span className="font-mono text-[10px] text-slate-600">
+                      {(entry.experiencePathCount ?? 0) > 0
+                        ? `${entry.experiencePathCount} 条真实走法`
+                        : `${entry.pathCount} 条路径`}
+                    </span>
+                  </header>
 
-                <p className="mt-1.5 text-[13px] font-semibold leading-snug text-slate-100">
-                  {entry.question}
-                </p>
-
-                {entry.experiment ? (
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
-                    <span className="font-mono text-slate-600">我做了：</span>
-                    {entry.experiment.action.slice(0, 80)}
-                    {entry.experiment.action.length > 80 ? '…' : ''}
+                  {/* 1. 当时我在纠结什么 */}
+                  <p className="mt-1.5 text-[13px] font-semibold leading-snug text-slate-100">
+                    {entry.question}
                   </p>
-                ) : null}
 
-                {entry.followUp ? (
-                  <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[11px]">
-                    {entry.followUp.outcome ? (
+                  {/* 2. 我看见了哪些真实经历 */}
+                  {pathLabels.length > 0 ? (
+                    <JournalStep label="我看见了真实经历">{pathLabels.join('；')}</JournalStep>
+                  ) : null}
+
+                  {/* 3. 我真正不知道什么 */}
+                  {entry.keyUnknown ? (
+                    <JournalStep label="我真正不知道">{entry.keyUnknown}</JournalStep>
+                  ) : null}
+
+                  {/* 4. 我决定验证什么 */}
+                  {entry.experiment ? (
+                    <JournalStep label="我决定验证">
+                      {entry.experiment.action}
+                      {entry.experiment.timebox ? `（${entry.experiment.timebox}）` : ''}
+                    </JournalStep>
+                  ) : null}
+
+                  {/*
+                    5 & 6：现实发生了什么 / 我现在怎么看。
+                    `outcome` 是事实（做到了 / 做了一部分 / 改了计划），
+                    `note` 是用户自己写下的判断 —— 我们不替他总结。
+                  */}
+                  {entry.followUp ? (
+                    entry.followUp.outcome ? (
                       <>
-                        <span className="rounded-md border border-white/14 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
-                          {OUTCOME_LABEL[entry.followUp.outcome] ?? entry.followUp.outcome}
-                        </span>
+                        <JournalStep label="现实发生了什么">
+                          <span className="rounded-md border border-white/14 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+                            {OUTCOME_LABEL[entry.followUp.outcome] ?? entry.followUp.outcome}
+                          </span>
+                          {reviewedAt ? (
+                            <span className="ml-2 font-mono text-[10px] text-slate-600">
+                              {dayOf(reviewedAt)}
+                            </span>
+                          ) : null}
+                        </JournalStep>
                         {entry.followUp.note ? (
-                          <span className="text-slate-400">{entry.followUp.note}</span>
+                          <JournalStep label="我现在怎么看">{entry.followUp.note}</JournalStep>
                         ) : null}
                       </>
                     ) : (
-                      <span className="font-mono text-[10px] text-amber-200/90">
-                        待回访 · {dayOf(entry.followUp.dueAt)}
-                      </span>
-                    )}
-                  </p>
-                ) : null}
-              </Link>
-            </li>
-          ))}
+                      <JournalStep label="现实验证中">
+                        <span className="font-mono text-[10px] text-amber-200/90">
+                          待回访 · {dayOf(entry.followUp.dueAt)}
+                        </span>
+                      </JournalStep>
+                    )
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
         </ol>
       ) : null}
     </main>

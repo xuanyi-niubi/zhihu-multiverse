@@ -381,8 +381,43 @@ async function main() {
   // ── 7. 选择日志能看到它 ───────────────────────────────────
   const journal = await request('/api/sessions', {}, jar);
   const journalBody = await journal.json();
-  const listed = (journalBody?.data?.sessions ?? []).some((item) => item.id === sessionId);
-  check('选择日志列出该会话', listed, `共 ${journalBody?.data?.sessions?.length ?? 0} 条`);
+  const listedEntry = (journalBody?.data?.sessions ?? []).find((item) => item.id === sessionId);
+  check(
+    '选择日志列出该会话',
+    Boolean(listedEntry),
+    `共 ${journalBody?.data?.sessions?.length ?? 0} 条`,
+  );
+
+  /**
+   * ── 7.1 P1-4：日志回答的是「成长」，不是「战绩」 ─────────────
+   *
+   * 六问里最容易丢的是中间两步：我看见了哪些真实经历、我真正不知道什么。
+   * 只留「我问了什么 + 我做了什么」，日志就退化成任务列表。
+   */
+  check(
+    '日志条目带「我真正不知道什么」',
+    typeof listedEntry?.keyUnknown === 'string' && listedEntry.keyUnknown.length > 0,
+    String(listedEntry?.keyUnknown),
+  );
+  check(
+    '日志条目带真实走法与要验证的实验',
+    (listedEntry?.pathLabels ?? []).length > 0 && typeof listedEntry?.experiment?.action === 'string',
+    `paths=${(listedEntry?.pathLabels ?? []).length} experiment=${listedEntry?.experiment ? 'yes' : 'no'}`,
+  );
+
+  const journalSource = await readFile(new URL('../src/app/journal/page.tsx', import.meta.url), 'utf8');
+  check(
+    '日志按成长六问组织',
+    ['我看见了真实经历', '我真正不知道', '我决定验证', '现实发生了什么', '我现在怎么看'].every((label) =>
+      journalSource.includes(label),
+    ),
+    '成长叙事已接线',
+  );
+  check(
+    '日志不展示战斗数值（成长 ≠ 战绩）',
+    !journalSource.includes('state.stats') && !journalSource.includes('statDeltas'),
+    '未引入战斗数值展示',
+  );
 
   // ── 8. 删除入口真的能删 ───────────────────────────────────
   const removed = await request(`/api/sessions/${sessionId}`, { method: 'DELETE' }, jar);

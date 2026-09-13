@@ -150,7 +150,23 @@ export async function GET(request: Request): Promise<Response> {
           createdAt: session.createdAt,
           provenance: session.retrievalRun?.provenance ?? 'offline',
           followUp: session.followUp,
-          experiment: session.experiment ? { action: session.experiment.action } : null,
+          /**
+           * 日志页要回答的不只是「我当时问了什么」，还有
+           * 「我看见了哪些真实经历」与「我真正不知道什么」（P1-4）。
+           *
+           * `pathLabels` 取的是**经验引擎**合成出来的走法（不是旧
+           * pathClusters）—— 那才是这一局真正喂给玩家与世界蓝图的东西。
+           */
+          experiencePathCount: (session.experiencePaths ?? []).length,
+          pathLabels: (session.experiencePaths ?? []).map((path) => path.label).slice(0, 3),
+          keyUnknown: session.worldBlueprint?.keyUnknown?.label ?? null,
+          experiment: session.experiment
+            ? {
+                action: session.experiment.action,
+                timebox: session.experiment.timebox,
+                successSignal: session.experiment.successSignal,
+              }
+            : null,
         })),
       },
       meta: { traceId: trace.traceId },
