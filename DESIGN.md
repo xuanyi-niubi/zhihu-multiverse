@@ -204,7 +204,7 @@ AI Narrative Layer（把结果叙事化，**不修改结果**）
 降低目标改路径要求 / 用 Reversibility 退回原世界线）——
 这些动作进入真实世界状态，而不是只改文案。
 
-**判定标准重构**：赢 ≠ 走完四幕。四维认知结算（`core/decision/clarity.ts`）：
+**判定标准重构**：赢 ≠ 走完几幕。终局问的是「你的问题是否比开始时更清楚」——所以结局是一次**问题重写**，不是一次判卷。四维认知结算（`core/decision/clarity.ts`）：
 **清晰度**（能否说清自己在哪条轴上最紧）· **证据覆盖** · **代价认知**（预判 vs 真实）·
 **可逆性管理**（有没有留退路）。
 
@@ -866,10 +866,10 @@ DialogueBox（内容自然撑开）。禁止在根节点使用 `h-screen + overf
 | 主轴 | 位置 | 角色 |
 |---|---|---|
 | `DecisionSession` | `src/features/decision-session/` | **后台业务主轴**：问题 → 动态澄清 → prepare-world → 蓝图 → 实验 |
-| Play（推演舱） | `src/app/play/page.tsx` | **前台游戏主轴**：多幕剧本 + 裁决 + 遗物；`/play?session=<id>` 消费世界蓝图 |
+| Play（推演舱） | `src/app/play/page.tsx` | **前台叙事主轴**：`/play?session=<id>` 消费世界蓝图，只呈现叙事 / 选项 / 借来的经验 / 问题重写；数值与骰子等旧机制只服务 legacy 路径 |
 | 经验引擎 | `src/features/experience/` | **新链**：检索 → 逐字片段 → 经历 → 动态路径 → 差异对照 |
 | 世界编译 | `src/features/game-world/` | **经验 → 游戏**：`compileWorld`（纯函数）+ DM 上下文切片 + 解锁注入 |
-| 首页 | `src/app/page.tsx` | 单一主链入口：一个问题输入 + 一个 CTA（生成我的平行宇宙）+ 一句解释；旧剧本入口降级为次级按钮 |
+| 首页 | `src/app/page.tsx` | **只做一个任务**：让用户说出一个真实困惑。一个问题输入 + 一个 CTA + 一句「我们不会替你决定」；Case / Origin / Seed / Domain / 引擎状态一律不出现 |
 
 #### 已落地的 Experience Engine（P0-A～P0-H）
 
@@ -884,7 +884,7 @@ ProblemFrame（分离现实事实与叙事推断）            frame.ts
   → ExperienceCase（把同一来源的片段拼成「一个人的经历」）  cases.ts
   → ExperiencePath（模型只分组不创作；验证不过回落 legacy 聚类）  pathSynthesis.ts / legacyAdapter.ts
   → UserDifference（数值算术 / 逐字命中，否则 unknown）  compare.ts
-  → WorldBlueprint（纯函数编译：进入世界 → 体验代价 → 遇见反例 → 终局反思）  game-world/compileWorld.ts
+  → WorldBlueprint（纯函数编译三幕：走进去 → 代价出现 → 反例出现）      game-world/compileWorld.ts
   → /play?session=<id> 消费 Blueprint（LOAD_WORLD_BLUEPRINT，与 memory 同模式异步装载）
   → DmTurnInput.worldContext（本幕冲突 + 可引用原文 + 差异 + 现实边界；sourceFacts 转引用片段，整局不再逐幕搜索）
   → Experience Unlock Choice（选项 <3 才注入、无检定、带【经验解锁】徽标可回溯原文）
