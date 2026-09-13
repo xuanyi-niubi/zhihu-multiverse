@@ -4,30 +4,31 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+import { ClarificationStep } from '@/components/session/ClarificationStep';
+import { WorldCompiling, type CompileStage } from '@/components/session/WorldCompiling';
+
 import type { ClarifyQuestion } from '@/features/decision-session/clarify';
 import type { DecisionSession } from '@/features/decision-session/domain';
 
 /**
- * 会话页（产品减法重构方案 §6 / §7 / §10）。
+ * 会话页（产品化方案 §6 / §14 / §15 / §16 / §46）。
  *
- * ## 它不再是一份报告
- *
- * 旧版在这里先摊开「别人走过的 3 条路 + 支持证据 + 反对证据 + 未知」，
- * 再让用户点「生成我的世界」—— 那会把产品拉回 AI 咨询工具（§10），
- * 也会让用户以为「看报告」才是正事。
- *
- * ## 它现在是一条通道
+ * ## 它不是页面，是一段连续转场
  *
  * ```text
- * 必要时 1~2 个澄清问题
- * ↓  去问：会改变下面任一项才值得问 —— 搜什么 / 比较谁 / 冲突是什么 / 最后该验证什么
- * 「我去找找，有没有人活过你正在纠结的这几种人生。」   ← 刘看山第一次出现（§35）
- * ↓
- * 编译世界 → 直接进入游戏（/play?session=）
+ * 必要时一题一屏的澄清
+ * ↓  刘看山第一次出现（§35）
+ * 「我去找找，有没有人活过你正在纠结的这几种人生。」
+ * ↓  真实阶段（检索三类经历 → 编译世界），只有真的找到才打勾
+ * ↓  自动进入游戏 —— 用户不需要理解 Session / prepare-world 这些词
  * ```
  *
- * 路径与证据不再先给用户看：它们退到后台，由世界编译器消费（§10），
- * 玩家在游戏里通过**经验卡**遇见具体的人（§13/§23）。
+ * ## 三条纪律
+ *
+ * 1. **一题一屏**：不在一个面板里堆所有问题（§15）。
+ * 2. **状态必须真实**：✓ 只出现在真的找到来源的那一类上（§16）。
+ * 3. **失败可退可重试**：没找到就如实说，给「换个说法」与「仍然进入」两条路，
+ *    不把用户困在一个转圈页上（§40 的 fallback 链终点是「明确失败」）。
  */
 
 interface SessionView {
@@ -42,7 +43,36 @@ interface SessionView {
   readonly experiment: DecisionSession['experiment'];
   readonly followUp: DecisionSession['followUp'];
   readonly questions: readonly ClarifyQuestion[];
+  readonly experienceFacts?: DecisionSession['experienceFacts'];
 }
+
+const INTENT_LABELS: readonly { readonly id: CompileStage['id']; readonly label: string }[] = [
+  { id: 'similar-person', label: '找到与你处境相近的经历' },
+  { id: 'alternative', label: '找到另一种走法' },
+  { id: 'counterexample', label: '找到一条结果相反的经历' },
+];
+
+/** 从**真实检索结果**派生三类经历的命中数（没找到就是 0，不假装）。 */
+function stagesFrom(view: SessionView | null): readonly CompileStage[] {
+  const facts = view?.experienceFacts ?? [];
+  return INTENT_LABELS.map((intent) => ({
+    id: intent.id,
+    label: intent.label,
+    found:
+      view === null
+        ? null
+        : facts.filter((fact) => {
+            if (intent.id === 'counterexample') {
+              // 反例这一类把失败经历也算上（与 compileWorld 的四轮优先级同一口径）
+              return fact.purposes.includes('counterexample') || fact.purposes.includes('failure');
+            }
+            return fact.purposes.includes(intent.id);
+          }).length,
+  }));
+}
+
+/** 编译完成后，让用户看一眼真实结果再进入游戏 —— 不留白，也不拖延。 */
+const ENTER_DELAY_MS = 1400;
 
 export default function SessionPage() {
   const params = useParams<{ id: string }>();
@@ -53,6 +83,7 @@ export default function SessionPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [compileFailed, setCompileFailed] = React.useState(false);
 
   React.useEffect(() => {
     if (!id) {
@@ -88,7 +119,7 @@ export default function SessionPage() {
     return () => controller.abort();
   }, [id]);
 
-  /** 统一派发：所有动作都走这里，错误处理只有一份。 */
+  /** 统一派发：动作只有一个入口，错误处理只有一份。 */
   const act = React.useCallback(
     async (body: Record<string, unknown>) => {
       if (!id) {
@@ -96,6 +127,7 @@ export default function SessionPage() {
       }
       setBusy(true);
       setError(null);
+      setCompileFailed(false);
       try {
         const response = await fetch(`/api/sessions/${id}`, {
           method: 'PATCH',
@@ -109,11 +141,18 @@ export default function SessionPage() {
         };
         if (payload.ok && payload.data) {
           setView(payload.data);
-        } else {
-          setError(payload.error?.message ?? '这一步没有成功。');
+          return;
+        }
+        // 编译失败要能被用户看见并重试，而不是静默停在转圈页上
+        setError(payload.error?.message ?? '这一步没有成功。');
+        if (body.action === 'prepare-world') {
+          setCompileFailed(true);
         }
       } catch {
         setError('网络没有响应，请再试一次。');
+        if (body.action === 'prepare-world') {
+          setCompileFailed(true);
+        }
       } finally {
         setBusy(false);
       }
@@ -123,49 +162,46 @@ export default function SessionPage() {
 
   const status = view?.status ?? null;
 
-  /**
-   * 澄清答完就**自动**编译世界（§6）：用户不需要知道「prepare-world」这一步。
-   * 用 ref 守住，避免状态回流导致的重复请求。
-   */
+  /** 澄清答完（或本来就不需要澄清）→ 自动编译。 */
   const autoPreparedRef = React.useRef(false);
   React.useEffect(() => {
-    if (!view || busy || autoPreparedRef.current) {
+    if (!view || busy || autoPreparedRef.current || compileFailed) {
       return;
     }
     if (view.status === 'comparing' || view.status === 'choosing_unknown') {
       autoPreparedRef.current = true;
       void act({ action: 'prepare-world' });
     }
-  }, [act, busy, view]);
+  }, [act, busy, compileFailed, view]);
 
-  /**
-   * 世界就绪就**自动**进入游戏（§6）。做不到时（例如浏览器拦了跳转）
-   * 页面上留一个兜底按钮，不让用户卡在一句「已就绪」上。
-   */
+  /** 世界就绪 → 让用户看清真实检索结果，再自动进入游戏。 */
   const autoEnteredRef = React.useRef(false);
   React.useEffect(() => {
     if (!view || view.status !== 'ready_to_play' || autoEnteredRef.current) {
       return;
     }
     autoEnteredRef.current = true;
-    router.replace(`/play?session=${encodeURIComponent(view.id)}`);
+    const timer = window.setTimeout(() => {
+      router.replace(`/play?session=${encodeURIComponent(view.id)}`);
+    }, ENTER_DELAY_MS);
+    return () => window.clearTimeout(timer);
   }, [router, view]);
 
   if (loading) {
     return (
-      <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-16">
-        <p className="font-mono text-[11px] text-slate-500">正在读取这次梳理…</p>
+      <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-20">
+        <p className="font-mono text-[11px] text-slate-600">正在读取这次梳理…</p>
       </main>
     );
   }
 
   if (error && !view) {
     return (
-      <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-16">
-        <p role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/[0.08] px-4 py-3 text-[13px] text-rose-200">
+      <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-20">
+        <p role="alert" className="rounded-2xl border border-rose-400/30 bg-rose-400/[0.05] px-4 py-3 text-[13px] text-rose-200">
           {error}
         </p>
-        <Link href="/" className="btn-ghost mt-4 inline-flex text-xs">
+        <Link href="/" className="btn-ghost mt-5 inline-flex text-xs">
           回到首页
         </Link>
       </main>
@@ -178,137 +214,119 @@ export default function SessionPage() {
 
   const showClarify = status === 'clarifying';
   const worldReady = status === 'ready_to_play';
+  const stages = stagesFrom(worldReady ? view : null);
+  const foundTotal = stages.reduce((sum, stage) => sum + (stage.found ?? 0), 0);
+  /**
+   * 只有两个真实状态：`searching`（等着）与 `done`（服务端已经给出结果）。
+   *
+   * 刻意不做「编译中」这一档 —— 没有流式接口之前，我们**看不见**它，
+   * 而编一个中间态就是假动画（§16 明确禁止）。
+   */
+  const phase: 'searching' | 'done' = worldReady ? 'done' : 'searching';
 
   return (
-    <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-14">
+    <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-16">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] tracking-[0.2em] text-slate-500">你问的是</p>
-          <h1 className="mt-1 text-[15px] font-bold leading-snug text-slate-100">{view.question}</h1>
+          <p className="act-label">你问的是</p>
+          <h1 className="mt-1.5 text-[16px] font-semibold leading-relaxed text-slate-100">
+            {view.question}
+          </h1>
         </div>
-        <Link href="/" className="btn-ghost shrink-0 text-xs">
+        <Link href="/" className="shrink-0 font-mono text-[11px] text-slate-600 transition-colors duration-200 hover:text-slate-300">
           换个问题
         </Link>
       </header>
 
-      {/* 刘看山第一次出现（§35）：全局只出现三次，这是第一次 */}
-      <p className="mt-5 text-[13px] leading-relaxed text-slate-300">
+      {/* 刘看山第一次出现（§35：全局只出现三次） */}
+      <p className="mt-6 text-[14px] leading-relaxed text-slate-300">
         我去找找，有没有人活过你正在纠结的这几种人生。
       </p>
 
       {error ? (
-        <p role="alert" className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/[0.08] px-3 py-2 text-[12px] text-rose-200">
+        <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/[0.05] px-3 py-2 text-[12px] text-rose-200">
           {error}
         </p>
       ) : null}
 
       {showClarify ? (
-        <ClarifyStage
+        <ClarificationStep
           questions={view.questions}
           busy={busy}
           onSubmit={(answers) => void act({ action: 'clarify', answers })}
         />
       ) : (
-        <section className="mt-6">
+        <>
+          <WorldCompiling stages={stages} phase={phase} />
+
           {worldReady ? (
-            <Link
-              href={`/play?session=${encodeURIComponent(id)}`}
-              data-destination="play-session"
-              className="arcade-btn flex w-full justify-center bg-zhihu-500 text-white"
-            >
-              进入我的平行宇宙
-            </Link>
-          ) : (
-            <>
-              <p className="font-mono text-[11px] leading-relaxed text-slate-500">
-                {busy ? '正在知乎里找走过这条路的人…' : '正在编译这一局的世界…'}
-              </p>
+            <div className="mt-6">
+              {foundTotal === 0 ? (
+                /**
+                 * 一条都没找到：§40 的 fallback 链终点是「明确失败」，
+                 * 所以这里如实说，并给两条出路 —— 不假装、也不困住用户。
+                 */
+                <div className="quiet-panel">
+                  <p className="text-[13px] leading-relaxed text-slate-300">
+                    这一次没有找到可核对的真实经历 —— 我们不会用编造的内容把世界填满。
+                  </p>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500">
+                    换一种说法再试（例如补上你的年级、专业、能投入的时间），通常就能找到人。
+                  </p>
+                  <div className="mt-3.5 flex flex-wrap gap-3">
+                    <Link href="/" className="door-btn max-w-[240px]">
+                      换一种说法再试
+                    </Link>
+                    <Link
+                      href={`/play?session=${encodeURIComponent(id)}`}
+                      data-destination="play-session"
+                      className="btn-ghost text-xs"
+                    >
+                      仍然进入（这一局没有别人的经验）
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  href={`/play?session=${encodeURIComponent(id)}`}
+                  data-destination="play-session"
+                  className="door-btn"
+                >
+                  进入我的平行宇宙
+                </Link>
+              )}
+            </div>
+          ) : compileFailed ? (
+            <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"
                 data-action="prepare-world"
                 disabled={busy}
                 onClick={() => void act({ action: 'prepare-world' })}
-                className="arcade-btn mt-4 w-full bg-zhihu-500 text-white disabled:opacity-50"
+                className="door-btn max-w-[240px] disabled:opacity-50"
+              >
+                {busy ? '正在重试…' : '重试一次'}
+              </button>
+              <Link href="/" className="btn-ghost text-xs">
+                换个问题
+              </Link>
+            </div>
+          ) : (
+            /* 兜底入口：自动跳转被拦时，用户仍有明确的一步可走 */
+            <div className="mt-6">
+              <button
+                type="button"
+                data-action="prepare-world"
+                disabled={busy}
+                onClick={() => void act({ action: 'prepare-world' })}
+                className="door-btn disabled:opacity-50"
               >
                 {busy ? '正在找…' : '进入我的平行宇宙'}
               </button>
-              <p className="mt-3 text-[11px] leading-relaxed text-slate-600">
-                如果迟迟没有动静，点上面这个按钮重试一次。
-              </p>
-            </>
+            </div>
           )}
-        </section>
+        </>
       )}
     </main>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* 澄清 stage                                                                  */
-/* -------------------------------------------------------------------------- */
-
-function ClarifyStage({
-  questions,
-  busy,
-  onSubmit,
-}: {
-  readonly questions: readonly ClarifyQuestion[];
-  readonly busy: boolean;
-  readonly onSubmit: (answers: Record<string, string | undefined>) => void;
-}) {
-  const [answers, setAnswers] = React.useState<Record<string, string | undefined>>({});
-
-  return (
-    <section className="mt-6">
-      <p className="text-[12px] leading-relaxed text-slate-500">
-        先确认{questions.length > 1 ? ` ${questions.length} 件` : '一件'}会真正改变这个世界的事
-        —— 每一问都能跳过，跳过的地方我们写「待验证」，不替你猜。
-      </p>
-
-      <div className="mt-3.5 flex flex-col gap-3">
-        {questions.map((question) => (
-          <fieldset key={question.id} className="panel p-3.5">
-            <legend className="px-1 text-[12px] font-semibold text-slate-200">{question.question}</legend>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{question.hint}</p>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {question.options?.map((option) => {
-                const active = answers[question.id] === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() =>
-                      setAnswers((prev) => ({
-                        ...prev,
-                        // 再点一次取消选择，让「跳过」是一个明确动作
-                        [question.id]: active ? undefined : option.id,
-                      }))
-                    }
-                    className={[
-                      'rounded-xl border px-2.5 py-1.5 text-[11px] transition-colors duration-150',
-                      active
-                        ? 'border-zhihu-500/70 bg-zhihu-500/15 text-zhihu-100'
-                        : 'border-white/12 bg-white/[0.02] text-slate-400 hover:border-white/25 hover:text-slate-200',
-                    ].join(' ')}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => onSubmit(answers)}
-        className="arcade-btn mt-4 w-full bg-zhihu-500 text-white disabled:opacity-50"
-      >
-        {busy ? '正在整理…' : '继续'}
-      </button>
-    </section>
   );
 }

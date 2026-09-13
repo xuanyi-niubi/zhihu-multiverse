@@ -187,3 +187,48 @@ describe('新主链的死路防护', () => {
     expect(source).toContain("state.phase === 'critical' && !isSessionMode");
   });
 });
+
+/**
+ * 编译体验（方案 §15 / §16 / §46）：一题一屏、真实状态、失败可退。
+ *
+ * 这三条最容易在实现里被"顺手"破坏：把问题又堆回一屏、给没找到的类别
+ * 打勾、或者卡在一个没有出口的转圈页上。
+ */
+describe('Session 编译体验', () => {
+  const page = () => readFileSync(new URL('../src/app/session/[id]/page.tsx', import.meta.url), 'utf8');
+  const step = () => readFileSync(new URL('../src/components/session/ClarificationStep.tsx', import.meta.url), 'utf8');
+
+  it('澄清是一题一屏（有 index 状态，而不是把 questions 全渲染）', () => {
+    const source = step();
+    expect(source).toContain('useState(0)');
+    expect(source).toContain('questions[index]');
+    // 不允许出现 map 全部问题的渲染（那就会一屏多题）
+    expect(source).not.toContain('questions.map(');
+  });
+
+  it('✓ 只给真的找到的那一类（找不到就如实写没找到）', () => {
+    const source = readFileSync(
+      new URL('../src/components/session/WorldCompiling.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(source).toContain('这一类暂时没找到');
+    expect(source).toContain('hit ? \'✓\' : \'—\'');
+  });
+
+  it('编译状态只有两个真实档，不编「编译中」中间态', () => {
+    const source = page();
+    expect(source).toContain("const phase: 'searching' | 'done'");
+    expect(source).not.toContain("'compiling'");
+  });
+
+  it('失败可重试、可换问题，不把用户困在转圈页', () => {
+    const source = page();
+    expect(source).toContain('重试一次');
+    expect(source).toContain('换一种说法再试');
+    expect(source).toContain('仍然进入');
+  });
+
+  it('刘看山第一次出现仍在会话页（§35）', () => {
+    expect(page()).toContain('我去找找，有没有人活过你正在纠结的这几种人生。');
+  });
+});

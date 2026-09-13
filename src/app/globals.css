@@ -482,3 +482,88 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 产品化视觉语言（方案 §9-§13）：安静、克制、电影感、档案感            */
+/*                                                                     */
+/* 与上面的街机语言并存而不是替换 —— 旧路径仍在用 arcade-btn / gmv-*，   */
+/* 新主链只用下面这一组：像一扇门，而不是游戏机按键。                    */
+/* ------------------------------------------------------------------ */
+
+@layer components {
+  /* 主 CTA：像一扇门。没有 3D 下沿、没有街机发光，只有边缘一丝亮。 */
+  .door-btn {
+    @apply relative inline-flex min-h-12 w-full items-center justify-center rounded-2xl
+      border border-zhihu-500/45 bg-zhihu-500/[0.14] px-6 py-3.5 text-[15px] font-semibold
+      tracking-[0.02em] text-zhihu-50 transition-all duration-300 ease-out
+      hover:border-zhihu-400/70 hover:bg-zhihu-500/[0.22] active:scale-[0.995]
+      disabled:cursor-not-allowed disabled:opacity-45;
+  }
+
+  /* 档案面板：比 panel 更平，几乎不投影 —— 纸张感来自边线而不是光晕 */
+  .quiet-panel {
+    @apply relative rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3.5;
+  }
+
+  /* 幕标 / 来源标：mono 只用于这种短标签，正文一律用无衬线正文层 */
+  .act-label {
+    @apply font-mono text-[11px] tracking-[0.28em] text-slate-500;
+  }
+
+  /* 知乎来源链接：全局只有一个"可点回原文"的样子 */
+  .source-link {
+    @apply inline-flex items-center gap-1 font-mono text-[11px] font-semibold
+      text-zhihu-300 transition-colors duration-200 hover:text-zhihu-100;
+  }
+
+  /* 借来的经验（方案 §10：柔和青绿，不要 RPG 金色） */
+  .unlock-card {
+    @apply relative rounded-2xl border border-relic-jade/35 bg-relic-jade/[0.06] px-4 py-3.5;
+  }
+
+  /* 反例（方案 §10：低饱和琥珀，不要大红警告） */
+  .counter-card {
+    @apply relative rounded-2xl border border-amber-300/25 bg-amber-300/[0.045] px-4 py-3.5;
+  }
+
+  /* 编译期的"人生轨迹"线：一条极淡的横线，找到来源时亮点 */
+  .trajectory-line {
+    @apply relative h-px w-full bg-white/10;
+  }
+
+  .trajectory-dot {
+    @apply absolute -top-[3px] h-[7px] w-[7px] rounded-full bg-relic-jade/80
+      shadow-[0_0_10px_2px_rgba(61,214,160,0.35)];
+  }
+}
+
+/* 新行动出现：全产品唯一的高光动画（方案 §22） */
+@keyframes gmv-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gmv-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .reveal-in {
+    animation: gmv-reveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .fade-in {
+    animation: gmv-fade-in 320ms ease-out both;
+  }
+}
