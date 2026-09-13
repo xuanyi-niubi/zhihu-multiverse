@@ -3,6 +3,7 @@ import type {
   WorldActSpec,
   WorldBlueprint,
 } from '@/features/game-world/domain';
+import { buildExperienceCases } from '@/features/experience/cases';
 import type {
   ExperienceFact,
   ExperiencePath,
@@ -251,6 +252,11 @@ export function compileWorldBlueprint(input: CompileWorldBlueprintInput): WorldB
     keyUnknown: keyUnknownOf(input.frame, input.paths),
     acts: actsOf(input.paths, input.facts, unlocks),
     experienceFacts: input.facts,
+    /**
+     * 卡片数据（§13）：把片段按来源聚成「一个人的一段经历」。
+     * 只做分组，不新增内容 —— 与 Experience Engine 同一套 cases 规则。
+     */
+    experienceCases: buildExperienceCases(input.facts),
     unlocks,
     forbiddenClaims: FORBIDDEN_CLAIMS,
   };

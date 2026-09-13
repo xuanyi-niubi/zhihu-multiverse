@@ -39,8 +39,10 @@ export interface SessionEndgameProps {
   readonly experiment: RealityExperiment | null;
   /** 你选过的行动（按顺序，用于轻量回顾）。 */
   readonly steps: readonly string[];
-  /** 收集到的经验卡（借来的经验），用于回顾「你多看见了什么」。 */
-  readonly cards: readonly string[];
+  /** 这一局你看见了什么（有出处的回顾条目，来自 questView）。 */
+  readonly highlights: readonly string[];
+  /** 真实经验替你解锁、而你真的用过的行动（§14/§15）。 */
+  readonly unlockedActions: readonly string[];
   readonly className?: string;
 }
 
@@ -64,7 +66,8 @@ export function SessionEndgame({
   keyUnknown,
   experiment,
   steps,
-  cards,
+  highlights,
+  unlockedActions,
   className = '',
 }: SessionEndgameProps) {
   const [copied, setCopied] = React.useState(false);
@@ -128,16 +131,32 @@ export function SessionEndgame({
         </div>
       ) : null}
 
-      {cards.length > 0 ? (
+      {highlights.length > 0 ? (
+        <div className="relative mt-4 border-t border-white/8 pt-3.5">
+          <p className="font-mono text-[10px] tracking-[0.2em] text-slate-500">你看见了什么</p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {highlights.map((item) => (
+              <li key={item} className="flex gap-2 text-[12px] leading-relaxed text-slate-400">
+                <span aria-hidden="true" className="text-slate-600">
+                  ·
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {unlockedActions.length > 0 ? (
         <div className="relative mt-4 border-t border-white/8 pt-3.5">
           <p className="font-mono text-[10px] tracking-[0.2em] text-slate-500">你多看见的行动</p>
           <ul className="mt-2 flex flex-col gap-1">
-            {cards.map((card) => (
-              <li key={card} className="flex gap-2 text-[12px] leading-relaxed text-slate-300">
+            {unlockedActions.map((action) => (
+              <li key={action} className="flex gap-2 text-[12px] leading-relaxed text-slate-300">
                 <span aria-hidden="true" className="text-zhihu-300">
                   ◆
                 </span>
-                <span>{card}</span>
+                <span>{action}</span>
               </li>
             ))}
           </ul>

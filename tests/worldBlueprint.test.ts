@@ -254,3 +254,33 @@ describe('P0-8：解锁只从行动经验生成', () => {
     expect(blueprint.unlocks[0]!.label.length).toBeLessThanOrEqual(12);
   });
 });
+
+/**
+ * 经验卡（§13）：蓝图必须带上「按人聚合的经历」，卡片才有数据可渲染。
+ */
+describe('经验卡数据（§13）', () => {
+  it('蓝图带 experienceCases，且每条片段都能回到来源', () => {
+    const blueprint = compileWorldBlueprint({
+      sessionId: 's1',
+      frame: frame(),
+      paths: [path()],
+      facts: [
+        fact('fact:c', 'condition', '我当时大二，基础一般，没有把握。'),
+        fact('fact:a', 'action', '先用一周完成一个最小项目。'),
+        fact('fact:o', 'outcome', '发现真正缺的是协作，而不是技术。'),
+      ],
+    });
+
+    expect(blueprint.experienceCases?.length).toBeGreaterThan(0);
+    const card = blueprint.experienceCases![0]!;
+    expect(card.actions[0]!.exactQuote).toBe('先用一周完成一个最小项目。');
+    expect(card.conditions[0]!.exactQuote).toContain('基础一般');
+    // 卡片上的每一句都能点回原文
+    expect(card.sourceUrl.length).toBeGreaterThan(0);
+  });
+
+  it('没有事实时不编卡片', () => {
+    const blueprint = compileWorldBlueprint({ sessionId: 's1', frame: frame(), paths: [], facts: [] });
+    expect(blueprint.experienceCases?.length ?? 0).toBe(0);
+  });
+});

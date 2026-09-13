@@ -1,4 +1,5 @@
 import type {
+  ExperienceCase,
   ExperienceFact,
   ExperiencePath,
   ProblemFrame,
@@ -132,6 +133,14 @@ export interface WorldBlueprint {
   readonly acts: readonly WorldActSpec[];
 
   readonly experienceFacts: readonly ExperienceFact[];
+
+  /**
+   * 本局用到的「一个人的一段经历」（Experience Card 的数据源，§13）。
+   *
+   * 可选：早期落盘的蓝图没有这个字段，页面按「没有卡片」降级，
+   * 不因为缺字段而崩。
+   */
+  readonly experienceCases?: readonly ExperienceCase[];
 
   readonly unlocks: readonly ExperienceChoiceUnlock[];
 

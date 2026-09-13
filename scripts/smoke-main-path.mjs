@@ -287,9 +287,21 @@ async function main() {
    * 并给一条有停止信号的现实支线；旧的报告折叠保留。
    */
   check(
-    '终局渲染现实支线面板（P1-2）',
-    playPageSource.includes('RealityQuestPanel') && playPageSource.includes('realityQuestViewOf('),
+    '终局换成「问题重写 + 现实支线」（§21/§30）',
+    playPageSource.includes('SessionEndgame') && playPageSource.includes('realityQuestViewOf('),
     '终局交接面板已接线',
+  );
+  check(
+    '新主链把旧机制撤出主路径（§3/§12/§19/§20）',
+    playPageSource.includes('const isSessionMode') &&
+      playPageSource.includes('usesTerminalEnding') &&
+      playPageSource.includes('SessionEndgame'),
+    'isSessionMode + 终端分支 legacy 专用',
+  );
+  check(
+    '经验卡取代遗物面板（§13）',
+    playPageSource.includes('ExperienceCardPanel') && playPageSource.includes('sessionExperienceCards'),
+    '借来的经验抽屉已接线',
   );
   check(
     '旧报告折叠为「查看完整报告」',

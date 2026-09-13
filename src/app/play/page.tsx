@@ -36,8 +36,8 @@ import { EngineStatusBar } from '@/components/EngineStatusBar';
 import { AxisHUD } from '@/components/AxisHUD';
 import { EventCard } from '@/components/EventCard';
 import { ExperienceSourceModal } from '@/components/game/ExperienceSourceModal';
-import { RealityQuestPanel } from '@/components/game/RealityQuestPanel';
 import { SessionEndgame } from '@/components/game/SessionEndgame';
+import { ExperienceCardPanel, cardDataFrom } from '@/components/game/ExperienceCardPanel';
 import { WorldlineRail, worldlineStateOf } from '@/components/worldline/Worldline';
 import { CommitPicker, type CommitCandidate } from '@/components/CommitPicker';
 import { axisCapsFor } from '@/core/decision/axis';
@@ -1417,6 +1417,8 @@ function PlayScreen() {
    * 从蓝图里现取，这样即使蓝图在过程中更新，弹层显示的也永远是最新事实。
    */
   const [sourceChoice, setSourceChoice] = React.useState<ScenarioChoice | null>(null);
+  /** 经验卡抽屉（§13）：新主链里它取代了遗物面板。 */
+  const [experienceOpen, setExperienceOpen] = React.useState(false);
   const [constraints, setConstraints] = React.useState<ConstraintProfile>(() => loadConstraints());
   const [exploredPathIds, setExploredPathIds] = React.useState<readonly string[]>([]);
   /** 运行模式（v2 §11）：由服务端真实能力决定，界面不自己拼条件。 */
@@ -1828,6 +1830,35 @@ function PlayScreen() {
    *
    * 网格代码一行未删 —— legacy 推演与蓝图加载失败时的降级路径仍然用它。
    */
+  /**
+   * 本局**真正用到**的经验卡（§13）：只列被某一幕或某个解锁引用过的经历，
+   * 而不是把检索到的所有经历都摊给玩家看。
+   */
+  const sessionExperienceCards = React.useMemo(() => {
+    const blueprint = sessionView?.worldBlueprint;
+    if (!blueprint || !blueprint.experienceCases) {
+      return [];
+    }
+    const usedFactIds = new Set<string>([
+      ...blueprint.acts.flatMap((act) => act.experienceFactIds),
+      ...blueprint.unlocks.flatMap((unlock) => unlock.sourceFactIds),
+    ]);
+    const differences = blueprint.paths.flatMap((path) => path.differencesFromUser);
+
+    return blueprint.experienceCases
+      .filter((experienceCase) =>
+        [
+          ...experienceCase.conditions,
+          ...experienceCase.actions,
+          ...experienceCase.costs,
+          ...experienceCase.outcomes,
+          ...experienceCase.reflections,
+        ].some((fact) => usedFactIds.has(fact.id)),
+      )
+      .slice(0, 6)
+      .map((experienceCase) => cardDataFrom(experienceCase, differences));
+  }, [sessionView?.worldBlueprint]);
+
   /**
    * 终局回顾用：这一局玩家做过的每个行动（方案 §22 的轻量回顾）。
    *
@@ -2442,15 +2473,26 @@ function PlayScreen() {
             <span className="font-mono text-[10px] tracking-[0.25em] text-slate-500">
               第 {currentTurn.turnIndex} / {state.totalActs} 幕
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = '/';
-              }}
-              className="font-mono text-[10px] text-slate-600 transition-colors duration-150 hover:text-slate-300"
-            >
-              换一个问题
-            </button>
+            <span className="flex items-center gap-3">
+              {sessionExperienceCards.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setExperienceOpen(true)}
+                  className="font-mono text-[10px] text-zhihu-300 transition-colors duration-150 hover:text-zhihu-100"
+                >
+                  借来的经验 · {sessionExperienceCards.length}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = '/';
+                }}
+                className="font-mono text-[10px] text-slate-600 transition-colors duration-150 hover:text-slate-300"
+              >
+                换一个问题
+              </button>
+            </span>
           </div>
         </div>
       )}
@@ -2524,7 +2566,8 @@ function PlayScreen() {
                   keyUnknown={sessionView?.worldBlueprint?.keyUnknown?.label ?? null}
                   experiment={sessionView?.experiment ?? null}
                   steps={sessionSteps}
-                  cards={sessionCards}
+                  highlights={realityQuest?.seen ?? []}
+                  unlockedActions={sessionCards}
                 />
               ) : null}
 
@@ -2570,28 +2613,6 @@ function PlayScreen() {
                 玩家带走的问题（keyUnknown）在这一屏被明确交还给他，
                 并附上一条有停止信号的现实支线。
               */}
-              {realityQuest ? (
-                <RealityQuestPanel
-                  keyUnknown={realityQuest.keyUnknown}
-                  experiment={sessionView?.experiment ?? null}
-                  seen={realityQuest.seen}
-                  claimed={
-                    realityQuest.candidate
-                      ? committedMap[realityQuest.candidate.id] !== undefined
-                      : false
-                  }
-                  claiming={
-                    realityQuest.candidate ? committingId === realityQuest.candidate.id : false
-                  }
-                  onClaim={() => {
-                    if (realityQuest.candidate) {
-                      return handleCommit(realityQuest.candidate);
-                    }
-                    return undefined;
-                  }}
-                  {...(realityQuest.designHref ? { designHref: realityQuest.designHref } : {})}
-                />
-              ) : null}
 
               {/*
                 P1-2：旧的「生成报告 → 一堆指标」折叠保留。
@@ -2770,7 +2791,18 @@ function PlayScreen() {
         )}
       </div>
 
-      {/* 抽屉：命途 / 遗物 */}
+      {isSessionMode ? (
+        <Drawer
+          open={experienceOpen}
+          title="借来的经验"
+          subtitle="别人的真实经历，不是数值加成"
+          onClose={() => setExperienceOpen(false)}
+        >
+          <ExperienceCardPanel cards={sessionExperienceCards} />
+        </Drawer>
+      ) : null}
+
+      {/* 抽屉：命途 / 遗物（旧机制，新主链不进入） */}
       {!isSessionMode ? (
       <Drawer
         open={fateOpen}
