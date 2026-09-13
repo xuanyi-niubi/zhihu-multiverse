@@ -118,16 +118,23 @@ export function counterexampleFacts(
   return [];
 }
 
-/** 解锁项：一条真实行动经验 → 一个此后才出现的游戏选择。 */
+/**
+ * 解锁项：一条真实**行动**经验 → 一个此后才出现的游戏选择（P0-8）。
+ *
+ * ## 为什么只允许 `action`
+ *
+ * 解锁项的文案是「按『X』的路子先试一小步」——它会被渲染成一个
+ * **可执行的游戏行动**。如果来源是 condition（例如「家里能支持两年」），
+ * 这句话就变成「按『家里能支持两年』的路子先试一小步」：语义荒谬，
+ * 而且把一个条件伪装成了一种方法。
+ *
+ * 所以没有行动经验就没有解锁。**一局没有 Experience Unlock 是允许的**
+ * —— 那说明我们没找到「别人具体做了什么」，编一个反而是错的。
+ */
 function unlocksOf(paths: readonly ExperiencePath[], facts: readonly ExperienceFact[]): readonly ExperienceChoiceUnlock[] {
   const unlocks: ExperienceChoiceUnlock[] = [];
   paths.slice(0, 3).forEach((path, index) => {
-    // 优先行动类片段；没有行动就退而取条件片段（仍然真实）
-    const candidates = [
-      ...factsByIds(facts, path.supportingFactIds).filter((fact) => fact.type === 'action'),
-      ...factsByIds(facts, path.supportingFactIds).filter((fact) => fact.type === 'condition'),
-    ];
-    const source = candidates[0];
+    const source = factsByIds(facts, path.supportingFactIds).find((fact) => fact.type === 'action');
     if (!source) {
       return;
     }

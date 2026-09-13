@@ -211,3 +211,47 @@ describe('确定性', () => {
     expect(JSON.stringify(compileWorldBlueprint(input))).toBe(JSON.stringify(compileWorldBlueprint(input)));
   });
 });
+
+/**
+ * P0-8：解锁项只允许从**行动**经验生成。
+ *
+ * 解锁会被渲染成「按『X』的路子先试一小步」这样的游戏行动。
+ * 若来源是 condition（「家里能支持两年」），文案就荒谬了 ——
+ * 而且它把一个条件伪装成了一种方法。
+ */
+describe('P0-8：解锁只从行动经验生成', () => {
+  function compileWith(facts: readonly ExperienceFact[]) {
+    return compileWorldBlueprint({
+      sessionId: 's1',
+      frame: frame(),
+      paths: [path({ supportingFactIds: facts.map((item) => item.id) })],
+      facts,
+    });
+  }
+
+  it('只有 condition 片段 → 不生成解锁（宁可这一局没有解锁）', () => {
+    const blueprint = compileWith([fact('fact:cond', 'condition', '家里能支持我两年不赚钱。')]);
+    expect(blueprint.unlocks).toHaveLength(0);
+    // 蓝图本身仍然成立：四幕、没有解锁、Act 里也没有 unlockIds
+    expect(blueprint.acts).toHaveLength(4);
+    expect(blueprint.acts.every((act) => act.unlockIds.length === 0)).toBe(true);
+  });
+
+  it('condition 排在 action 前面时，也只用 action 生成', () => {
+    const blueprint = compileWith([
+      fact('fact:cond', 'condition', '家里能支持我两年不赚钱。'),
+      fact('fact:act', 'action', '我先做了个 48 小时的小样给队友看。'),
+    ]);
+    expect(blueprint.unlocks).toHaveLength(1);
+    expect(blueprint.unlocks[0]!.sourceFactIds).toEqual(['fact:act']);
+    expect(blueprint.unlocks[0]!.description).toBe('我先做了个 48 小时的小样给队友看。');
+  });
+
+  it('解锁选项文案由 action 原文的短标签拼成（描述 = 逐字原文）', () => {
+    const quote = '我先做一个小样再决定是否全力投入';
+    const blueprint = compileWith([fact('fact:act', 'action', quote)]);
+    expect(blueprint.unlocks[0]!.choice.text).toContain('先试一小步');
+    expect(blueprint.unlocks[0]!.description).toBe(quote);
+    expect(blueprint.unlocks[0]!.label.length).toBeLessThanOrEqual(12);
+  });
+});
