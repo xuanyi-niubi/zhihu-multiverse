@@ -98,7 +98,7 @@ import type { ExperienceFact } from '@/features/experience/domain';
 
 import type { DmSource } from '@/core/dm/generate';
 import type { PlayerProfile } from '@/core/dm/profile';
-import type { DmTurnInput } from '@/core/dm/prompt';
+import type { DmTurnInput, DmZhihuSnippet } from '@/core/dm/prompt';
 import type { FateEdge, FateNode, FateNodeStatus, FateTreeGraph } from '@/types/fate';
 import type {
   ActCard,
@@ -1759,9 +1759,45 @@ function PlayScreen() {
     [state.originId],
   );
 
-  const snapshotRef = React.useRef({ state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, sessionView, usedUnlockIds });
-  snapshotRef.current = { state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, sessionView, usedUnlockIds };
+  /**
+   * 蓝图证据 → DM 语料（P0-11）。
+   *
+   * Session 模式下，本幕要引用的真实经验由世界蓝图编译好
+   * （`worldContextForTurn` 切出当前幕的 `sourceFacts`）。这份证据
+   * **优先于**旧证据网格：网格是 legacy 资产，蓝图才是新主链的权威来源。
+   * 两者同时喂给模型，会让它把「演算出来的走法」和「真人原文」混着引用。
+   *
+   * 没有蓝图（legacy `/play?goal=`）时返回空数组，调用处回落到网格片段。
+   */
+  const blueprintSnippets = React.useMemo((): readonly DmZhihuSnippet[] => {
+    const blueprint = sessionView?.worldBlueprint;
+    if (!blueprint) {
+      return [];
+    }
+    const context = worldContextForTurn(blueprint, Math.max(0, state.turnIndex - 1));
+    return (context?.sourceFacts ?? []).map((fact) => ({
+      author: fact.author,
+      quote: fact.quote,
+      sourceUrl: fact.sourceUrl,
+    }));
+  }, [sessionView?.worldBlueprint, state.turnIndex]);
 
+  const snapshotRef = React.useRef({ state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, blueprintSnippets, sessionView, usedUnlockIds });
+  snapshotRef.current = { state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, blueprintSnippets, sessionView, usedUnlockIds };
+
+  /**
+   * 旧证据网格的入口（P0-11）。
+   *
+   * Session 模式下**不暴露**它：新主链的证据是「世界蓝图 + 经验解锁的
+   * 来源弹层」，此时再让玩家看到证据网格 / 现实轴 / D20，只会把
+   * 「这些经验真的改变了游戏」这件事淹掉。
+   *
+   * 网格代码一行未删 —— legacy 推演与蓝图加载失败时的降级路径仍然用它。
+   */
+  const evidenceDrawerEntry = React.useMemo(
+    () => (mesh && !sessionView?.worldBlueprint ? { onOpenEvidence: () => setMeshOpen(true) } : {}),
+    [mesh, sessionView?.worldBlueprint],
+  );
   /**
    * 记忆是否已加载完成。
    *
@@ -1780,7 +1816,7 @@ function PlayScreen() {
     const controller = new AbortController();
 
     const run = async () => {
-      const { state: current, goalParam: goal, totalTurns, turnSnippets, sessionView: currentSession, usedUnlockIds: usedUnlocks } = snapshotRef.current;
+      const { state: current, goalParam: goal, totalTurns, turnSnippets, blueprintSnippets, sessionView: currentSession, usedUnlockIds: usedUnlocks } = snapshotRef.current;
       const turnIndex = current.turnIndex;
 
       // 第一步：读懂处境（仅在第一幕、且还没有档案时）
@@ -1844,7 +1880,11 @@ function PlayScreen() {
         // 片段不再硬编码为空，而是来自证据网格里**已核验的路径卡**
         // （meshToTurnSnippets 只取有样本的路线，并按证据强度排序）。
         // 没有网格时它就是空数组 —— 不编造语料。
-        zhihuSnippets: [...turnSnippets],
+        //
+        // P0-11：Session 模式下改喂**世界蓝图本幕引用的真实经验**，
+        // 网格片段只作为 legacy 兜底 —— 同时给两套，模型会把
+        // 「演算出来的走法」和「真人原文」混着引用。
+        zhihuSnippets: blueprintSnippets.length > 0 ? [...blueprintSnippets] : [...turnSnippets],
         history,
         personaTags: current.memory?.personalityTags ?? [],
         // 只有第二局及以后才有前世记忆；第一幕注入，让 AI 以老友口吻开场
@@ -2307,7 +2347,7 @@ function PlayScreen() {
         hitKey={state.hitKey}
         onOpenFate={() => setFateOpen(true)}
         onOpenInventory={() => setInventoryOpen(true)}
-        {...(mesh ? { onOpenEvidence: () => setMeshOpen(true) } : {})}
+        {...evidenceDrawerEntry}
         onQuit={() => {
           window.location.href = '/';
         }}

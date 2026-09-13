@@ -263,6 +263,23 @@ async function main() {
     'worldBlueprint.experienceFacts',
   );
 
+  /**
+   * ── 6.56 P0-11：Session 模式蓝图证据优先 ────────────────────
+   *
+   * 新主链的权威证据是蓝图；旧证据网格是 legacy 资产。
+   * 两套同时喂给模型，它会把「演算出来的走法」和「真人原文」混着引用。
+   */
+  check(
+    'Session 模式蓝图片段优先喂给 DM',
+    playPageSource.includes('blueprintSnippets.length > 0'),
+    'blueprintSnippets 优先',
+  );
+  check(
+    'Session 模式隐藏旧证据网格入口',
+    playPageSource.includes('mesh && !sessionView?.worldBlueprint'),
+    'legacy 入口按蓝图存在与否收敛',
+  );
+
   // ── 6.6 prepare-world（P0-F）：把已澄清的会话编译成世界蓝图 ──
   const prepared = await request(
     `/api/sessions/${sessionId}`,
