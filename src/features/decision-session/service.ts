@@ -10,6 +10,7 @@ import { synthesizeExperiencePaths } from '@/features/experience/pathSynthesis';
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
 import { caseSources, matchDemoCase } from '@/data/demoCases';
 import { contextFrom, clarifyQuestions, experimentFor } from '@/features/decision-session/clarify';
+import { experimentFromUnknown } from '@/features/decision-session/experiment';
 import { factTypeOf, relevanceOf, toEvidenceFacts } from '@/features/decision-session/facts';
 import { clusterPaths, detectProblemType } from '@/features/decision-session/routes';
 import { newSessionId } from '@/features/decision-session/store';
@@ -650,12 +651,31 @@ export async function prepareExperienceSession(
   });
 }
 
-/** 第五步：设计实验。 */
+/**
+ * 第五步：设计实验。
+ *
+ * ## 两条路径（P1-1）
+ *
+ * - **有世界蓝图**：从本局那个 `keyUnknown` 推导 —— 未知的类型决定
+ *   实验形态（时间容量 → 七天记录；队友可得性 → 真去联系三个人）。
+ *   这是新主链的路径。
+ * - **没有蓝图**（legacy / 刚创建还没 prepare-world）：沿用按问题类型
+ *   查表的旧模板。旧路径零变化，测试与既有会话不受影响。
+ */
 export function designExperiment(session: DecisionSession): DecisionSession {
-  const experiment: RealityExperiment = experimentFor({
-    type: detectProblemType(session.question),
-    context: session.userContext,
-  });
+  const blueprint = session.worldBlueprint;
+  const experiment =
+    blueprint && blueprint.keyUnknown
+      ? experimentFromUnknown({
+          unknown: blueprint.keyUnknown,
+          frame: blueprint.problemFrame,
+          differences: blueprint.paths.flatMap((path) => path.differencesFromUser),
+          context: session.userContext,
+        })
+      : experimentFor({
+          type: detectProblemType(session.question),
+          context: session.userContext,
+        });
   return touch(session, { experiment, status: 'designing_experiment' });
 }
 

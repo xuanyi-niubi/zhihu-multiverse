@@ -149,6 +149,41 @@ export function contextFrom(input: {
 /* -------------------------------------------------------------------------- */
 
 /**
+ * 时间盒：按用户自述的可用量取最小可行档。
+ *
+ * 用户说「未来两周约 3 小时」，实验就**不能**要求他每周 10 小时 ——
+ * 那是最常见的一种「建议看起来很对、但根本做不了」。
+ *
+ * 独立成函数是因为它被两条路径共用：旧的问题类型模板（`experimentFor`）
+ * 与新的未知驱动路径（`experimentFromUnknown`）。两处必须同一口径，
+ * 否则「跟着用户时间走」这条纪律会在一半场景里失守。
+ */
+export function timeboxFor(context: UserContext): string {
+  const time = context.availableTime ?? '（你还没说能拿出多少时间）';
+  if (/3\s*小时|几小时/.test(time)) {
+    return '3 小时，一次性做完';
+  }
+  if (/5–10|5-10/.test(time)) {
+    return '一周内投入 6 小时';
+  }
+  if (/15\s*小时/.test(time)) {
+    return '一周内投入 12 小时';
+  }
+  // 没给时间 → 取最小档，并让用户自己收紧
+  return '3 小时（你还没说可用时间，先按最小档做）';
+}
+
+/**
+ * 停止信号：碰到用户说的那种损失就停。
+ *
+ * 没有停止信号的实验不是实验，是赌博 —— 用户会在沉没成本里越陷越深。
+ */
+export function stopSignalFor(context: UserContext): string {
+  const loss = context.nonNegotiables[0] ?? '影响你最重要的事';
+  return `如果它开始${loss}，立刻停下，先解决这件事而不是继续加注。`;
+}
+
+/**
  * 生成现实实验（方案 §3.1 第五步 / §5.1）。
  *
  * ## 六件事缺一不可
@@ -166,25 +201,9 @@ export function experimentFor(input: {
   readonly context: UserContext;
 }): RealityExperiment {
   const unknown = input.context.wantToVerify ?? '这件事到底适不适合我';
-  const time = input.context.availableTime ?? '（你还没说能拿出多少时间）';
-  const loss = input.context.nonNegotiables[0] ?? '影响你最重要的事';
 
   /** 时间盒按用户自述的可用量取最小可行档。 */
-  const box = (() => {
-    if (/3\s*小时|几小时/.test(time)) {
-      return '3 小时，一次性做完';
-    }
-    if (/5–10|5-10/.test(time)) {
-      return '一周内投入 6 小时';
-    }
-    if (/15\s*小时/.test(time)) {
-      return '一周内投入 12 小时';
-    }
-    // 没给时间 → 取最小档，并让用户自己收紧
-    return '3 小时（你还没说可用时间，先按最小档做）';
-  })();
-
-  const stop = `如果它开始${loss}，立刻停下，先解决这件事而不是继续加注。`;
+  const box = timeboxFor(input.context);
 
   switch (input.type) {
     case 'competition':
@@ -194,7 +213,7 @@ export function experimentFor(input: {
         timebox: box,
         artifact: '一个能给别人看的最小成果，以及一段 3 分钟讲清它的说明。',
         successSignal: '你能列出「还差哪些任务」并且每一项都估得出时间 —— 这说明你能判断后续投入，而不是只能靠猜。',
-        stopSignal: stop,
+        stopSignal: stopSignalFor(input.context),
         reducesUnknown: unknown,
       };
     case 'postgrad-or-job':
@@ -204,7 +223,7 @@ export function experimentFor(input: {
         timebox: box,
         artifact: '两份对话记录，以及「他们和我的处境哪一点不一样」的清单。',
         successSignal: '你能说出至少一处「他们的条件和我不同」，并且知道自己缺的是哪条信息。',
-        stopSignal: stop,
+        stopSignal: stopSignalFor(input.context),
         reducesUnknown: unknown,
       };
     case 'first-job':
@@ -214,7 +233,7 @@ export function experimentFor(input: {
         timebox: box,
         artifact: '一份「这个岗位真实的一天」的记录，以及你愿意接受 / 不接受的部分。',
         successSignal: '你能具体说出这份工作半年后会给你什么（技能、作品或人脉），而不是「应该会有成长」。',
-        stopSignal: stop,
+        stopSignal: stopSignalFor(input.context),
         reducesUnknown: unknown,
       };
     case 'pivot':
@@ -224,7 +243,7 @@ export function experimentFor(input: {
         timebox: box,
         artifact: '一个小成果 + 一份「我在这件事上的真实体感」记录。',
         successSignal: '你能说出新方向里哪一部分你做得下去、哪一部分你其实很排斥 —— 这比「我喜不喜欢」具体得多。',
-        stopSignal: stop,
+        stopSignal: stopSignalFor(input.context),
         reducesUnknown: unknown,
       };
     default:
@@ -234,7 +253,7 @@ export function experimentFor(input: {
         timebox: box,
         artifact: '一份写下来的结论，以及「我还缺哪条信息」。',
         successSignal: '你能说出自己缺的是哪一条具体信息，以及去哪里能拿到它。',
-        stopSignal: stop,
+        stopSignal: stopSignalFor(input.context),
         reducesUnknown: unknown,
       };
   }

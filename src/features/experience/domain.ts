@@ -76,6 +76,23 @@ export interface UnknownVariable {
   /** 它为什么会影响结论（一句话，不含预测）。 */
   readonly whyItMatters: string;
 
+  /**
+   * 这个未知的**类型**（P1-1，可选）。
+   *
+   * 它决定「用什么动作才能把它变成已知」：时间容量要靠七天真实记录，
+   * 队友可得性要靠真去联系三个人，兴趣匹配要靠做完一个最小任务。
+   * 没有它就退回按 `label` 关键词推断；两者都不命中时按
+   * `information-gap`（去找走过这条路的人问）处理。
+   */
+  readonly kind?:
+    | 'time-capacity'
+    | 'skill-capability'
+    | 'interest-fit'
+    | 'ally-availability'
+    | 'cost-tolerance'
+    | 'reversibility'
+    | 'information-gap';
+
   readonly origin:
     /** 用户没提供。 */
     | 'missing-user-context'
