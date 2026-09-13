@@ -8,6 +8,7 @@ import {
 import { MAX_TOTAL_FACTS } from '@/features/experience/validate';
 
 import type { ProviderRouter, RoutedResult } from '@/agents/providerRouter';
+import type { RetrievedExperienceSource } from '@/features/experience/domain';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
 /**
@@ -169,5 +170,94 @@ describe('上限三道闸', () => {
     const result = await extractExperienceFacts({ sources: [src], question: QUESTION, router });
     expect(result.source).toBe('model');
     expect(result.facts).toHaveLength(5);
+  });
+});
+
+/**
+ * P0-6：**每条片段继承自己来源的检索意图**。
+ *
+ * 早先的实现把「全局所有意图」赋给每一条片段，于是每条片段都声称自己
+ * 同时是相似经历、替代走法和反例 —— 意图被抹平，第三幕就没法优先挑
+ * 真正来自反例检索的片段。这组测试把「按来源继承」钉死。
+ */
+describe('P0-6：来源意图按来源保留，不合并成全局并集', () => {
+  function retrieved(
+    id: string,
+    quote: string,
+    purposes: RetrievedExperienceSource['purposes'],
+  ): RetrievedExperienceSource {
+    return {
+      source: source({ id, quote, url: `https://www.zhihu.com/answer/${id}` }),
+      purposes,
+      matchedQueryIds: purposes.map((purpose) => `q-${purpose}`),
+    };
+  }
+
+  const SIMILAR_QUOTE = '我当时大二，基础一般，边上课边准备比赛，每周大概花十个小时，最后拿了省二。';
+  const COUNTER_QUOTE = '我也大二参加过，但课程全线崩了，最后退赛重修，不建议基础一般的人硬上。';
+
+  it('fallback 路径：两条来源意图不同 → 各自保留', async () => {
+    const similar = retrieved('live:similar', SIMILAR_QUOTE, ['similar-person']);
+    const counter = retrieved('live:counter', COUNTER_QUOTE, ['counterexample', 'failure']);
+
+    const result = await extractExperienceFacts({
+      sources: [similar, counter],
+      question: QUESTION,
+      router: null,
+    });
+
+    const byId = new Map(result.facts.map((fact) => [fact.sourceId, fact]));
+    expect(byId.get('live:similar')!.purposes).toEqual(['similar-person']);
+    expect(byId.get('live:counter')!.purposes).toEqual(['counterexample', 'failure']);
+  });
+
+  it('反例来源的片段**不会**同时声称自己是相似经历', async () => {
+    const similar = retrieved('live:similar', SIMILAR_QUOTE, ['similar-person']);
+    const counter = retrieved('live:counter', COUNTER_QUOTE, ['counterexample']);
+
+    const result = await extractExperienceFacts({
+      sources: [similar, counter],
+      question: QUESTION,
+      router: null,
+    });
+
+    const counterFact = result.facts.find((fact) => fact.sourceId === 'live:counter');
+    // 并集写法会在这里塞进 similar-person（因为另一条来源带了它）
+    expect(counterFact!.purposes).not.toContain('similar-person');
+  });
+
+  it('model 路径：同一来源的多个片段都拿到该来源的意图', async () => {
+    const sim = retrieved('live:sim', SIMILAR_QUOTE, ['similar-person']);
+    const counter = retrieved('live:cnt', COUNTER_QUOTE, ['counterexample']);
+    const router = routerOf(
+      JSON.stringify({
+        facts: [
+          { sourceId: sim.source.id, exactQuote: '边上课边准备比赛，每周大概花十个小时', type: 'action' },
+          { sourceId: counter.source.id, exactQuote: '但课程全线崩了，最后退赛重修', type: 'outcome' },
+        ],
+      }),
+    );
+
+    const result = await extractExperienceFacts({
+      sources: [sim, counter],
+      question: QUESTION,
+      router,
+    });
+
+    expect(result.source).toBe('model');
+    const action = result.facts.find((fact) => fact.type === 'action');
+    const outcome = result.facts.find((fact) => fact.type === 'outcome');
+    expect(action!.purposes).toEqual(['similar-person']);
+    expect(outcome!.purposes).toEqual(['counterexample']);
+  });
+
+  it('旧写法（裸来源 + 全局 purposes）行为不变', async () => {
+    const result = await extractExperienceFacts({
+      sources: [source()],
+      question: QUESTION,
+      purposes: ['similar-person', 'cost'],
+      router: null,
+    });
+    expect(result.facts[0]!.purposes).toEqual(['similar-person', 'cost']);
   });
 });

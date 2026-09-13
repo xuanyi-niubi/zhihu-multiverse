@@ -578,10 +578,16 @@ export async function prepareExperienceSession(
   if (deps.search) {
     const plan = buildSearchPlan({ frame });
     const retrieved = await retrieveExperienceSources({ plan, search: deps.search });
+    /**
+     * 直接把 `retrieved.sources` 交给提取层（P0-6）。
+     *
+     * 每条来源自带 `purposes` —— 检索阶段知道它是作为相似经历、替代走法
+     * 还是反例被找来的。早先这里把全部意图合成一个并集再传下去，
+     * 结果每条片段都声称自己同时服务所有意图，反例幕就没法优先挑真正的反例。
+     */
     const extracted = await extractExperienceFacts({
-      sources: retrieved.sources.map((item) => item.source),
+      sources: retrieved.sources,
       question: frame.rawQuestion,
-      purposes: [...new Set(retrieved.sources.flatMap((item) => item.purposes))],
       router: deps.router ?? null,
     });
     facts = extracted.facts;

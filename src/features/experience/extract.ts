@@ -4,6 +4,7 @@ import type { AgentRole } from '@/agents/types';
 import type {
   ExperienceFact,
   ExperienceFactType,
+  RetrievedExperienceSource,
   SearchPurpose,
 } from '@/features/experience/domain';
 import { MAX_EXPERIENCE_SOURCES } from '@/features/experience/retrieve';
@@ -133,12 +134,54 @@ function parseProposals(text: string): readonly ProposedFact[] {
 }
 
 export interface ExtractExperienceFactsInput {
-  readonly sources: readonly KnowledgeSource[];
+  /**
+   * 来源。两种写法都接受：
+   *
+   * - `RetrievedExperienceSource`（**新主链走这条**）：每条来源自带
+   *   `purposes` —— 检索阶段已经知道「这条是作为相似经历、替代走法还是
+   *   反例被找来的」，这份意图必须一路传到片段上；
+   * - 裸 `KnowledgeSource` + 全局 `purposes`（旧写法，测试与兼容路径用）。
+   *
+   * ## 为什么必须区分
+   *
+   * 早先的实现把「全局所有意图」赋给每一条片段，于是每条片段都声称自己
+   * 同时是相似经历、替代走法和反例 —— 意图信息被抹平，第三幕就没法
+   * 优先去挑真正来自反例检索的片段（P0-7）。
+   */
+  readonly sources: readonly ExtractSourceInput[];
   readonly question: string;
-  /** 检索意图（把「这条片段替哪路检索服务」一路带下去）。 */
+  /** 旧写法下的全局意图。新写法请让每条来源自带 `purposes`。 */
   readonly purposes?: readonly SearchPurpose[];
   /** 模型路由；null = 无模型，走 fallback。 */
   readonly router: ProviderRouter | null;
+}
+
+/**
+ * 提取层来源入参。
+ *
+ * `RetrievedExperienceSource` 带 `source` 字段，`KnowledgeSource` 没有 ——
+ * 这就是两者在运行时可区分的地方。
+ */
+export type ExtractSourceInput = KnowledgeSource | RetrievedExperienceSource;
+
+function isRetrievedSource(item: ExtractSourceInput): item is RetrievedExperienceSource {
+  const candidate = (item as { source?: unknown }).source;
+  return typeof candidate === 'object' && candidate !== null;
+}
+
+/**
+ * 把两种来源写法归一成「来源 + 它自己的意图」。
+ *
+ * 裸来源（旧写法）只能拿到全局 `purposes`；带意图的来源用自己的，
+ * **绝不合并全局并集** —— 合并就等于把意图抹平。
+ */
+function bundlesOf(input: ExtractExperienceFactsInput): readonly SourceBundle[] {
+  const globalPurposes = input.purposes ?? [];
+  return input.sources.slice(0, MAX_EXTRACT_SOURCES).map((item) =>
+    isRetrievedSource(item)
+      ? { source: item.source, purposes: item.purposes }
+      : { source: item, purposes: globalPurposes },
+  );
 }
 
 export interface ExtractExperienceFactsResult {
@@ -155,11 +198,8 @@ export interface ExtractExperienceFactsResult {
 export async function extractExperienceFacts(
   input: ExtractExperienceFactsInput,
 ): Promise<ExtractExperienceFactsResult> {
-  const purposes = input.purposes ?? [];
-  // 第一道闸：来源封顶
-  const bundles: readonly SourceBundle[] = input.sources
-    .slice(0, MAX_EXTRACT_SOURCES)
-    .map((source) => ({ source, purposes }));
+  // 第一道闸：来源封顶。意图按来源归一（见 `bundlesOf` 的纪律）。
+  const bundles: readonly SourceBundle[] = bundlesOf(input);
 
   if (bundles.length === 0) {
     return { facts: [], source: 'fallback' };
