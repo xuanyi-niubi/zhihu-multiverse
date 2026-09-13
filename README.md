@@ -23,7 +23,7 @@
 
 ### 新链：两条路合成一条（已落地）
 
-2026-09-12 起新主链端到端可用（smoke 35 项断言覆盖）：
+2026-09-13 起新主链端到端可用（smoke 54 项断言覆盖：HTTP 级闭环 + 源码级 UI 契约）：
 
 ```text
 输入真实困惑（POST /api/sessions）
@@ -340,19 +340,39 @@ x-boss-source: model | fallback | cached      x-trace-id: tr-...
 当前实测（`scripts/test-stats.json`）：
 
 ```
-76 个测试文件 · 1193 个用例 · 通过 1193 · 失败 0
+76 个测试文件 · 1188 个用例 · 通过 1188 · 失败 0
 ```
 
 | 测试文件 | 覆盖内容 |
 |---|---|
 | `tests/fullPersonalizedRun.test.ts` | **新主链技术身份证**：陌生问题 → 动态澄清 → 三视角检索 → 逐字片段 → 动态路径 → 差异含 unknown → 四幕蓝图 → 经验解锁 → DM 上下文逐字引用（全 fake 注入，不碰真网络） |
+| `tests/problemFrame.test.ts` | 第一道诚实性关卡：`user-explicit` 与 `parser-synthesis` 分开，**推断出来的东西永远拿不到硬条件** |
+| `tests/queryPlan.test.ts` | **任何一份检索计划都必须包含失败 / 反例视角** —— 只搜支持性内容就退化成了讨好用户 |
+| `tests/experienceRetrieve.test.ts` | 去重合并、来源封顶 12、失败不抛、缺数据不丢 |
+| `tests/experienceSearchCache.test.ts` | 坏缓存被忽略、真结果优先落盘、**过期缓存绝不顶** |
+| `tests/experienceExtraction.test.ts` | 零模型也能产出；有模型也不能造假（逐字校验兜底）。**每条片段继承自己来源的检索意图**，不合并成全局并集 |
+| `tests/experienceCases.test.ts` | 经历聚合只 group / sort，不发明任何内容 |
+| `tests/pathSynthesis.test.ts` | 路径只能从真实片段长出来；模型只分组；出现禁词即整条 fallback |
+| `tests/userDifference.test.ts` | **不能明确比较就是 unknown**，绝不语义猜测，绝不产出匹配度 |
+| `tests/worldBlueprintDomain.test.ts` | 蓝图是把经历编译成游戏、不是生成报告：每一幕都必须挂着真实事实 ID |
+| `tests/worldBlueprint.test.ts` | 固定四幕、终局有 keyUnknown、没有事实不伪造、纯函数确定性；**解锁只从行动经验生成** |
+| `tests/worldBlueprintCounterexample.test.ts` | 第三幕必须真的由反例驱动：四轮来源优先级（对立片段 → 反例 → 失败经历 → 对立 case），**找不到反例就留空并如实写出来** |
+| `tests/playWorldIndexing.test.ts` | Play 1 基幕次 ↔ 蓝图 0 基索引的四个映射，含「不换算会错位」的反例 |
+| `tests/experienceUnlock.test.ts` | 经验解锁：先获得经验 → 之后某一幕多出一个此前不存在的选择 |
+| `tests/dmWorldContext.test.ts` | 无 session 时 prompt 与旧版完全一致；有蓝图时逐字引用规则生效，反例幕注入「不得虚构反例」 |
+| `tests/realityExperimentFromUnknown.test.ts` | 未知的**类型**决定实验形态；时间盒看得见用户自述的可用时间；六要素缺一不可 |
+| `tests/realityQuestView.test.ts` | 终局回顾条目必须有出处；**没有实验就不给承诺候选** |
+| `tests/realityMemoryDomain.test.ts` | 不许把「随口一说」升级成「反复验证过的事实」 |
+| `tests/realityMemoryService.test.ts` | 只记实验真的产出的东西、观测才能升级置信度、**不推断人格** |
+| `tests/decisionSession.test.ts` | 路径必须属于当前问题；缺信息就说缺信息 |
+| `tests/decisionFlow.test.ts` | 五步闭环真的能走完：建会话 → 澄清 → 选未知 → 实验 → 认领 → 回访 |
 | `tests/experienceQuoteIntegrity.test.ts` | 片段诚信底线：AI 改写一个字就拒绝、scripted 来源不进经验层、标点替换不命中 |
 | `tests/dynamicClarification.test.ts` | 动态澄清：0/1/2 条、**用户说过的绝不重复问**、每条问题都说清它改变什么 |
 | `tests/dmParse.test.ts` | 27 类畸形模型输出语料，逐条断言**永不抛异常** |
 | `tests/zhihuOAuth.test.ts` | 本地地址拒判、授权 URL 字段、凭证串位拦截、诊断不泄露明文、会话 Cookie |
 | `tests/memoryStore.test.ts` | url_token 抽取、路径穿越防护、输入钳制、损坏恢复、**写失败不谎报成功**、遗言两步封存 |
 | `tests/memory.test.ts` | 存储损坏降级、决策画像提炼、前世遗念卡牌、AI 记忆块注入 |
-| `tests/zhihuClient.test.ts` | 搜索/热榜/故事解析、配额缓存、网络异常不抛、路径可配置 |
+| `tests/zhihuClient.test.ts` | 搜索 / 热榜解析、配额缓存、网络异常不抛 |
 | `tests/dmProfile.test.ts` | 处境档案：关键词规则、JSON 归一化、逐行键值容错、降级链 |
 | `tests/dmValidate.test.ts` | 越界 DC / 属性、缺字段、非法遗物、非 https 链接的钳制与修复 |
 | `tests/memoryApi.test.ts` | `/api/memory` 集成：未登录为正常态、写入读回、**同名不同 token 不串数据**、PATCH 封存遗言幂等 |
@@ -401,6 +421,12 @@ x-boss-source: model | fallback | cached      x-trace-id: tr-...
 
 **叙事节拍系统** — `core/narrative.ts`
 `NarrativeBeat` 支持场景切换、角色登场退场、SAN 阈值叙述、全屏演出。AI DM 只返回一段文本时自动退化为单个旁白节拍，**离线剧本与动态关卡共用同一套演出管线**。
+
+**经验引擎的诚信链** — `features/experience/` · `features/game-world/`
+从提问到世界蓝图，每一步都有一个「不许编」的落点：问题框定把「用户原话」与「解析推断」分开（后者永远拿不到硬条件）；检索计划**强制**包含失败与反例视角；片段提取只有提议权，`exactQuote` 不是原文子串就整条丢弃；路径合成只做分组，出现禁词即整条回落；第三幕有反例来源的四轮优先级，找不到反例就留空并如实写在冲突文案里，而不是拿支持性内容硬充。DM 这一端同样闭环：蓝图模式下 `zhihuBullet.quote` 必须逐字等于某条真实片段，署名与链接取自**同一条**（只改 quote 不修署名，等于把话说对了却挂在别人头上）。
+
+**终局是一次交接，不是一份报告** — `components/game/RealityQuestPanel.tsx`
+终局第一屏不再堆指标，而是把「这一局任何人的人生经验都替不了的那个问题」交还给玩家，并给一条带**成功信号与停止信号**的现实支线。认下它复用已有的七天后回访机制；回访结果被记成 `experiment-observed` 的记忆（不是你自我估计的那句话），下一次提问时作为硬条件参与判断 —— 现实里验证过的事，从此回流。
 
 **跨周期记忆闭环** — `core/memoryStore.ts` · `core/memoryClient.ts`
 解决文字游戏最致命的「玩一次就再也不来」。三层设计：既视感开场（把上局挫折注入 AI Prompt，让它以老友口吻追问「这次改不改」）、决策画像沉淀（硬刚型 / 求稳型 / 借力型 / 同辈焦虑 / 后程崩盘）、前世遗念卡牌（上局写下的反思变成这一局的开局装备，加成幅度随上局进度递增）。
@@ -510,7 +536,7 @@ src/
 │   ├── narrative.ts          # 叙事编排
 │   ├── memory.ts             # 跨周期记忆 / 决策画像 / 前世遗念
 │   ├── oauth/zhihu.ts        # 知乎 OAuth 协议核心
-│   ├── zhihu/                # 搜索 / 热榜 / 故事客户端
+│   ├── zhihu/                # 搜索 / 热榜客户端
 │   └── dm/                   # AI DM 五层防御
 ├── data/
 │   ├── demoCases.ts          # 黄金案例（含口语化匹配短语）
@@ -542,7 +568,7 @@ src/
 - **AI DM 单关耗时受输出长度主导**：一个完整关卡 JSON 约 600 字，生成时间随模型吞吐线性增长。3 分钟演示建议走离线精调剧本（零延迟），自由推演用 CRT 神经信号加载动效承接等待。
 - 模型偶尔会编造遗物 id（实测 `relic-code-bible`），校验层会静默丢弃该掉落并保住整个关卡——这是防御正常工作的表现，但也意味着 AI DM 的掉落率偏低。
 - 遗物「套装共鸣」、双骰检定、知识图谱复盘、宿命分歧点等机制尚未实现。
-- **知乎故事接口路径待确认**：规则页只公开了搜索与热榜的绝对路径，故事类未给；路径做成 `ZHIHU_STORY_PATH` 可配置，默认按开放平台惯例，调用失败会自动降级不影响主链路。**关注流接口尚未接入。**
+- **关注流接口尚未接入**：知乎开放平台只公开了搜索与热榜的绝对路径，关注关系类接口未开放；本作品也不接「盐选故事」——那是虚构文学，混进「真人经历」会直接破坏这个作品最核心的诚信纪律。
 - **账号登录需先部署**：OAuth 回调要求公网 HTTPS，本地 `127.0.0.1` 只能预览面板，授权按钮保持禁用。真实登录须先部署并登记回调地址。
 - **OAuth Token 存在进程内存**：多实例或 Serverless 冷启动会导致会话丢失，黑客松联调可接受，生产需换共享存储。
 
