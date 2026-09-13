@@ -544,7 +544,7 @@ export default function FateConsolePage() {
                 <span aria-hidden="true" className="text-lg">
                   ◉
                 </span>
-                投币开始推演
+                生成我的平行宇宙
               </button>
 
               {/*
@@ -573,11 +573,15 @@ export default function FateConsolePage() {
                 </Link>
               ) : null}
 
-              <p className="max-w-[220px] text-[11px] leading-relaxed text-slate-500">
-                {/* 幕数是动态的：AI 路径实测 7–8 幕，预置剧本 4 幕。写死数字会直接损伤信任。 */}
-                一次推演 4–8 幕，约 3 分钟，幕数随你的处境变化。
+              <p className="max-w-[260px] text-[11px] leading-relaxed text-slate-500">
+                {/*
+                  主 CTA 的一句话解释（收口方案 §5）：新用户与评委第一眼看懂
+                  「这些经验是从哪来的」，比先讲幕数更有价值。
+                */}
+                我们会从知乎寻找真正走过类似道路的人，再把这些经历编译成一局属于你的游戏。
                 <br />
-                结果由种子锁定，可复盘、可发起挑战。
+                {/* 幕数是动态的：AI 路径实测 7–8 幕，预置剧本 4 幕。写死数字会直接损伤信任。 */}
+                一次推演 4–8 幕、约 3 分钟；结果由种子锁定，可复盘、可发起挑战。
               </p>
             </div>
 

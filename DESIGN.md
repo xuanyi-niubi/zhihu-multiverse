@@ -869,7 +869,7 @@ DialogueBox（内容自然撑开）。禁止在根节点使用 `h-screen + overf
 | Play（推演舱） | `src/app/play/page.tsx` | **前台游戏主轴**：多幕剧本 + 裁决 + 遗物；`/play?session=<id>` 消费世界蓝图 |
 | 经验引擎 | `src/features/experience/` | **新链**：检索 → 逐字片段 → 经历 → 动态路径 → 差异对照 |
 | 世界编译 | `src/features/game-world/` | **经验 → 游戏**：`compileWorld`（纯函数）+ DM 上下文切片 + 解锁注入 |
-| 首页 | `src/app/page.tsx` | 双入口：投币进游戏 / 先看现实对照 |
+| 首页 | `src/app/page.tsx` | 单一主链入口：一个问题输入 + 一个 CTA（生成我的平行宇宙）+ 一句解释；旧剧本入口降级为次级按钮 |
 
 #### 已落地的 Experience Engine（P0-A～P0-H）
 
