@@ -2336,6 +2336,22 @@ function PlayScreen() {
   const isSessionMode = Boolean(sessionView?.worldBlueprint);
 
   /**
+   * 新主链里 SAN 归零**不会**把玩家卡住。
+   *
+   * 旧机制下 SAN 归零会进入 critical 阶段，界面给一个「消耗 30 羁绊呼叫大 V」
+   * 的救场面板 —— 而新主链把属性与救场都撤出了主路径（§3/§17）。若只藏面板
+   * 不处理状态，玩家会停在一个没有任何按钮的死界面上。
+   *
+   * 处理方式：新主链不展示属性，也就不该被属性判死 —— 直接把这一局收束到终局，
+   * 「问题重写 + 现实支线」照常出现。属性对 legacy 路径的行为完全不变。
+   */
+  React.useEffect(() => {
+    if (isSessionMode && state.phase === 'critical') {
+      dispatch({ type: 'GIVE_UP' });
+    }
+  }, [isSessionMode, state.phase]);
+
+  /**
    * 是否用「终端输入 + 判卷」收尾（产品减法方案 §20 之后只剩 legacy 路径）。
    *
    * 新主链最后一幕是**反例幕**，玩家必须能正常做选择；终局也不再判卷，

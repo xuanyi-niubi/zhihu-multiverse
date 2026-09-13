@@ -167,3 +167,23 @@ describe('Session 幕数绑定蓝图（P0-2）', () => {
     expect(acts.filter((act) => act.objective === 'meet-counterexample')).toHaveLength(1);
   });
 });
+
+/**
+ * 新主链不能有死路（§3/§17）：属性被撤出前台，就不该由属性判死。
+ *
+ * 旧机制下 SAN 归零会进入 critical 阶段，界面上只有一个「消耗羁绊救场」
+ * 按钮 —— 新主链把这个面板藏了，若不处理状态，玩家会停在没有任何按钮的
+ * 界面上。这里用源码级契约钉住「新主链会自动收束到终局」。
+ */
+describe('新主链的死路防护', () => {
+  it('play 页在会话模式下把 critical 收束到终局，而不是停在空界面', () => {
+    const source = readFileSync(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
+    expect(source).toContain("if (isSessionMode && state.phase === 'critical')");
+    expect(source).toContain("dispatch({ type: 'GIVE_UP' })");
+  });
+
+  it('救场与临界面板只在 legacy 路径渲染', () => {
+    const source = readFileSync(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
+    expect(source).toContain("state.phase === 'critical' && !isSessionMode");
+  });
+});
