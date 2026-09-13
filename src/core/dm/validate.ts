@@ -22,11 +22,36 @@ export interface DmIssue {
   readonly repaired: boolean;
 }
 
+/**
+ * 蓝图模式下的**逐字基准**（P0-10）。
+ *
+ * 与 `snippets` 的区别是纪律等级不同：
+ *
+ * - `snippets` 是 legacy 检索片段，允许模型归纳改写（旧规则「改写自」）；
+ * - `exactQuotes` 是本局世界蓝图里**允许被引用的真实经验**，
+ *   模型引用时必须逐字相等 —— 差一个字就算伪造。
+ *
+ * 带上 author / sourceUrl 是刻意的：只修 quote 不修署名，等于
+ * 「话说对了，但挂在了别人头上」，仍然是失真。
+ */
+export interface DmExactQuote {
+  readonly quote: string;
+  readonly author: string;
+  readonly sourceUrl: string;
+  readonly upvotes?: number | null;
+  readonly answerId?: string | null;
+}
+
 export interface DmValidateContext {
   readonly turnIndex: number;
   readonly totalTurns: number;
   readonly goal: string;
   readonly snippets: readonly DmZhihuSnippet[];
+  /**
+   * 蓝图模式的逐字基准。缺省 / 空数组 = legacy 模式，
+   * `zhihuBullet.quote` 仍允许从 snippets 归纳改写（行为零变化）。
+   */
+  readonly exactQuotes?: readonly DmExactQuote[];
 }
 
 export type DmValidationResult =
@@ -341,13 +366,116 @@ function normalizeSourceUrl(
   return DEFAULT_SOURCE_URL as `https://${string}`;
 }
 
+/* -------------------------------------------------------------------------- */
+/* 蓝图模式：逐字引用强制（P0-10）                                              */
+/* -------------------------------------------------------------------------- */
+
+/** zhihuBullet 的草稿（模型给的原始四项）。 */
+interface BulletDraft {
+  readonly quote: string;
+  readonly author: string;
+  readonly sourceUrl: string;
+  readonly upvotes: number | null;
+  readonly answerId: string | null;
+}
+
+/** 字符二元组集合：用于判断「模型大概想引用哪一条」。 */
+function bigrams(text: string): ReadonlySet<string> {
+  const normalized = text.replace(/\s+/g, '');
+  const grams = new Set<string>();
+  for (let index = 0; index < normalized.length - 1; index += 1) {
+    grams.add(normalized.slice(index, index + 2));
+  }
+  return grams;
+}
+
+/**
+ * 在候选里挑「与模型这句话最接近」的一条。
+ *
+ * 用字符二元组重合度并按候选长度归一化 —— 长句不会因为更长就占优。
+ * **确定性**：同输入必得同输出（检索/校验层不该有随机性）。
+ */
+function mostRelevantQuote(candidates: readonly DmExactQuote[], hint: string): DmExactQuote {
+  if (candidates.length <= 1) {
+    return candidates[0];
+  }
+  const hintGrams = bigrams(hint);
+  let best = candidates[0];
+  let bestScore = -1;
+
+  for (const candidate of candidates) {
+    const grams = bigrams(candidate.quote);
+    let overlap = 0;
+    for (const gram of grams) {
+      if (hintGrams.has(gram)) {
+        overlap += 1;
+      }
+    }
+    const score = grams.size > 0 ? overlap / grams.size : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+/**
+ * 蓝图模式的逐字强制：**quote 与 author / sourceUrl 必须同源**。
+ *
+ * 规则：
+ * - 模型 quote 逐字等于某条真实片段 → 采用它；若署名或链接对不上，
+ *   一并对齐到那条片段（引对了话却挂错人，同样是失真）；
+ * - 不逐字相等 → 替换为最相关的那条真实片段（含 author / sourceUrl），
+ *   并记一条 `quote-not-verbatim` 修复。
+ *
+ * 没有逐字基准（legacy）时原样返回 —— 旧行为零变化。
+ */
+function enforceExactQuote(
+  draft: BulletDraft,
+  ctx: DmValidateContext,
+  issues: DmIssue[],
+): BulletDraft {
+  const exact = ctx.exactQuotes ?? [];
+  if (exact.length === 0) {
+    return draft;
+  }
+
+  const wanted = draft.quote.trim();
+  const hit = exact.find((item) => item.quote.trim() === wanted);
+  const chosen = hit ?? mostRelevantQuote(exact, wanted);
+
+  if (!hit) {
+    issues.push({
+      path: 'zhihuBullet.quote',
+      code: 'quote-not-verbatim',
+      message: `模型引用不是蓝图原文的逐字片段，已替换为最相关的真实片段（${chosen.author}）`,
+      repaired: true,
+    });
+  } else if (draft.author.trim() !== chosen.author.trim()) {
+    issues.push({
+      path: 'zhihuBullet.author',
+      code: 'author-mismatch-verbatim',
+      message: `引用逐字命中但署名不符，已对齐为该片段的作者（${chosen.author}）`,
+      repaired: true,
+    });
+  }
+
+  return {
+    quote: chosen.quote.trim(),
+    author: chosen.author,
+    sourceUrl: chosen.sourceUrl,
+    upvotes: chosen.upvotes ?? draft.upvotes,
+    answerId: chosen.answerId ?? draft.answerId,
+  };
+}
+
 function normalizeChoice(
   raw: unknown,
   ctx: DmValidateContext,
   issues: DmIssue[],
   index: 0 | 1 | 2,
-): ScenarioChoice | null {
-  if (!isRecord(raw)) {
+): ScenarioChoice | null {  if (!isRecord(raw)) {
     issues.push({
       path: `choices[${index}]`,
       code: 'choice-not-object',
@@ -473,23 +601,39 @@ export function validateDmTurn(input: unknown, ctx: DmValidateContext): DmValida
   );
 
   const bulletRaw = isRecord(input.zhihuBullet) ? input.zhihuBullet : {};
-  const author = truncate(
-    pickString(bulletRaw.author) ?? ctx.snippets[0]?.author ?? '知乎匿名用户',
-    32,
-  );
-  const quote = truncate(
-    pickString(bulletRaw.quote) ??
+  const draft: BulletDraft = {
+    author: pickString(bulletRaw.author) ?? ctx.snippets[0]?.author ?? '知乎匿名用户',
+    quote:
+      pickString(bulletRaw.quote) ??
       ctx.snippets[0]?.quote ??
       '别急着下结论，先把信息补齐，再决定要不要下注。',
-    120,
-  );
-  const sourceUrl = normalizeSourceUrl(bulletRaw.sourceUrl, ctx, issues, 'zhihuBullet.sourceUrl');
+    sourceUrl: pickString(bulletRaw.sourceUrl) ?? ctx.snippets[0]?.sourceUrl ?? '',
+    upvotes: pickNumber(bulletRaw.upvotes),
+    answerId: pickString(bulletRaw.answerId),
+  };
 
-  // 溯源角标数据：优先用模型给的，缺失时从命中的检索片段补齐
+  /**
+   * 蓝图模式：先做逐字强制，**再截断**（P0-10）。
+   *
+   * 顺序不能反 —— 截断会加省略号，先截断就会让本来逐字的引用对不上原文，
+   * 校验层随后只能整条替换。
+   */
+  const enforced = enforceExactQuote(draft, ctx, issues);
+  const hasExactQuotes = (ctx.exactQuotes ?? []).length > 0;
+  const author = truncate(enforced.author, 32);
+  const quote = hasExactQuotes ? enforced.quote : truncate(enforced.quote, 120);
+  const sourceUrl = normalizeSourceUrl(
+    enforced.sourceUrl.length > 0 ? enforced.sourceUrl : undefined,
+    ctx,
+    issues,
+    'zhihuBullet.sourceUrl',
+  );
+
+  // 溯源角标数据：优先用（已被逐字强制校准的）事实，缺失时从命中的检索片段补齐
   const matchedSnippet =
     ctx.snippets.find((snippet) => snippet.sourceUrl === sourceUrl) ?? ctx.snippets[0] ?? null;
-  const upvotes = pickNumber(bulletRaw.upvotes) ?? matchedSnippet?.upvotes ?? null;
-  const answerId = pickString(bulletRaw.answerId) ?? matchedSnippet?.answerId ?? null;
+  const upvotes = enforced.upvotes ?? matchedSnippet?.upvotes ?? null;
+  const answerId = enforced.answerId ?? matchedSnippet?.answerId ?? null;
 
   const rawChoices = Array.isArray(input.choices) ? input.choices : [];
   if (rawChoices.length === 0) {

@@ -147,6 +147,19 @@ export async function generateTurn(
       totalTurns: input.totalTurns,
       goal: input.goal,
       snippets: input.zhihuSnippets,
+      /**
+       * P0-10：蓝图模式把「允许引用的真实经验」交给校验层做逐字基准。
+       *
+       * 模型可以写出很漂亮但被改写过的引用 —— 那是本产品最不能犯的错。
+       * 有基准时，引用不是逐字原文就整条替换（含署名与链接）。
+       * 没有蓝图（legacy）时这个字段为空数组，校验行为与此前完全一致。
+       */
+      exactQuotes:
+        input.worldContext?.sourceFacts.map((fact) => ({
+          quote: fact.quote,
+          author: fact.author,
+          sourceUrl: fact.sourceUrl,
+        })) ?? [],
     };
 
     const baseMessages = buildDmMessages(input);

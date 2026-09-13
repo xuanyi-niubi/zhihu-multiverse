@@ -126,7 +126,12 @@ export const DM_TURN_JSON_SCHEMA = {
       required: ['author', 'quote', 'sourceUrl'],
       properties: {
         author: { type: 'string', minLength: 1, maxLength: 32 },
-        quote: { type: 'string', minLength: 8, maxLength: 120 },
+        /**
+         * 上限 160：蓝图模式要求 quote **逐字**引用真实片段，
+         * 而片段本身最长 160 字。上限若停在 120，模型会把原文截短，
+         * 截短就破坏了逐字性（校验层随后只能整条替换）。
+         */
+        quote: { type: 'string', minLength: 8, maxLength: 160 },
         sourceUrl: { type: 'string', pattern: '^https://' },
       },
     },
@@ -251,9 +256,9 @@ ${JSON.stringify(DM_TURN_JSON_SCHEMA)}
 - 若提供了【玩家处境档案】：每一幕的核心冲突必须直接来自档案里的「客观约束」或「主观恐惧」，并按档案给出的四幕设计推进；【禁止】套用与档案无关的通用校园桥段（例如给法学转码的人安排「室友保研」）。
 
 # 四、知乎生态约束
-- zhihuBullet.quote 必须改写自【知乎检索片段】中提供的内容，不得编造答主、观点或数据。
-- zhihuBullet.author 使用片段中给出的作者名；sourceUrl 必须直接使用片段中的 https 链接。
-- 若片段为空：quote 写该领域公认的普适经验，author 写「知乎匿名用户」，sourceUrl 写 "https://www.zhihu.com"。
+- **若【本局世界蓝图】给出了【允许引用的真实经验】**：zhihuBullet.quote 必须**逐字等于**其中一条原文，一个字都不能改（不得缩写、不得补标点、不得换同义词）；author 与 sourceUrl 必须取自**同一条**。没有特别贴切的那条，就挑一条并原样引用 —— 概括就等于伪造。
+- **否则（只有【知乎检索片段】的 legacy 模式）**：zhihuBullet.quote 必须改写自【知乎检索片段】中提供的内容，不得编造答主、观点或数据；author 使用片段中给出的作者名；sourceUrl 必须直接使用片段中的 https 链接。
+- 两者都为空：quote 写该领域公认的普适经验，author 写「知乎匿名用户」，sourceUrl 写 "https://www.zhihu.com"。
 - 不得编造点赞数、收藏数、评论数等任何站内统计数据。
 
 # 五、禁止项

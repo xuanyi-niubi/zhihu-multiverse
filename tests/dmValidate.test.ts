@@ -303,3 +303,81 @@ describe('validateDmTurn', () => {
     expect(result.turn.storyText.length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * P0-10：蓝图模式的引用必须**逐字**。
+ *
+ * legacy 模式允许模型从检索片段归纳改写；但本局世界蓝图里给出的
+ * 真实经验是「证物」，引用时必须一字不差，且署名与链接必须同源。
+ */
+describe('P0-10：蓝图模式逐字引用强制', () => {
+  const WORLD_CTX: DmValidateContext = {
+    ...CTX,
+    exactQuotes: [
+      {
+        quote: '我先做了一个 48 小时的小样，拿给队友看之后才决定要不要认真做。',
+        author: '走过这条路的人',
+        sourceUrl: 'https://www.zhihu.com/question/1/answer/1',
+      },
+      {
+        quote: '我们组三个人最后都退赛了，课业压力比想象中大得多。',
+        author: '中途退赛的学长',
+        sourceUrl: 'https://www.zhihu.com/question/1/answer/2',
+      },
+    ],
+  };
+
+  function payloadWithQuote(quote: string, author = '某个人', sourceUrl = 'https://www.zhihu.com') {
+    const payload = basePayload();
+    payload.zhihuBullet = { author, quote, sourceUrl };
+    return payload;
+  }
+
+  it('逐字命中 → 原样保留', () => {
+    const verbatim = '我们组三个人最后都退赛了，课业压力比想象中大得多。';
+    const result = expectOk(
+      validateDmTurn(payloadWithQuote(verbatim, '中途退赛的学长', 'https://www.zhihu.com/question/1/answer/2'), WORLD_CTX),
+    );
+    expect(result.turn.zhihuBullet.quote).toBe(verbatim);
+    expect(result.turn.zhihuBullet.author).toBe('中途退赛的学长');
+    expect(result.issues.some((issue) => issue.code === 'quote-not-verbatim')).toBe(false);
+  });
+
+  it('改写过（意思相近但不等）→ 替换为最相关的真实片段，并记修复', () => {
+    const result = expectOk(
+      validateDmTurn(payloadWithQuote('我们组最后都退赛了，课业压力太大了。'), WORLD_CTX),
+    );
+    expect(result.turn.zhihuBullet.quote).toBe('我们组三个人最后都退赛了，课业压力比想象中大得多。');
+    expect(result.turn.zhihuBullet.author).toBe('中途退赛的学长');
+    expect(result.turn.zhihuBullet.sourceUrl).toBe('https://www.zhihu.com/question/1/answer/2');
+    expect(result.issues.some((issue) => issue.code === 'quote-not-verbatim')).toBe(true);
+  });
+
+  it('**只修 quote 不修署名是不允许的**：逐字命中但署名不符 → 署名对齐', () => {
+    const verbatim = '我先做了一个 48 小时的小样，拿给队友看之后才决定要不要认真做。';
+    const result = expectOk(
+      validateDmTurn(payloadWithQuote(verbatim, '随便编的答主', 'https://www.zhihu.com/question/9/answer/9'), WORLD_CTX),
+    );
+    expect(result.turn.zhihuBullet.author).toBe('走过这条路的人');
+    expect(result.turn.zhihuBullet.sourceUrl).toBe('https://www.zhihu.com/question/1/answer/1');
+    expect(result.issues.some((issue) => issue.code === 'author-mismatch-verbatim')).toBe(true);
+  });
+
+  it('超过 120 字的逐字原文不会被截断（截断即破坏逐字性）', () => {
+    const longQuote =
+      '我当时大二，基础一般，边上课边准备比赛，每周大概花十个小时，最后拿了省二；现在回头看，真正难的不是技术本身，而是在没有人给你反馈的那两个月里，你还能不能继续把手上这件小事做完；如果你也打算走这条路，先想清楚这一点，再决定要不要开始，别等到期中了才发现自己两头都没有抓住。';
+    expect(longQuote.length).toBeGreaterThan(120);
+    const ctx: DmValidateContext = {
+      ...CTX,
+      exactQuotes: [{ quote: longQuote, author: '长句答主', sourceUrl: 'https://www.zhihu.com/question/2/answer/2' }],
+    };
+    const result = expectOk(validateDmTurn(payloadWithQuote('随手写的一句话，明显不是原文引用。'), ctx));
+    expect(result.turn.zhihuBullet.quote).toBe(longQuote);
+  });
+
+  it('legacy 模式（无 exactQuotes）行为不变：允许改写且照旧截断到 120', () => {
+    const result = expectOk(validateDmTurn(payloadWithQuote('这是一句模型自己归纳的话，本来就没有原文。'), CTX));
+    expect(result.turn.zhihuBullet.quote).toBe('这是一句模型自己归纳的话，本来就没有原文。');
+    expect(result.issues.some((issue) => issue.code === 'quote-not-verbatim')).toBe(false);
+  });
+});

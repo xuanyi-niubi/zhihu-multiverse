@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { normalizeDmInput } from '@/core/dm/input';
-import { formatDmUserMessage } from '@/core/dm/prompt';
+import { buildDmMessages, formatDmUserMessage } from '@/core/dm/prompt';
 
 import type { DmWorldContext } from '@/features/game-world/dmContext';
 
@@ -127,5 +127,18 @@ describe('prompt：世界蓝图块', () => {
       normalizeDmInput(baseInput({ worldContext: { ...WORLD, actObjective: 'final-reflection' } })),
     );
     expect(text).toContain('本幕不引入新的现实主张');
+  });
+
+  /**
+   * P0-10：系统提示词必须把两种模式讲清楚 ——
+   * 蓝图模式逐字引用，legacy（只有检索片段）才允许改写。
+   * 此前只有「改写自」一条，与蓝图块的「禁止改写」互相矛盾。
+   */
+  it('system prompt 同时给出逐字模式与 legacy 改写模式（P0-10）', () => {
+    const messages = buildDmMessages(normalizeDmInput(baseInput({ worldContext: WORLD })));
+    const system = messages[0]!.content;
+    expect(system).toContain('逐字等于');
+    expect(system).toContain('legacy 模式');
+    expect(system).toContain('改写自');
   });
 });
