@@ -21,8 +21,12 @@ import type { RetrievalRun } from '@/features/decision-session/domain';
  * | `live` | 知乎实时检索 + 检索时间 | 可以 |
  * | `snapshot` | 知乎来源快照 | 可以 |
  * | `offline` | 当前没有可核对的来源 | 没有来源 |
+ * | `deferred` | 检索还没开始（推迟到生成世界时） | 还没有来源 |
  *
  * **用快照时绝不说「没有样本」** —— 快照本身就是样本。
+ * 同理，**推迟检索时绝不说「没有可核对的来源」** ——
+ * 那是「查过了没有」，而这里只是「还没查」。两者混淆会让人
+ * 以为证据真的不存在，从而低估这件事。
  */
 
 const COPY: Readonly<Record<RetrievalRun['provenance'], { readonly label: string; readonly tone: string }>> = {
@@ -30,6 +34,7 @@ const COPY: Readonly<Record<RetrievalRun['provenance'], { readonly label: string
   live: { label: '知乎实时检索', tone: 'border-emerald-400/35 bg-emerald-400/[0.07] text-emerald-100' },
   snapshot: { label: '知乎来源快照', tone: 'border-zhihu-500/35 bg-zhihu-500/[0.07] text-zhihu-100' },
   offline: { label: '当前没有可核对的来源', tone: 'border-amber-400/35 bg-amber-400/[0.07] text-amber-100' },
+  deferred: { label: '检索还没开始 · 生成世界时进行', tone: 'border-white/15 bg-white/[0.03] text-slate-300' },
 };
 
 export function ProvenanceNote({

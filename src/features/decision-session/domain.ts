@@ -198,8 +198,16 @@ export type SessionStatus =
 /** 检索运行记录：给「这条结论是怎么来的」留证据。 */
 export interface RetrievalRun {
   readonly queries: readonly string[];
-  /** live / snapshot / curated 三档，**文案必须与事实一致**（方案 §5.3）。 */
-  readonly provenance: 'live' | 'snapshot' | 'curated' | 'offline';
+  /**
+   * live / snapshot / curated / offline 四档 + `deferred`，
+   * **文案必须与事实一致**（方案 §5.3）。
+   *
+   * `deferred` 是 P0-5 新增的一档：检索被**推迟**到 `prepare-world`，
+   * 此刻既没查过、也不是查了没结果。它必须与 `offline`
+   * （查过了但没有可用样本）区分开 —— 混淆会让人以为证据真的不存在，
+   * 而实际上我们还没去找。
+   */
+  readonly provenance: 'live' | 'snapshot' | 'curated' | 'offline' | 'deferred';
   readonly retrievedAt: string;
   readonly sourceCount: number;
   readonly factCount: number;

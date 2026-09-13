@@ -87,6 +87,19 @@ export async function POST(request: Request): Promise<Response> {
     question,
     profile,
     profileAnalysis,
+    /**
+     * P0-5：创建会话时**不再做实时检索**。
+     *
+     * 两个原因：
+     * 1. 检索要等澄清答完才定得准 —— 用户的回答会改变检索意图
+     *    （该找相似处境、替代走法、还是反例）；
+     * 2. 旧 `retrieveFor()` 与 `prepare-world` 的 multi-intent 检索
+     *    叠在一起，一局会打 4 次知乎接口，白耗配额。
+     *
+     * 检索统一推迟到 `prepare-world` —— 那时 `SearchPlan` 才拿得到
+     * 澄清后的条件。
+     */
+    deferRetrieval: true,
     ...(liveSearch ? { liveSearch } : {}),
   });
 

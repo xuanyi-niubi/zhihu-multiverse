@@ -223,6 +223,8 @@ export interface CreateSessionInput {
   readonly profile?: PlayerProfile;
   /** 模型写的自由文本分析；没有就 null。 */
   readonly profileAnalysis?: string | null;
+  /** 把实时检索推迟到 `prepare-world`（P0-5）。默认 false，保持旧行为。 */
+  readonly deferRetrieval?: boolean;
   readonly liveSearch?: (query: string) => Promise<readonly KnowledgeSource[]>;
 }
 
@@ -252,12 +254,80 @@ export async function createSession(input: CreateSessionInput): Promise<Decision
    */
   const clarificationNeeds = clarificationNeedsFor(problemFrame);
 
+  /**
+   * 推迟检索（P0-5）。
+   *
+   * ## 为什么需要它
+   *
+   * 新主链在一次推演里会检索**两遍**：
+   *
+   * ```text
+   * POST /api/sessions  → 旧 retrieveFor()          （1 次）
+   * prepare-world       → multi-intent retrieval    （3 次）
+   * ```
+   *
+   * 既浪费知乎配额，也让职责混乱：创建会话的职责是
+   * 「确定这是谁、他在问什么、还缺什么信息」；检索的职责是
+   * 「按 SearchPlan 去找相似 / 替代 / 反例经历」—— 而后者
+   * **必须等澄清答完**才定得准，因为用户的回答会改变检索意图。
+   *
+   * ## 兼容
+   *
+   * 默认 `false`：旧 Session、黄金案例、既有测试仍可在创建时预加载路径。
+   * 只有新主链（`/api/sessions`）显式传 `true`。
+   */
+  const deferred = input.deferRetrieval === true;
+  const now = new Date().toISOString();
+
+  if (deferred) {
+    return {
+      id: newSessionId(),
+      ownerId: input.ownerId,
+      status: clarificationNeeds.length > 0 ? 'clarifying' : 'comparing',
+      question,
+      userContext: { goal: question, nonNegotiables: [], existingResources: [] },
+      problemFrame,
+      profile,
+      profileAnalysis,
+      clarificationNeeds,
+      /**
+       * 检索留空，但**如实标注它被推迟了** —— 不是「检索了但没结果」。
+       *
+       * 这两种状态在界面上必须能区分：前者是「还没做」，
+       * 后者是「做了但没有可用样本」。混为一谈会让人以为
+       * 证据真的不存在，而实际上我们还没去找。
+       */
+      retrievalRun: {
+        provenance: 'deferred',
+        queries: [],
+        retrievedAt: now,
+        sourceCount: 0,
+        factCount: 0,
+        filteredCount: 0,
+        unsupportedSynthesisCount: 0,
+        factual: false,
+        notes: ['检索推迟到生成世界时进行：先确定还缺什么，再按意图去找经历。'],
+        reason: '检索推迟到生成世界时进行：先确定还缺什么，再按意图去找经历。',
+      } as RetrievalRun,
+      evidenceFacts: [],
+      pathClusters: [],
+      experienceFacts: [],
+      experienceCases: [],
+      experiencePaths: [],
+      worldBlueprint: null,
+      selectedUnknown: null,
+      experiment: null,
+      followUp: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   const retrieved = await retrieveFor({
     question,
     ...(input.liveSearch ? { liveSearch: input.liveSearch } : {}),
   });
   const paths = buildPaths({ question, sources: retrieved.sources });
-  const now = new Date().toISOString();
 
   // 事实**只算一次**，路径与展示共用同一组（避免两者基于不同数据）
   const retrievalRun: RetrievalRun = {
@@ -450,6 +520,42 @@ function experienceFactsFromLegacy(session: DecisionSession): readonly Experienc
 }
 
 /**
+ * 为「检索被推迟」的会话补做 legacy 检索（P0-5）。
+ *
+ * ## 为什么必须有这一步
+ *
+ * `/api/sessions` 现在传 `deferRetrieval: true`，创建时不再预加载
+ * `evidenceFacts` / `pathClusters`。而无 key 的场景（本地演示、
+ * 访客没填自己的知乎凭证）走的是 `experienceFactsFromLegacy()` 兜底 ——
+ * 它读的正是这两个字段。不补做的话兜底会静默失效：
+ * 空事实 → 空经历 → 空路径 → **零经验解锁**（实测复现过）。
+ *
+ * ## 它做的是同一件事，只是换了时间
+ *
+ * 与 `createSession()` 的非推迟分支**完全同一套调用**
+ * （`retrieveFor` + `buildPaths`），所以数据不会因为搬家而变样：
+ * 黄金案例仍然给出 curated 快照与问题专属路径。
+ * 区别只是它发生在用户答完澄清之后 —— 那时检索意图才定得准。
+ */
+async function hydrateLegacyEvidence(session: DecisionSession): Promise<DecisionSession> {
+  const retrieved = await retrieveFor({ question: session.question });
+  const paths = buildPaths({ question: session.question, sources: retrieved.sources });
+  const now = new Date().toISOString();
+
+  return {
+    ...session,
+    retrievalRun: {
+      ...retrieved.retrievalRun,
+      factCount: paths.facts.length,
+      filteredCount: retrieved.retrievalRun.filteredCount + paths.filteredCount,
+    },
+    evidenceFacts: paths.facts,
+    pathClusters: paths.clusters,
+    updatedAt: now,
+  };
+}
+
+/**
  * prepare-world：把一个已澄清的会话编译成可进入的世界。
  *
  * ```text
@@ -480,7 +586,22 @@ export async function prepareExperienceSession(
     });
     facts = extracted.facts;
   } else {
-    // 无检索能力：从 legacy 证据桥接（黄金案例 / 上一次实时检索的产物）
+    /**
+     * 无检索能力：从 legacy 证据桥接（黄金案例 / 上一次实时检索的产物）。
+     *
+     * **P0-5 的关键一环**：检索被推迟到这一步之后，创建会话时
+     * `session.evidenceFacts` 是空的。如果这里直接桥接，桥出来的
+     * 就是「空 → 没有事实 → 没有经历 → 没有路径 → 没有经验解锁」，
+     * 整条兜底链会静默断掉（实测：`unlocks=0`）。
+     *
+     * 所以**在这里补做 legacy 检索**，把「什么时候取样本」整体后移，
+     * 而不是把这份样本丢掉。无 key 时它给出的是演示案例的 curated 快照，
+     * 有 key 时上面那条 `deps.search` 分支走实时多意图检索。
+     */
+    session =
+      session.evidenceFacts.length > 0 || session.pathClusters.length > 0
+        ? session
+        : await hydrateLegacyEvidence(session);
     facts = experienceFactsFromLegacy(session);
   }
 
