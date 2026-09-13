@@ -135,3 +135,37 @@ describe('源码层的契约（防止有人把换算删掉）', () => {
     expect(source).toMatch(/act:\s*input\.turnIndex\b/);
   });
 });
+
+/**
+ * P0-2：Session 模式必须严格跑蓝图幕数（固定 4），而不是 AI 预算的 7～8 幕。
+ *
+ * 症状：蓝图只有四幕，而 `runBudgetFor` 给出 7～8 幕，
+ * 于是**第五幕之后一直重复 `final-reflection`** —— 拖沓且重复。
+ */
+describe('Session 幕数绑定蓝图（P0-2）', () => {
+  it('reducer 装载蓝图时同时写入 totalActs', () => {
+    const source = readFileSync(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
+    // LOAD_WORLD_BLUEPRINT 的分支里必须有 totalActs: action.blueprint.acts.length
+    expect(source).toMatch(/totalActs:\s*action\.blueprint\.acts\.length/);
+  });
+
+  it('幕数计算优先读蓝图长度，且排在 legacy 预算之前', () => {
+    const source = readFileSync(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
+    const blueprintRead = source.indexOf('sessionView?.worldBlueprint?.acts.length');
+    const legacyBudget = source.indexOf('runBudgetFor({', blueprintRead >= 0 ? blueprintRead : 0);
+    expect(blueprintRead).toBeGreaterThan(-1);
+    expect(legacyBudget).toBeGreaterThan(blueprintRead);
+  });
+
+  it('蓝图固定四幕（编译契约，smoke 也断言了同一件事）', () => {
+    // 幕数绑定只有在蓝图确实是四幕时才有意义
+    expect(blueprint().acts).toHaveLength(4);
+  });
+
+  it('第五幕及以后在蓝图里不存在（所以不能再跑下去）', () => {
+    const acts = blueprint().acts;
+    expect(acts.find((act) => act.act === 5)).toBeUndefined();
+    // 且第四幕就是终局反思，不是「重复的终局反思」
+    expect(acts.filter((act) => act.objective === 'final-reflection')).toHaveLength(1);
+  });
+});

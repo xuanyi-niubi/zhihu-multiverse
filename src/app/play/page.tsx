@@ -990,10 +990,22 @@ function runReducer(state: RunState, action: RunAction): RunState {
       return { ...state, profile: action.profile, profileAnalysis: action.analysis };
 
     case 'LOAD_WORLD_BLUEPRINT': {
-      // Session 世界蓝图（P0-G）：像 memory 一样异步装载，不动初始状态签名。
-      // 蓝图本身不直接驱动叙事 —— 它经过 worldContextForTurn 切成每幕上下文，
-      // 由 /api/dm 注入模型；这里只是把它挂进运行时供读取。
-      return { ...state, sessionId: action.sessionId, worldBlueprint: action.blueprint };
+      /*
+        Session 世界蓝图（P0-G）：像 memory 一样异步装载，不动初始状态签名。
+        蓝图本身不直接驱动叙事 —— 它经过 `worldContextForTurn` 切成每幕上下文，
+        由 `/api/dm` 注入模型；这里只是把它挂进运行时供读取。
+
+        **`totalActs` 一并写入（P0-2）**：蓝图固定四幕，而 Session 模式原本
+        沿用了 `runBudgetFor` 的 7～8 幕，于是第五幕之后一直重复
+        `final-reflection`。把幕数绑到蓝图长度之后，
+        「UI 计算 / Reducer 终局判断 / DM totalTurns」三处同源。
+      */
+      return {
+        ...state,
+        sessionId: action.sessionId,
+        worldBlueprint: action.blueprint,
+        totalActs: action.blueprint.acts.length,
+      };
     }
 
     case 'LOAD_MEMORY': {
@@ -1590,15 +1602,31 @@ function PlayScreen() {
   /**
    * 本局的幕数（v2 §14 Phase 0 第 2 条：接线动态幕）。
    *
-   * 两条路径刻意不同：
+   * 三条路径刻意不同（P0-2 新增了第一条）：
+   * - **Session 个性化推演**：幕数**必须等于编译出的世界蓝图幕数**（固定 4 幕）。
+   *   蓝图是「进入世界 → 体会代价 → 遇到反例 → 终局反思」这一段弧，
+   *   它本来就只有四幕；如果让 AI 预算把它拉成 7～8 幕，
+   *   **第五幕之后会一直重复 `final-reflection`** —— 体验拖沓且重复。
    * - **预置剧本**：幕数由剧本本身决定（人工精调的四幕，每幕都有手写内容），
    *   动态幕不该截断它；
-   * - **AI 自由推演**：幕数由张力预算决定（`runBudgetFor`），因此不同的出身
-   *   与属性会得到不同的幕数 —— 这正是「玩两次真的不一样」的来源。
+   * - **AI 自由推演（legacy `/play?goal=`）**：幕数由张力预算决定
+   *   （`runBudgetFor`），因此不同的出身与属性会得到不同的幕数。
    *
-   * 两者都用 `MAX_TURNS` 作为硬上限，口径只有一处。
+   * 三者都用 `MAX_TURNS` 作为硬上限，口径只有一处。
    */
   const totalActCount = React.useMemo(() => {
+    /**
+     * Session 模式优先：蓝图有几幕就跑几幕。
+     *
+     * 这里读的是 `sessionView.worldBlueprint.acts.length`（与 reducer 写入的
+     * `state.totalActs` 同源），保证「UI 计算 / Reducer 终局判断 / DM totalTurns」
+     * 三处一致 —— 三处口径不同会让终局在第 4 幕与第 8 幕之间摇摆。
+     */
+    const blueprintActs = sessionView?.worldBlueprint?.acts.length ?? 0;
+    if (blueprintActs > 0) {
+      return blueprintActs;
+    }
+
     if (state.scenarioId !== AI_DM_SCENARIO_ID) {
       return scenario.turns.length;
     }
@@ -1612,7 +1640,13 @@ function PlayScreen() {
       },
       constraints,
     });
-  }, [constraints, scenario.turns.length, state.originId, state.scenarioId]);
+  }, [
+    constraints,
+    scenario.turns.length,
+    sessionView?.worldBlueprint,
+    state.originId,
+    state.scenarioId,
+  ]);
 
   /** 本局开局的幕状态：用于展示余量与危机判定（纯函数，可复现）。 */
   const runAct = React.useMemo(
