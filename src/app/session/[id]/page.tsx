@@ -148,6 +148,8 @@ export default function SessionPage() {
 
   const showClarify = view.status === 'clarifying';
   const showPaths = !showClarify;
+  const worldReady = view.status === 'ready_to_play';
+  const canPrepareWorld = view.status === 'comparing' || view.status === 'choosing_unknown';
   const showExperiment = view.status === 'designing_experiment' || view.status === 'committed';
 
   return (
@@ -235,14 +237,36 @@ export default function SessionPage() {
                 </p>
               ) : null}
 
-              {!showExperiment ? (
+              {canPrepareWorld ? (
+                <button
+                  type="button"
+                  data-action="prepare-world"
+                  disabled={busy}
+                  onClick={() => void act({ action: 'prepare-world' })}
+                  className="arcade-btn mt-4 w-full bg-zhihu-500 text-white disabled:opacity-50"
+                >
+                  {busy ? '正在生成你的世界…' : '生成我的世界'}
+                </button>
+              ) : null}
+
+              {worldReady ? (
+                <Link
+                  href={`/play?session=${encodeURIComponent(id)}`}
+                  data-destination="play-session"
+                  className="arcade-btn mt-4 flex w-full justify-center bg-zhihu-500 text-white"
+                >
+                  进入这个世界
+                </Link>
+              ) : null}
+
+              {!worldReady && !showExperiment ? (
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => void act({ action: 'design-experiment' })}
-                  className="arcade-btn mt-4 w-full bg-zhihu-500 text-white disabled:opacity-50"
+                  className="btn-ghost mt-3 w-full text-xs disabled:opacity-50"
                 >
-                  {view.selectedUnknown ? '把这个问题变成一个本周就能做的实验' : '看完这些，生成一个可验证的小实验'}
+                  {view.selectedUnknown ? '先把这个问题变成一个本周实验' : '先生成一个可验证的小实验'}
                 </button>
               ) : null}
             </>

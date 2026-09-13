@@ -228,7 +228,20 @@ async function main() {
     );
   }
 
-  // ── 6.5 prepare-world（P0-F）：把已澄清的会话编译成世界蓝图 ──
+  // ── 6.5 UI 入口契约：主链不能只在 API 层可达 ───────────────
+  const sessionPageSource = await readFile(new URL('../src/app/session/[id]/page.tsx', import.meta.url), 'utf8');
+  check(
+    '会话页暴露 prepare-world 触发点',
+    sessionPageSource.includes('data-action="prepare-world"') && sessionPageSource.includes("action: 'prepare-world'"),
+    'data-action=prepare-world',
+  );
+  check(
+    '会话页暴露 /play?session= 入口',
+    sessionPageSource.includes('data-destination="play-session"') && sessionPageSource.includes('/play?session=${'),
+    'data-destination=play-session',
+  );
+
+  // ── 6.6 prepare-world（P0-F）：把已澄清的会话编译成世界蓝图 ──
   const prepared = await request(
     `/api/sessions/${sessionId}`,
     {
@@ -253,7 +266,7 @@ async function main() {
   check('蓝图带经验解锁（P0-H 的弹药）', (blueprint?.unlocks ?? []).length > 0, `unlocks=${blueprint?.unlocks?.length}`);
   check('蓝图经验片段可回溯', (blueprint?.experienceFacts ?? []).every((fact) => String(fact?.exactQuote ?? '').length > 0));
 
-  // ── 6.6 /play?session= 可进入（P0-G 的入口） ────────────────
+  // ── 6.7 /play?session= 可进入（P0-G 的入口） ────────────────
   const playWithSession = await request(`/play?session=${sessionId}`, {}, jar);
   check('GET /play?session= → 200', playWithSession.status === 200, `实际 ${playWithSession.status}`);
 
