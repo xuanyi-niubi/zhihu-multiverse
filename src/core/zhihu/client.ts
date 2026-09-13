@@ -32,16 +32,6 @@ export interface ZhihuHotItem {
   readonly Summary: string;
 }
 
-/** 知乎故事条目（盐选故事等品类）。 */
-export interface ZhihuStoryItem {
-  readonly Title: string;
-  readonly Url: string;
-  readonly Summary: string;
-  readonly AuthorName: string;
-  readonly Category: string;
-  readonly Tags: readonly string[];
-}
-
 export type ZhihuResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly code: string; readonly message: string };
@@ -52,22 +42,12 @@ export interface ZhihuConfig {
   readonly timeoutMs: number;
   /** 缓存存活时间（毫秒）。 */
   readonly cacheTtlMs: number;
-  /**
-   * 故事接口路径。
-   *
-   * 官方文档给出的规则页只列出了搜索与热榜的绝对路径，故事类只描述了
-   * 「开放五个品类」而没有公开路径；不同租户开通的路径可能不同。
-   * 因此这里做成可配置项（`ZHIHU_STORY_PATH`），默认值按开放平台惯例推测，
-   * 调用失败时静默降级——不猜死一个路径就假装它能用。
-   */
-  readonly storyPath: string;
 }
 
 export interface ZhihuClient {
   readonly id: string;
   search(query: string, count?: number): Promise<ZhihuResult<readonly ZhihuSearchItem[]>>;
   hotList(limit?: number): Promise<ZhihuResult<readonly ZhihuHotItem[]>>;
-  stories(limit?: number): Promise<ZhihuResult<readonly ZhihuStoryItem[]>>;
 }
 
 const DEFAULT_BASE_URL = 'https://developer.zhihu.com';
@@ -107,7 +87,6 @@ export function resolveZhihuFromEnv(
     baseUrl: readEnv(env, 'ZHIHU_BASE_URL') ?? DEFAULT_BASE_URL,
     timeoutMs: readNumber(env, 'ZHIHU_TIMEOUT_MS', 15_000, 1_000, 60_000),
     cacheTtlMs: readNumber(env, 'ZHIHU_CACHE_TTL_MS', 10 * 60_000, 0, 24 * 3600_000),
-    storyPath: readEnv(env, 'ZHIHU_STORY_PATH') ?? '/api/v1/content/story',
   };
 }
 
@@ -186,7 +165,6 @@ function normalizeItem(raw: unknown): ZhihuSearchItem {
 export function createZhihuClient(config: ZhihuConfig): ZhihuClient {
   const searchCache = createLru<readonly ZhihuSearchItem[]>(128);
   const hotCache = createLru<readonly ZhihuHotItem[]>(8);
-  const storyCache = createLru<readonly ZhihuStoryItem[]>(8);
 
   async function request<T>(
     path: string,
@@ -298,39 +276,5 @@ export function createZhihuClient(config: ZhihuConfig): ZhihuClient {
       return result;
     },
 
-    async stories(limit = 10) {
-      const clamped = Math.min(Math.max(Math.round(limit), 1), 30);
-      const cacheKey = String(clamped);
-      const cached = storyCache.get(cacheKey, config.cacheTtlMs);
-
-      if (cached) {
-        return { ok: true, data: cached };
-      }
-
-      const result = await request(config.storyPath, { Limit: String(clamped) }, (data) => {
-        const items = Array.isArray(data.Items) ? data.Items : [];
-        return items.map((raw) => {
-          const item = isRecord(raw) ? raw : {};
-          const tags = Array.isArray(item.Tags)
-            ? item.Tags.map((tag) => asString(tag)).filter((tag) => tag.length > 0)
-            : [];
-
-          return {
-            Title: asString(item.Title),
-            Url: asString(item.Url),
-            Summary: asString(item.Summary),
-            AuthorName: asString(item.AuthorName),
-            Category: asString(item.Category),
-            Tags: tags,
-          };
-        });
-      });
-
-      if (result.ok) {
-        storyCache.set(cacheKey, result.data);
-      }
-
-      return result;
-    },
   };
 }

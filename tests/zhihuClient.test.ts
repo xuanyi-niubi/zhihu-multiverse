@@ -19,7 +19,6 @@ function config(over: Partial<ZhihuConfig> = {}): ZhihuConfig {
     baseUrl: 'https://developer.zhihu.com',
     timeoutMs: 5000,
     cacheTtlMs: 60_000,
-    storyPath: '/api/v1/content/story',
     ...over,
   };
 }
@@ -54,15 +53,6 @@ describe('resolveZhihuFromEnv', () => {
 
   it('也接受 ZHIHU_API_KEY 作为别名', () => {
     expect(resolveZhihuFromEnv({ ZHIHU_API_KEY: 'abc' })?.accessSecret).toBe('abc');
-  });
-
-  it('故事路径可配置，且有默认值', () => {
-    expect(resolveZhihuFromEnv({ ZHIHU_ACCESS_SECRET: 'x' })?.storyPath).toBe(
-      '/api/v1/content/story',
-    );
-    expect(
-      resolveZhihuFromEnv({ ZHIHU_ACCESS_SECRET: 'x', ZHIHU_STORY_PATH: '/custom' })?.storyPath,
-    ).toBe('/custom');
   });
 
   it('缓存 TTL 被钳制在合法区间', () => {
@@ -211,61 +201,5 @@ describe('hotList', () => {
     await client.hotList(5);
 
     expect(calls).toHaveLength(1);
-  });
-});
-
-describe('stories', () => {
-  it('解析故事条目与标签', async () => {
-    stubFetch({
-      Code: 0,
-      Data: {
-        Items: [
-          {
-            Title: '一个故事',
-            Url: 'https://zhihu.com/s',
-            Summary: '简介',
-            AuthorName: '作者',
-            Category: '盐选',
-            Tags: ['悬疑', '校园'],
-          },
-        ],
-      },
-    });
-
-    const result = await createZhihuClient(config()).stories(5);
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data[0].Tags).toEqual(['悬疑', '校园']);
-      expect(result.data[0].AuthorName).toBe('作者');
-    }
-  });
-
-  it('Tags 非数组时降级为空数组而不抛', async () => {
-    stubFetch({ Code: 0, Data: { Items: [{ Title: 'x', Tags: '不是数组' }] } });
-
-    const result = await createZhihuClient(config()).stories(1);
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data[0].Tags).toEqual([]);
-    }
-  });
-
-  it('使用可配置的 storyPath', async () => {
-    const calls = stubFetch({ Code: 0, Data: { Items: [] } });
-
-    await createZhihuClient(config({ storyPath: '/custom/story' })).stories(1);
-
-    expect(calls[0]).toContain('/custom/story');
-  });
-
-  it('路径不存在时返回结构化失败，不影响其他方法', async () => {
-    stubFetch({ Code: 404, Message: '接口不存在' });
-    const client = createZhihuClient(config());
-
-    const stories = await client.stories(1);
-    expect(stories.ok).toBe(false);
-    expect(typeof client.search).toBe('function');
   });
 });

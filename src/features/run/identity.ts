@@ -108,6 +108,5 @@ export function zhihuConfigForIdentity(stored: StoredSettings | null): ZhihuConf
     baseUrl: 'https://developer.zhihu.com',
     timeoutMs: 20_000,
     cacheTtlMs: 600_000,
-    storyPath: '/api/v1/content/story',
   };
 }
