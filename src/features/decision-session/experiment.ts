@@ -113,13 +113,25 @@ export function experimentFromUnknown(input: ExperimentFromUnknownInput): Realit
   const tension = input.frame.centralTension || input.frame.rawQuestion;
   const diff = differenceClause(sharpestDifference(input.differences));
   const unknown = input.unknown.label;
+  const stated = input.context.availableTime;
+
+  /**
+   * 时间容量实验的时间盒（P1-1）。
+   *
+   * 它和别的实验**方向相反**：不是「花掉你多少时间」，而是「量出你真实
+   * 有多少时间」。所以不能套 `timeboxFor` 的档位，但必须把用户自述的
+   * 可用时间写出来 —— 否则他会以为这个记录要占用他刚说的那 3 小时。
+   */
+  const capacityBox = stated
+    ? `7 天，每天约 2 分钟记录（你说的可用时间是「${stated}」—— 记录本身不占用它）`
+    : '7 天，每天约 2 分钟记录（不是让你每天投入两小时）';
 
   switch (kind) {
     case 'time-capacity':
       return {
         hypothesis: `「${unknown}」不能靠估计回答 —— 人对自己的时间余量普遍估计偏高。这一局的核心张力是「${tension}」，${diff}先用七天真实记录换一个数。`,
         action: '连续 7 天记录真实投入：每天结束时写一行「今天为这件事实际投入了 X 分钟」，不补齐、不美化，没做就写 0。',
-        timebox: '7 天，每天约 2 分钟记录（不是让你每天投入两小时）',
+        timebox: capacityBox,
         artifact: '一份七天的真实投入记录，以及一个中位数。',
         successSignal: `中位数达到你心里那条线（例如每周 8 小时）——这说明这条路的投入是可持续的，而不是靠某一天爆发。`,
         stopSignal: `${stop}若七天里有五天记的是 0，说明当前条件下容量不支持 —— 先去改条件，而不是先怪自己。`,

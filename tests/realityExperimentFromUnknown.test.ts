@@ -258,3 +258,27 @@ describe('接线：有蓝图走未知驱动，无蓝图保留旧模板', () => {
     expect(designed.experiment?.action).not.toContain('连续 7 天记录真实投入');
   });
 });
+
+/**
+ * P1-1 补充：时间容量实验的时间盒必须**看得见**用户自述的可用时间。
+ *
+ * 它和其他实验方向相反（不是花掉时间，而是量出真实容量），
+ * 但如果不把自述时间写出来，用户会以为记录要占用他刚说的那 3 小时。
+ */
+describe('时间容量实验的时间盒', () => {
+  it('用户说了可用时间 → 时间盒里写明它，并说清记录不占用', () => {
+    const experiment = build('time-capacity', {
+      context: context({ availableTime: '未来两周约 3 小时' }),
+    });
+    expect(experiment.timebox).toContain('3 小时');
+    expect(experiment.timebox).toContain('不占用');
+    // 仍然只要求每天两分钟的记录量
+    expect(experiment.timebox).toContain('2 分钟');
+  });
+
+  it('用户没说可用时间 → 不编一个数字，只说明这是最小记录量', () => {
+    const experiment = build('time-capacity', { context: context({ availableTime: undefined }) });
+    expect(experiment.timebox).toContain('2 分钟');
+    expect(experiment.timebox).not.toMatch(/约 \d+\s*小时/);
+  });
+});
