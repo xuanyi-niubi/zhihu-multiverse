@@ -496,8 +496,7 @@ function normalizeChoice(
     return null;
   }
 
-  const hint =
-    pickString(raw.hint) ?? (index === 0 ? '稳妥：收益有限但风险低' : '高危：需要检定，成败悬殊');
+  const hint = pickString(raw.hint) ?? '这一步要付一点代价，但你能说清它是什么。';
 
   const ghostEchoStat = normalizeGhostEcho(
     raw.ghostEchoStat,
@@ -506,7 +505,12 @@ function normalizeChoice(
     `choices[${index}].ghostEchoStat`,
   );
 
-  const onSuccess = normalizeOutcome(raw.onSuccess, issues, `choices[${index}].onSuccess`, index === 1);
+  /**
+   * 遗物只从**带 check 的分支**掉落（§16 之后不再有「第 2 个选项 = 风险位」
+   * 这个位置假设，改用「这次行动真的需要一次检验」来判断）。
+   */
+  const hasCheck = raw.check !== undefined && raw.check !== null;
+  const onSuccess = normalizeOutcome(raw.onSuccess, issues, `choices[${index}].onSuccess`, hasCheck);
   if (!onSuccess) {
     issues.push({
       path: `choices[${index}].onSuccess`,
@@ -517,24 +521,18 @@ function normalizeChoice(
     return null;
   }
 
-  let check: ScenarioCheck | null = null;
+  /**
+   * check 允许出现在**任意**选项上（§16）。
+   *
+   * 旧规则按位置强制「第 1 个稳妥无检定、第 2 个必须带检定」，那是在用
+   * 模板代替判断：真实经验里有人做的事，未必都能被分成「稳」和「险」。
+   * 现在只保留机械保证：**带 check 就必须有失败分支**。
+   */
+  const check: ScenarioCheck | null = normalizeCheck(raw.check, ctx, issues, `choices[${index}].check`);
 
-  if (index === 0) {
-    if (raw.check !== undefined && raw.check !== null) {
-      issues.push({
-        path: `choices[${index}].check`,
-        code: 'safe-has-check',
-        message: '稳妥选项不应带 check，已移除',
-        repaired: true,
-      });
-    }
-  } else {
-    // index ≥ 1 的选项都可以带检定（第三项是「特殊/多线」选项，同样允许）
-    check = normalizeCheck(raw.check, ctx, issues, `choices[${index}].check`);
-  }
-
-  const onFail =
-    index >= 1 ? normalizeOutcome(raw.onFail, issues, `choices[${index}].onFail`, false) : null;
+  const onFail = check
+    ? normalizeOutcome(raw.onFail, issues, `choices[${index}].onFail`, false)
+    : null;
 
   const base: ScenarioChoice = {
     id: CHOICE_IDS[index],
@@ -681,47 +679,36 @@ export function validateDmTurn(input: unknown, ctx: DmValidateContext): DmValida
 
   // 选项数松绑（最终版 §5）：日常事件可以只有 1 个「推进」选项，
   // 危机事件 2 个形成风险对比，特殊事件可以到 3 个。
-  const [safeRaw, ...restRaw] = normalized;
-  const safeChoice = { ...safeRaw, id: 'a' as const };
+  const [firstRaw, ...restRaw] = normalized;
+  const firstChoice = { ...firstRaw, id: 'a' as const };
   const others: ScenarioChoice[] = [];
 
   restRaw.forEach((choice, offset) => {
-    let riskChoice = choice;
+    let fixed = choice;
 
-    // 只有"风险位"（第一个非稳妥选项）需要自动补检定与失败分支
-    if (offset === 0) {
-      if (!riskChoice.check) {
-        const band = bandFor(ctx.turnIndex);
-        riskChoice = {
-          ...riskChoice,
-          check: { targetStat: 'skill', difficulty: clampInt(12 + ctx.turnIndex, band.min, band.max) },
-        };
-        issues.push({
-          path: 'choices[1].check',
-          code: 'risk-missing-check',
-          message: '高风险选项缺少 check，已按回合补齐',
-          repaired: true,
-        });
-      }
-
-      if (!riskChoice.onFail) {
-        riskChoice = {
-          ...riskChoice,
-          onFail: {
-            feedback: '这一步没走通，你花了不少时间收拾残局，心气也掉了一截。',
-            statDeltas: { san: -14, skill: 2 },
-          },
-        };
-        issues.push({
-          path: 'choices[1].onFail',
-          code: 'risk-missing-fail',
-          message: '高风险选项缺少失败分支，已合成',
-          repaired: true,
-        });
-      }
+    /**
+     * 机械保证：**有 check 就必须有失败分支**（否则骰子掷失败时无事发生）。
+     *
+     * 这是唯一还保留的自动补全 —— 它保证的是「规则引擎不会卡住」，
+     * 不是「每个回合都必须有一个带检定的选项」（§16 已取消那条模板）。
+     */
+    if (fixed.check && !fixed.onFail) {
+      fixed = {
+        ...fixed,
+        onFail: {
+          feedback: '这一步没走通，你花了不少时间收拾残局，心气也掉了一截。',
+          statDeltas: { san: -14, skill: 2 },
+        },
+      };
+      issues.push({
+        path: `choices[${offset + 1}].onFail`,
+        code: 'check-missing-fail',
+        message: '带检定的选项缺少失败分支，已合成',
+        repaired: true,
+      });
     }
 
-    others.push({ ...riskChoice, id: CHOICE_IDS[offset + 1] ?? 'b' });
+    others.push({ ...fixed, id: CHOICE_IDS[offset + 1] ?? 'b' });
   });
 
   return {
@@ -737,7 +724,7 @@ export function validateDmTurn(input: unknown, ctx: DmValidateContext): DmValida
         ...(typeof upvotes === 'number' ? { upvotes } : {}),
         ...(answerId ? { answerId } : {}),
       },
-      choices: [safeChoice, ...others],
+      choices: [firstChoice, ...others],
     },
     issues,
   };

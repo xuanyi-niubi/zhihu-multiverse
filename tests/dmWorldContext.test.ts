@@ -143,3 +143,24 @@ describe('prompt：世界蓝图块', () => {
     expect(system).toContain('改写自');
   });
 });
+
+/**
+ * §16：选项不再由「一稳一险」模板产生。
+ *
+ * 有蓝图时，选项必须来自玩家想法 / 真实行动 / 反例替代做法；
+ * 旧模板只保留给 legacy 路径（没有蓝图时）。
+ */
+describe('选项来源（§16）', () => {
+  it('蓝图模式：明确禁止稳妥-高风险模板，且不强制任何位置带 check', () => {
+    const text = formatDmUserMessage(normalizeDmInput(baseInput({ worldContext: WORLD })));
+    expect(text).toContain('不套稳妥-高风险模板');
+    expect(text).toContain('真实行动');
+    expect(text).not.toContain('choices[1] 必须带 check');
+  });
+
+  it('legacy（无蓝图）：保留原来的稳妥/高风险模板，行为零变化', () => {
+    const text = formatDmUserMessage(normalizeDmInput(baseInput()));
+    expect(text).toContain('choices[1] 必须带 check');
+    expect(text).toContain('choices[0] 稳妥');
+  });
+});

@@ -234,12 +234,18 @@ export const DM_SYSTEM_PROMPT = `你是「知乎平行宇宙」的 AI 地下城�
 # 二、输出 Schema
 ${JSON.stringify(DM_TURN_JSON_SCHEMA)}
 
-# 三、数值平衡（必须遵守）
-- choices 给 1 到 3 个，id 依次为 "a""b""c"：
+# 三、选项（必须遵守）
+- choices 给 1 到 3 个，id 依次为 "a""b""c"。
+- **若本次提供了【本局世界蓝图 / 允许引用的真实经验】**：选项必须来自三种真实来源 ——
+  ① 玩家原本就想到的想法；② 【允许引用的真实经验】里某个人**真的做过**的事；③ 反例里的替代做法。
+  【禁止】用「a 稳妥 / b 高风险」这种模板化配对凑选项：人生里没有固定的稳/险二分。
+  只有当这个行动**真的需要一次检验**（结果不由你决定）时才给 check，且允许出现在任意一个选项上；
+  不要求任何一个位置必须带 check。
+- 若本次**没有**世界蓝图（legacy 路径）：按下面的稳妥/高风险模板给选项：
   · 日常事件给 1 个「推进」选项；
   · 危机事件给 2 个，形成明确的风险对比（a 稳妥无检定、b 有检定）；
   · 特殊事件可以给 3 个，体现多线可能。
-  choices[0] 永远是不带 check 的稳妥项；带 check 的选项从 choices[1] 开始。
+  choices[0] 是不带 check 的稳妥项；带 check 的选项从 choices[1] 开始。
 - choices[0]（稳妥选项）：【不得】出现 check 字段。statDeltas 建议区间：san -12..0、skill 0..12、bond 0..6。
 - choices[1]（高风险选项）：【必须】包含 check。difficulty 按回合递增：${DC_BANDS}。
 - check.targetStat 只能是 "san" | "skill" | "bond"，且必须与本回合的核心矛盾一致：
@@ -269,7 +275,7 @@ ${JSON.stringify(DM_TURN_JSON_SCHEMA)}
 
 # 六、自检清单（输出前在心里过一遍，不要写出来）
 - 我输出的是否是纯 JSON，且以 { 开头、以 } 结尾？
-- choices 数量在 1 到 3 之间，且 choices[0] 无 check？
+- choices 数量在 1 到 3 之间？（有蓝图时：选项来自玩家想法/真实行动/反例，没有套模板；无蓝图时 choices[0] 无 check）
 - 所有数值是否在允许区间内，且都是 number 类型？
 - sourceUrl 是否以 https:// 开头？
 - 是否没有输出任何多余文字？`;
@@ -597,7 +603,13 @@ id 线索：${unlock.unlockId}
 【玩家性格画像】${input.personaTags.length > 0 ? input.personaTags.join('、') : '无'}
 【知乎检索片段】
 ${formatSnippets(input)}
-【本回合要求】生成第 ${input.turnIndex} 回合。choices[0] 稳妥且不得有 check；choices[1] 必须带 check，difficulty 落在 ${dcBandFor(input.turnIndex)}；turnIndex 必须等于 ${input.turnIndex}。
+【本回合要求】生成第 ${input.turnIndex} 回合。${
+    world
+      ? '选项按上文第三节规定：来自玩家想法 / 真实行动 / 反例替代做法，不套稳妥-高风险模板；带 check 时 difficulty 落在 ' +
+        dcBandFor(input.turnIndex) +
+        '；'
+      : `choices[0] 稳妥且不得有 check；choices[1] 必须带 check，difficulty 落在 ${dcBandFor(input.turnIndex)}；`
+  }turnIndex 必须等于 ${input.turnIndex}。
 现在直接输出 JSON。`;
 }
 
@@ -642,7 +654,9 @@ ${truncated}
 ${issueList || '1. 输出不是合法的单一 JSON 对象。'}
 
 请只输出【修正后的单个 JSON 对象】，不要任何解释、不要 markdown 围栏、不要注释。
-必须满足：choices 在 1 到 3 个之间、id 依次为 a/b/c；choices[0] 无 check；带 check 的选项 difficulty 在 ${dcBandFor(input.turnIndex)}；turnIndex = ${input.turnIndex}；所有数值为 number；sourceUrl 以 https:// 开头。`,
+必须满足：choices 在 1 到 3 个之间、id 依次为 a/b/c；${
+      input.worldContext ? '' : 'choices[0] 无 check；'
+    }带 check 的选项 difficulty 在 ${dcBandFor(input.turnIndex)}；turnIndex = ${input.turnIndex}；所有数值为 number；sourceUrl 以 https:// 开头。`,
     },
   ];
 }

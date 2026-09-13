@@ -106,7 +106,11 @@ describe('validateDmTurn', () => {
     expect(Object.keys(deltas)).not.toContain('luck');
   });
 
-  it('稳妥选项带 check 时移除', () => {
+  /**
+   * §16 之后不再有「第 1 个必须无检定」这条位置规则：
+   * 选项来自真实行动，能不能被分判成「稳/险」不由位置决定。
+   */
+  it('任意位置的选项都可以带 check（不再被位置剥离）', () => {
     const payload = basePayload();
     (payload.choices as Record<string, unknown>[])[0].check = {
       targetStat: 'skill',
@@ -115,24 +119,21 @@ describe('validateDmTurn', () => {
 
     const result = expectOk(validateDmTurn(payload, CTX));
 
-    expect(result.turn.choices[0].check).toBeUndefined();
-    expect(result.issues.some((issue) => issue.code === 'safe-has-check')).toBe(true);
+    expect(result.turn.choices[0].check).toBeDefined();
+    expect(result.issues.some((issue) => issue.code === 'safe-has-check')).toBe(false);
   });
 
-  it('高风险选项缺 check 时按回合补齐', () => {
+  it('没有 check 的选项就保持没有 check（不再自动补一个检定）', () => {
     const payload = basePayload();
     delete (payload.choices as Record<string, unknown>[])[1].check;
 
     const result = expectOk(validateDmTurn(payload, CTX));
-    const check = result.turn.choices[1].check;
 
-    expect(check).toBeDefined();
-    expect(check?.difficulty).toBeGreaterThanOrEqual(13);
-    expect(check?.difficulty).toBeLessThanOrEqual(15);
-    expect(result.issues.some((issue) => issue.code === 'risk-missing-check')).toBe(true);
+    expect(result.turn.choices[1].check).toBeUndefined();
+    expect(result.issues.some((issue) => issue.code === 'risk-missing-check')).toBe(false);
   });
 
-  it('高风险选项缺 onFail 时合成失败分支', () => {
+  it('带 check 却没有失败分支 → 合成失败分支（机械保证，规则引擎不卡住）', () => {
     const payload = basePayload();
     delete (payload.choices as Record<string, unknown>[])[1].onFail;
 
@@ -140,7 +141,7 @@ describe('validateDmTurn', () => {
 
     expect(result.turn.choices[1].onFail).toBeDefined();
     expect(result.turn.choices[1].onFail?.statDeltas.san).toBeLessThan(0);
-    expect(result.issues.some((issue) => issue.code === 'risk-missing-fail')).toBe(true);
+    expect(result.issues.some((issue) => issue.code === 'check-missing-fail')).toBe(true);
   });
 
   it('未知 relicId 被丢弃', () => {
