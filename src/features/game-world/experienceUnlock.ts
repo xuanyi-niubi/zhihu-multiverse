@@ -18,8 +18,10 @@ import type { ScenarioChoice } from '@/data/prebuiltScenarios';
  *
  * ## 纪律
  *
- * 1. **只在选项不足 3 个时插入**。已满 3 个就等下一幕 —— 强行替换
- *    会挤掉人工精调的选项，也可能与检定选项的既有契约冲突；
+ * 1. **必须让玩家看得见**：3 个以内直接追加；已经 4 个时**替换最后一条**
+ *    （写清被替换的是模型生成的那一项）。旧版「满 3 个就等下一幕」实测会让
+ *    这条机制在很多回合根本不出现 —— 而它是全产品的 WOW Point，
+ *    不出现就等于没有；
  * 2. **同一解锁绝不重复出现**（连续几幕都解锁同一条经验没有意义）；
  * 3. 解锁选项**永远无检定**：它是一小步试探，不是一次冒险；
  * 4. 每个注入的选项都带 `experienceUnlockId` + `sourceFactIds`，
@@ -41,10 +43,6 @@ export interface InjectExperienceUnlockInput {
 export function injectExperienceUnlock(input: InjectExperienceUnlockInput): readonly ScenarioChoice[] {
   const { choices, unlock } = input;
   if (!unlock) {
-    return choices;
-  }
-  // 已满 3 个：不强替换（任务书 §18 的 P0 规则），留给下一幕
-  if (choices.length >= 3) {
     return choices;
   }
   // 同一解锁已在场（重渲染 / 重试请求）→ 不重复
@@ -71,5 +69,12 @@ export function injectExperienceUnlock(input: InjectExperienceUnlockInput): read
     sourceFactIds: [...unlock.sourceFactIds],
   };
 
+  /**
+   * 超过 4 个就替换最后一条：宁可挤掉一条模型生成的选项，
+   * 也不能让「真实经验解锁的新行动」缺席（它是这个产品的核心机制）。
+   */
+  if (choices.length >= 4) {
+    return [...choices.slice(0, 3), injected];
+  }
   return [...choices, injected];
 }

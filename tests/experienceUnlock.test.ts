@@ -50,10 +50,28 @@ describe('注入规则（P0：只在选项不足 3 个时插入）', () => {
     expect(result[2]!.text).toContain('先做一个小样'.replace('小', '最小'));
   });
 
-  it('3 个选项 → 原样返回（不强替换人工选项）', () => {
+  /**
+   * §21 / §50：解锁是**全产品的 WOW Point**，必须让玩家看得见。
+   *
+   * 旧契约是「满 3 个就等下一幕」—— 实测这会让它在一整局里都不出现，
+   * 而一个不出现的核心机制等于没有。现在：3 个以内追加；已经 4 个时
+   * 替换最后一条（宁可挤掉一条模型生成的选项）。
+   */
+  it('3 个选项 → 追加为第四条（机制必须可见）', () => {
     const choices = [choice('a'), choice('b'), choice('c')];
     const result = injectExperienceUnlock({ choices, unlock: unlock(), act: 2 });
-    expect(result).toBe(choices);
+    expect(result).toHaveLength(4);
+    expect(result[3]!.experienceUnlockId).toBe('unlock-path-1');
+    // 原来的三条一个不动
+    expect(result.slice(0, 3)).toEqual(choices);
+  });
+
+  it('4 个选项 → 替换最后一条，保证解锁一定在场', () => {
+    const choices = [choice('a'), choice('b'), choice('c'), choice('d')];
+    const result = injectExperienceUnlock({ choices, unlock: unlock(), act: 2 });
+    expect(result).toHaveLength(4);
+    expect(result[3]!.experienceUnlockId).toBe('unlock-path-1');
+    expect(result.slice(0, 3)).toEqual(choices.slice(0, 3));
   });
 
   it('同一解锁已在场 → 不重复', () => {

@@ -2518,6 +2518,7 @@ function PlayScreen() {
         onAdvance={() =>
           dispatch({ type: state.phase === 'outcome' ? 'ADVANCE_ACT' : 'ADVANCE_BEAT' })
         }
+        onResolveCheck={() => dispatch({ type: 'RESOLVE_DICE' })}
         onQuit={() => {
           window.location.href = '/';
         }}

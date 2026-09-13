@@ -137,11 +137,52 @@ export function counterexampleFacts(
  */
 function unlocksOf(paths: readonly ExperiencePath[], facts: readonly ExperienceFact[]): readonly ExperienceChoiceUnlock[] {
   const unlocks: ExperienceChoiceUnlock[] = [];
+  /**
+   * 行动片段的取用顺序（P0-8 之后的放宽）：
+   *
+   * 1. 这条路径自己的支持片段里的行动；
+   * 2. 这条路径引用的那些人（supportingCaseIds）的动作；
+   * 3. 本局检索到的行动里相关性最高的那一条。
+   *
+   * 放宽的理由：准入仍然只认 `type === 'action'`（必须是**真的有人做过的事**），
+   * 但不再要求它恰好落在这条路径的 supportingFactIds 里 —— 实测这会让
+   * 「真实经验解锁新行动」这个核心机制在真实数据上常常是 0。
+   */
+  /**
+   * 行动片段里优先挑**真的写了动作**的那条。
+   *
+   * 规则判型会把「说白了竞赛不是混奖状」这类表态也算成 action，
+   * 而解锁文案是「按『X』的路子先试一小步」—— 拿表态去填这个空
+   * 会读起来很怪。这里用一组动作词做确定性筛选，不引入模型调用。
+   */
+  const ACTION_HINT = /(先|打算|决定|开始|试|做|找|报|拆|写|跑|投|组队|联系|问|拆解|升级|准备|报名)/;
+  const actions = [...facts].filter((fact) => fact.type === 'action');
+  const byVerb = actions.filter((fact) => ACTION_HINT.test(fact.exactQuote));
+  const actionPool = byVerb.length > 0 ? byVerb : actions;
+  const fallbackAction = [...actionPool].sort((left, right) => right.relevance - left.relevance)[0];
+  const pathAction = (path: ExperiencePath): ExperienceFact | undefined => {
+    const own = factsByIds(facts, path.supportingFactIds).filter(
+      (fact) => fact.type === 'action' && ACTION_HINT.test(fact.exactQuote),
+    )[0];
+    if (own) {
+      return own;
+    }
+    const caseIds = new Set(path.supportingCaseIds);
+    const fromCase = actionPool.find((fact) => caseIds.has(`case:${fact.sourceId}`));
+    return fromCase ?? fallbackAction;
+  };
+
+  const usedActionIds = new Set<string>();
   paths.slice(0, 3).forEach((path, index) => {
-    const source = factsByIds(facts, path.supportingFactIds).find((fact) => fact.type === 'action');
+    const source = pathAction(path);
     if (!source) {
       return;
     }
+    // 同一条真实行动只解锁一次 —— 三条一模一样的解锁是明显的错
+    if (usedActionIds.has(source.id)) {
+      return;
+    }
+    usedActionIds.add(source.id);
     const label = shortLabel(source.exactQuote);
     unlocks.push({
       id: `unlock-${path.id}`,

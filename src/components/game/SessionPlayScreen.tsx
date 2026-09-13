@@ -97,6 +97,13 @@ export interface SessionPlayScreenProps {
   readonly view: SessionPlayView;
   readonly onChoose: (choice: ScenarioChoice) => void;
   readonly onAdvance: () => void;
+  /**
+   * 结算这一刻的随机结果（§19：玩家不再看到骰子，但随机仍然决定遭遇）。
+   *
+   * 新主链不显示骰面，所以由屏幕自己**自动**把这一次检定结算掉 ——
+   * 否则状态机会停在 `checking` 上，玩家永远看不到结果。
+   */
+  readonly onResolveCheck: () => void;
   readonly onQuit: () => void;
   readonly onOpenSource: (choice: ScenarioChoice) => void;
   readonly onCloseSource: () => void;
@@ -138,6 +145,7 @@ export function SessionPlayScreen({
   view,
   onChoose,
   onAdvance,
+  onResolveCheck,
   onQuit,
   onOpenSource,
   onCloseSource,
@@ -147,6 +155,21 @@ export function SessionPlayScreen({
 }: SessionPlayScreenProps) {
   const heading = ACT_HEADING[view.act.objective] ?? ACT_HEADING['enter-world'];
   const unlockCards = view.choices.filter((choice) => choice.experienceUnlockId);
+
+  /**
+   * 检定自动结算（§19）：不显示骰子，但结果仍由随机决定。
+   *
+   * 留 ~900ms 让「这一刻的结果不由你决定」被看见，再落结算 ——
+   * 既有随机性的分量，又不出现骰子界面。
+   */
+  const checking = view.phase === 'checking';
+  React.useEffect(() => {
+    if (!checking) {
+      return;
+    }
+    const timer = window.setTimeout(() => onResolveCheck(), 900);
+    return () => window.clearTimeout(timer);
+  }, [checking, onResolveCheck]);
 
   return (
     <main className="relative min-h-[100dvh] bg-ink-950">
@@ -210,6 +233,24 @@ export function SessionPlayScreen({
             </>
           )}
         </section>
+
+        {/* 这一幕的叙事讲完了：给一个明确的「继续」，不让玩家卡在文本上 */}
+        {view.phase === 'story' && !view.loading ? (
+          <button
+            type="button"
+            onClick={onAdvance}
+            className="door-btn mt-6 max-w-[240px]"
+          >
+            继续
+          </button>
+        ) : null}
+
+        {/* 检定中：不显示骰子，只说明「结果不由你决定」 */}
+        {checking ? (
+          <p className="mt-6 animate-pulse font-mono text-[12px] text-slate-500">
+            这一刻的结果不由你决定…
+          </p>
+        ) : null}
 
         {/* 选项（§21）：普通选项与经验解锁选项视觉不同 */}
         {view.phase === 'choices' && !view.loading ? (

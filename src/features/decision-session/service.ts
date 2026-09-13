@@ -610,6 +610,14 @@ export async function prepareExperienceSession(
   }
 
   let facts: readonly ExperienceFact[];
+  /**
+   * 实时检索运行记录：**有检索就要如实写进会话**。
+   *
+   * 旧实现只在「无检索能力」那条分支更新它，于是走了实时检索的会话
+   * 依然显示「检索还没开始 / 0 条来源」—— 与事实相反，而这正是
+   * 这个产品最不该出错的地方（来源状态文案必须与事实一致）。
+   */
+  let liveRun: RetrievalRun | null = null;
   if (deps.search) {
     const plan = buildSearchPlan({ frame });
     const retrieved = await retrieveExperienceSources({ plan, search: deps.search });
@@ -626,6 +634,29 @@ export async function prepareExperienceSession(
       router: deps.router ?? null,
     });
     facts = extracted.facts;
+    liveRun = {
+      queries: plan.queries.map((query) => query.query),
+      provenance: 'live',
+      retrievedAt: new Date().toISOString(),
+      sourceCount: retrieved.sources.length,
+      factCount: facts.length,
+      filteredCount: 0,
+      unsupportedSynthesisCount: 0,
+      factual: retrieved.sources.length > 0,
+      notes: [
+        retrieved.sources.length > 0
+          ? `按 ${plan.queries.length} 个检索意图找到 ${retrieved.sources.length} 条真实来源，得到 ${facts.length} 条逐字片段。`
+          : '这次检索没有返回可用来源。',
+        ...((extracted.proposed ?? 0) > 0
+          ? [
+              `模型提议 ${extracted.proposed} 条片段，${extracted.accepted ?? 0} 条通过逐字校验${
+                (extracted.accepted ?? 0) === 0 ? '（它在改写原文，被全部丢掉）' : ''
+              }。`,
+            ]
+          : ['片段由确定性规则从原文切出（未使用模型）。']),
+      ],
+      reason: null,
+    } as RetrievalRun;
   } else {
     /**
      * 无检索能力：从 legacy 证据桥接（黄金案例 / 上一次实时检索的产物）。
@@ -677,6 +708,7 @@ export async function prepareExperienceSession(
   });
 
   return touch(session, {
+    ...(liveRun ? { retrievalRun: liveRun } : {}),
     experienceFacts: facts,
     experienceCases: cases,
     experiencePaths: synthesized.paths,

@@ -42,7 +42,8 @@ const EXTRACTION_SYSTEM_PROMPT = `你是经历片段提取器。输入若干条�
 规则：
 1. exactQuote 必须逐字复制输入原文，不得改写、缩写、翻译或修正标点；
 2. 每条 12～160 字；
-3. 每条来源最多 5 条；
+3. 每条来源抽 2～5 条，并**尽量覆盖不同类型**：尤其别漏 action（他具体做了什么）。
+   同一段原文里既有处境又有行动时，要分别抽出来，不要只给一条；
 4. 只提取五类：condition（处境条件）/ action（做了什么）/ cost（代价）/ outcome（结果）/ reflection（反思）；
 5. 输出 JSON：{"facts":[{"sourceId":"...","exactQuote":"...","type":"condition"}]}；
 6. 没有值得提取的内容就输出 {"facts":[]}。`;
@@ -61,21 +62,60 @@ function mapFactType(type: ReturnType<typeof factTypeOf>): ExperienceFactType {
  *
  * 复用现有 `factTypeOf` / `relevanceOf`，不复制第二套判型逻辑。
  */
+/**
+ * 把一条较长的原文按**句子边界**切成最多两段。
+ *
+ * 切点在句末（。；！？），所以两段都是原文的逐字子串 —— 不产生任何"改写"。
+ * 目的：让同一条来源能贡献两种类型（例如前段是处境、后段是结果），
+ * 从而够得上「一个人的一段经历」的准入规则（见 `cases.ts`）。
+ */
+function splitQuoteAtSentence(quote: string, maxParts = 2): readonly string[] {
+  const text = quote.trim();
+  if (text.length < 60 || maxParts < 2) {
+    return [text];
+  }
+  const boundaries: number[] = [];
+  const re = /[。；！？]/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    boundaries.push(match.index + 1);
+  }
+  const middle = Math.floor(text.length / 2);
+  const candidates = boundaries.filter((index) => index >= 24 && text.length - index >= 24);
+  if (candidates.length === 0) {
+    return [text];
+  }
+  const cut = candidates.reduce(
+    (best, index) => (Math.abs(index - middle) < Math.abs(best - middle) ? index : best),
+    candidates[0]!,
+  );
+  return [text.slice(0, cut).trim(), text.slice(cut).trim()].filter((part) => part.length >= 12);
+}
+
+/**
+ * 无模型路径：整段原文就是一条片段。
+ *
+ * 原文足够长时按句拆成两段（都是逐字子串），让同一来源能同时提供
+ * 「当时的处境」与「后来的结果」——否则 12 条来源会聚不出任何一段经历。
+ * 复用现有 `factTypeOf` / `relevanceOf`，不复制第二套判型逻辑。
+ */
 export function fallbackFactsFor(input: {
   readonly source: KnowledgeSource;
   readonly question: string;
   readonly purposes?: readonly SearchPurpose[];
   readonly index?: number;
 }): readonly ExperienceFact[] {
-  const fact = validateExtractedFact({
-    source: input.source,
-    exactQuote: input.source.quote,
-    type: mapFactType(factTypeOf(input.source.quote)),
-    id: `fact:${input.source.id}:${input.index ?? 0}`,
-    relevance: relevanceOf(input.question, input.source.quote),
-    purposes: input.purposes ?? [],
+  return splitQuoteAtSentence(input.source.quote).flatMap((part, partIndex) => {
+    const fact = validateExtractedFact({
+      source: input.source,
+      exactQuote: part,
+      type: mapFactType(factTypeOf(part)),
+      id: `fact:${input.source.id}:${input.index ?? 0}${partIndex === 0 ? '' : `-${partIndex}`}`,
+      relevance: relevanceOf(input.question, part),
+      purposes: input.purposes ?? [],
+    });
+    return fact ? [fact] : [];
   });
-  return fact ? [fact] : [];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -187,6 +227,14 @@ function bundlesOf(input: ExtractExperienceFactsInput): readonly SourceBundle[] 
 export interface ExtractExperienceFactsResult {
   readonly facts: readonly ExperienceFact[];
   readonly source: 'model' | 'fallback';
+  /**
+   * 模型提议了几条 / 其中逐字校验通过几条。
+   *
+   * 这两个数字是「模型有没有在改写原文」的直接证据：提议很多但采纳很少，
+   * 说明它在润色，而不是我们的校验坏了。
+   */
+  readonly proposed?: number;
+  readonly accepted?: number;
 }
 
 /**
@@ -206,9 +254,27 @@ export async function extractExperienceFacts(
   }
 
   if (input.router) {
-    const facts = await extractWithModel({ bundles, question: input.question, router: input.router });
+    const attempt = await extractWithModel({ bundles, question: input.question, router: input.router });
+    const facts = attempt.facts;
     if (facts.length > 0) {
-      return { facts: facts.slice(0, MAX_TOTAL_FACTS), source: 'model' };
+      /**
+       * 模型对某些来源只给了一条时，用**规则兜底**把那条来源的原文整段补成一条片段。
+       *
+       * 为什么需要它：经历聚合成「一个人的一段经历」要求来源同时有
+       * condition+outcome（或 action）。实测模型很常见只抽出 1 条（且集中在
+       * cost），于是 12 条来源 → 0 张经验卡 → 0 个经验解锁 ——
+       * 产品最核心的「真实经验解锁新行动」当场消失。
+       *
+       * 兜底那一条是**原文整段**，逐字成立（它本身就是 source.quote），
+       * 类型由既有的确定性规则判，不经过任何模型。
+       */
+      const topped = topUpThinSources(bundles, facts, input.question);
+      return {
+        facts: topped.slice(0, MAX_TOTAL_FACTS),
+        source: 'model',
+        proposed: attempt.proposed,
+        accepted: facts.length,
+      };
     }
   }
 
@@ -221,14 +287,56 @@ export async function extractExperienceFacts(
       index,
     }),
   );
-  return { facts: facts.slice(0, MAX_TOTAL_FACTS), source: 'fallback' };
+  return { facts: facts.slice(0, MAX_TOTAL_FACTS), source: 'fallback', proposed: 0, accepted: 0 };
+}
+
+
+/**
+ * 给「只抽到一条」的来源补一条规则兜底片段（见 extractExperienceFacts 的说明）。
+ *
+ * 只补不删：模型抽出来的片段一条不动；已出现过的原文整段不重复补。
+ */
+function topUpThinSources(
+  bundles: readonly SourceBundle[],
+  facts: readonly ExperienceFact[],
+  question: string,
+): readonly ExperienceFact[] {
+  const countBySource = new Map<string, number>();
+  const seen = new Set<string>();
+  for (const fact of facts) {
+    countBySource.set(fact.sourceId, (countBySource.get(fact.sourceId) ?? 0) + 1);
+    seen.add(`${fact.sourceId}:${fact.exactQuote}`);
+  }
+
+  const topped: ExperienceFact[] = [...facts];
+  bundles.forEach((bundle, index) => {
+    if ((countBySource.get(bundle.source.id) ?? 0) >= 2) {
+      return;
+    }
+    const key = `${bundle.source.id}:${bundle.source.quote.trim()}`;
+    if (seen.has(key) || bundle.source.quote.trim().length < 12) {
+      return;
+    }
+    const extra = fallbackFactsFor({
+      source: bundle.source,
+      question,
+      purposes: bundle.purposes,
+      index,
+    });
+    for (const fact of extra) {
+      topped.push(fact);
+      seen.add(`${fact.sourceId}:${fact.exactQuote}`);
+    }
+  });
+
+  return topped;
 }
 
 async function extractWithModel(input: {
   readonly bundles: readonly SourceBundle[];
   readonly question: string;
   readonly router: ProviderRouter;
-}): Promise<readonly ExperienceFact[]> {
+}): Promise<{ readonly facts: readonly ExperienceFact[]; readonly proposed: number }> {
   const indexById = sourceIndex(input.bundles.map((bundle) => bundle.source));
   const purposesBySource = new Map(input.bundles.map((bundle) => [bundle.source.id, bundle.purposes]));
 
@@ -248,17 +356,18 @@ async function extractWithModel(input: {
       { jsonMode: true },
     );
   } catch {
-    return [];
+    return { facts: [], proposed: 0 };
   }
   if (!routed.ok) {
-    return [];
+    return { facts: [], proposed: 0 };
   }
 
   const relevanceCache = new Map<string, number>();
   const perSourceCount = new Map<string, number>();
   const facts: ExperienceFact[] = [];
 
-  for (const proposal of parseProposals(routed.text)) {
+  const proposals = parseProposals(routed.text);
+  for (const proposal of proposals) {
     const source = indexById.get(proposal.sourceId);
     if (!source) {
       continue; // 提议了不存在的来源 → 丢
@@ -286,5 +395,5 @@ async function extractWithModel(input: {
     }
   }
 
-  return facts;
+  return { facts, proposed: proposals.length };
 }
