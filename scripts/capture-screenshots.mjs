@@ -79,15 +79,32 @@ async function main() {
   await page('Runtime.enable');
   await page('Emulation.setDeviceMetricsOverride', {
     width: 1440,
-    height: 950,
+    height: 900,
     deviceScaleFactor: 1,
     mobile: false,
   });
 
   const shots = [];
+
+  /**
+   * 截一张并落盘。
+   *
+   * ## 为什么是 JPEG 而不是 PNG
+   *
+   * 这套界面的底是一层暗房颗粒（SVG fractalNoise）。噪声在 PNG 里
+   * 几乎不可压缩 —— 1440×900 的单张能到 3.7MB，六张近 19MB，
+   * 而 README 的图只需要「看得清」。
+   *
+   * JPEG 对这种画面的压缩效率高得多：同样内容约 100KB。
+   * 代价是文字边缘有轻微振铃，所以质量取 88 而非默认的 75 ——
+   * 截图里有大量 11~13px 的中文小字，压太狠会糊成一团。
+   */
   async function shot(name) {
-    const { data } = await page('Page.captureScreenshot', { format: 'png' });
-    const file = path.join(OUT_DIR, `${name}.png`);
+    const { data } = await page('Page.captureScreenshot', {
+      format: 'jpeg',
+      quality: 88,
+    });
+    const file = path.join(OUT_DIR, `${name}.jpg`);
     await writeFile(file, Buffer.from(data, 'base64'));
     shots.push(file);
     console.log(`[shot] ${file}`);
@@ -96,6 +113,12 @@ async function main() {
   async function goto(url, settleMs = 3200) {
     await page('Page.navigate', { url });
     await sleep(settleMs);
+  }
+
+  /** 读会话状态（用来判断世界编译到哪一步了）。 */
+  async function sessionStatus(id) {
+    const res = await api('GET', `${BASE}/api/sessions/${id}`);
+    return res?.json?.data?.status ?? null;
   }
 
   /** 在页面上下文里调 API：匿名身份 cookie 由浏览器自动维护。 */
@@ -154,14 +177,39 @@ async function main() {
       body: JSON.stringify({ action: 'prepare-world' }),
     })`,
   });
-  await sleep(2600); // 编译中途：WorldForge 正在 materialize
-  await shot('world-forge');
+
+  /*
+    ## 为什么要轮询而不是固定等待
+
+    WorldForge 只在 `status === 'compiling'` 时才播那套「三条轨道
+    materialize」的演出。编译耗时取决于是否命中本地快照 ——
+    命中时可能 1 秒内就完成，此时固定等 2.6 秒截到的其实是
+    **已经就绪**的页面，与下一张 session-ready 看起来一样。
+
+    这里改成每 250ms 查一次，一发现 compiling 立刻截。
+    若始终没观察到（编译太快），如实打印提示，不假装截到了。
+  */
+  let forgeCaptured = false;
+  for (let i = 0; i < 32; i += 1) {
+    const status = await sessionStatus(sessionId);
+    if (status === 'compiling') {
+      await shot('world-forge');
+      forgeCaptured = true;
+      console.log(`[world-forge] 捕获编译态（第 ${i + 1} 次轮询）`);
+      break;
+    }
+    if (status && status !== 'clarified') break; // 已就绪
+    await sleep(250);
+  }
+  if (!forgeCaptured) {
+    console.log('[world-forge] 未观察到 compiling（编译太快），截就绪页');
+    await shot('world-forge');
+  }
 
   // 等编译真正完成（轮询会话状态）
   let ready = false;
   for (let i = 0; i < 40; i += 1) {
-    const current = await api('GET', `${BASE}/api/sessions/${sessionId}`);
-    const status = current?.json?.data?.status;
+    const status = await sessionStatus(sessionId);
     if (status && status !== 'clarified' && status !== 'compiling') {
       ready = true;
       break;
@@ -175,7 +223,12 @@ async function main() {
   await shot('session-ready');
 
   // ---- 6. 对局页：HUD + 第一幕抉择 -----------------------------------------
-  await goto(`${BASE}/play?session=${sessionId}`, 5200);
+  /*
+    ⚠️ 这一页不能等 networkidle。对局页保持一条会话状态轮询的长连接，
+    网络永远不会静默，等它等于等到超时。CDP 的 Page.navigate 本身
+    不等网络，所以这里靠固定等待让三幕世界线动画跑起来。
+  */
+  await goto(`${BASE}/play?session=${sessionId}`, 6000);
   await shot('play-act1');
 
   // ---- 7. 终局：问题重写 + 现实支线（select-unknown → design-experiment） ----

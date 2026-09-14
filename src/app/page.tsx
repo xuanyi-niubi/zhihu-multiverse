@@ -134,7 +134,9 @@ export default function HomePage() {
       {/* 极光带：全站唯一的情绪指示器（首页恒为 seek） */}
       <AuroraBand tone="seek" />
 
-      {/* 星尘：只在宽屏出现（窄屏不可见却要付渲染成本） */}
+      {/*
+        星尘：只在宽屏出现（窄屏不可见却要付渲染成本）
+      */}
       <div aria-hidden="true" className="sil-dust hidden lg:block">
         {DUST.map((mote, index) => (
           <span
@@ -148,6 +150,25 @@ export default function HomePage() {
       </div>
 
       {/*
+        人生轨道场：**整页背景**，不放进任何栅格列。
+
+        ## 为什么不做成左栏里的一个方块
+
+        轨道族原本被包在左栏的正方形容器里（`aspect-square`）。
+        但轨道是为「满屏铺开」设计的：它的 SVG 用
+        `preserveAspectRatio="xMidYMid slice"`，意思就是「按容器尺寸裁切铺满」——
+        这正是对局页的用法（那里它是全幅背景）。
+
+        塞进正方形后，容器不再是整个画面，`slice` 的裁切就从
+        「画面边缘」变成了「方块边缘」：轨道在方块左右被竖直切断，
+        读起来像画面被裁坏了，而不是「天空延伸到画面之外」。
+
+        放回成整页背景后，弧线自然地在视口边缘之外延续，
+        与 `AuroraBand` / 星尘同一层，内容栅格用 `z-10` 压在它上面。
+      */}
+      <OrbitField count={nearFocus ? 10 : 7} accent="path" near={nearFocus} />
+
+      {/*
         两栏栅格。
         宽屏：左 = 观象仪 + 叙事（弹性），右 = 操作台（定宽 520px）
         窄屏：单列，且用 order 把「标题 → 输入」提到观象仪之前
@@ -157,7 +178,6 @@ export default function HomePage() {
         <div className="order-2 flex justify-center lg:order-1 lg:justify-start">
           <div className="relative flex aspect-square w-full max-w-[min(78vw,460px)] items-center justify-center lg:max-w-none">
             <AstralDial focus={nearFocus} />
-            <OrbitField count={nearFocus ? 10 : 7} accent="path" near={nearFocus} />
           </div>
         </div>
 
