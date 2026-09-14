@@ -353,6 +353,69 @@ export function __resetSessions(): void {
 }
 
 /**
+ * 构造**对外可见**的来源（`scheme://host[:port]`）。
+ *
+ * ## 为什么不能用 `request.url`
+ *
+ * 部署形态是「Nginx 反代 → Docker 容器内的 Next standalone」。
+ * standalone 的 `request.url` **不是**客户端请求的那条 URL ——
+ * 它是容器用自己的 `HOSTNAME` / `PORT` 拼出来的（compose 里为
+ * `HOSTNAME=0.0.0.0`、`PORT=3000`）。
+ *
+ * 于是 `new URL('/oauth?oauth=success', request.url)` 会生成
+ * `http://0.0.0.0:3000/oauth?oauth=success`；再被
+ * `x-forwarded-proto: https` 抬成 `https://0.0.0.0:3000/...`。
+ * 手机浏览器打开就是 `ERR_CONNECTION_REFUSED` —— 授权明明成功了，
+ * 用户却看到「网页无法打开」。
+ *
+ * ## 这个 bug 为什么本地测不出来
+ *
+ * 本地 `next dev` / 直连时，`request.url` 就是用户访问的那条 URL，
+ * 所以无论怎么点都是对的。它**只在反代 + standalone 下暴露** ——
+ * 这正是「本地全绿、线上打不开」的典型成因。
+ *
+ * ## 三级取值
+ *
+ * 1. `APP_PUBLIC_ORIGIN` —— 部署时显式声明。最可靠，不依赖代理细节。
+ * 2. `x-forwarded-host` —— 反代传来的原始主机。要求反代传 `$http_host`
+ *    而不是 `$host`：本站对外是 **`:8443`**，而 `$host` 不含端口，
+ *    用它会把用户送回 443（那条路在移动网络下是被拦的）。
+ * 3. `request.url` —— 本地开发与直连的兜底。
+ */
+export function publicOrigin(request: Request): string {
+  const first = (value: string | null): string =>
+    value ? (value.split(',')[0]?.trim() ?? '') : '';
+
+  const configured = process.env.APP_PUBLIC_ORIGIN?.trim();
+  if (configured) {
+    return configured.replace(/\/+$/, '');
+  }
+
+  const forwardedHost = first(request.headers.get('x-forwarded-host'));
+  if (forwardedHost) {
+    const proto = first(request.headers.get('x-forwarded-proto')).toLowerCase() || 'https';
+    return `${proto}://${forwardedHost}`;
+  }
+
+  try {
+    return new URL(request.url).origin;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * 把路径解析成对外可见的绝对 URL。
+ *
+ * 传入绝对 URL 时（例如知乎授权页地址）原样返回 —— `new URL(abs, base)`
+ * 本来就忽略 base，这里保持同一语义。
+ */
+export function publicUrl(request: Request, path: string): URL {
+  const origin = publicOrigin(request);
+  return new URL(path, origin.length > 0 ? origin : request.url);
+}
+
+/**
  * 取当前会话对应的知乎用户标识（url_token）。
  *
  * 用途：服务端记忆按账号隔离时做 key。

@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import {
   buildAuthorizeUrl,
   getSession,
+  publicUrl,
   resolveOAuthConfig,
   resolveOAuthCredentials,
 } from '@/core/oauth/zhihu';
@@ -19,7 +20,12 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function redirectTo(request: Request, path: string, cookie: string | null): Response {
-  const response = NextResponse.redirect(new URL(path, request.url), 302);
+  /*
+    成功分支传进来的是知乎授权页的**绝对** URL，`publicUrl` 会原样保留它；
+    失败分支传的是 `/?oauth=error...` 这种相对路径 —— 那一支才是真正需要
+    对外来源的（否则会把用户跳到容器自己的 0.0.0.0:3000）。
+  */
+  const response = NextResponse.redirect(publicUrl(request, path), 302);
   response.headers.set('cache-control', 'no-store');
   response.headers.set('referrer-policy', 'no-referrer');
   if (cookie) {

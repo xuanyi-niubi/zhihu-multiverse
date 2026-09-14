@@ -97,7 +97,7 @@ npm run verify       # typecheck + test + build + smoke
 当前实测（`scripts/test-stats.json`，由 `npm run test:stats` 生成，不手写数字）：
 
 ```
-90 个测试文件 · 1426 个用例 · 全部通过
+92 个测试文件 · 1456 个用例 · 全部通过
 ```
 
 契约覆盖三条主线：**产品纪律**（三视角检索、逐字引用、未知永不补全）、

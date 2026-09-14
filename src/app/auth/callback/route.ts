@@ -6,6 +6,7 @@ import {
   exchangeToken,
   fetchProfile,
   getSession,
+  publicUrl,
   resolveOAuthConfig,
   resolveOAuthCredentials,
   safeEqual,
@@ -26,7 +27,15 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function redirectTo(request: Request, path: string, cookie: string | null): Response {
-  const response = NextResponse.redirect(new URL(path, request.url), 302);
+  /*
+    ⚠️ 必须用 `publicUrl` 而不是 `new URL(path, request.url)`。
+
+    反代 + standalone 下 `request.url` 的主机是**容器自己的**
+    `HOSTNAME:PORT`（0.0.0.0:3000），用它跳转会把用户送到一个
+    打不开的地址 —— 手机上是 `ERR_CONNECTION_REFUSED`。
+    详见 `core/oauth/zhihu.ts` 的 `publicOrigin()`。
+  */
+  const response = NextResponse.redirect(publicUrl(request, path), 302);
   response.headers.set('cache-control', 'no-store');
   response.headers.set('referrer-policy', 'no-referrer');
   if (cookie) {
