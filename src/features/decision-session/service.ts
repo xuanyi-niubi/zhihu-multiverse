@@ -9,7 +9,6 @@ import { qualifyExperienceSource } from '@/features/experience/qualification';
 import { retrieveExperienceSources, type ExperienceSearch } from '@/features/experience/retrieve';
 import { synthesizeExperiencePaths } from '@/features/experience/pathSynthesis';
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
-import { withUnlockTitles } from '@/features/game-world/unlockTitles';
 import { caseSources, matchDemoCase } from '@/data/demoCases';
 import { contextFrom, clarifyQuestions, experimentFor } from '@/features/decision-session/clarify';
 import { experimentFromUnknown } from '@/features/decision-session/experiment';
@@ -530,7 +529,10 @@ export interface PrepareExperienceSessionDeps {
  */
 function experienceFactsFromLegacy(session: DecisionSession): readonly ExperienceFact[] {
   const frame = session.problemFrame;
-  const question = frame?.rawQuestion ?? session.question;
+  if (!frame) {
+    return [];
+  }
+  const question = frame.rawQuestion;
   return (session.evidenceFacts ?? []).flatMap((fact) => {
     const source = {
       id: fact.sourceId,
@@ -639,10 +641,11 @@ export async function prepareExperienceSession(
      * 还是反例被找来的。早先这里把全部意图合成一个并集再传下去，
      * 结果每条片段都声称自己同时服务所有意图，反例幕就没法优先挑真正的反例。
      */
+    // 逐字切句可确定性完成，避免一次非必要的深模型等待。
     const extracted = await extractExperienceFacts({
       sources: retrieved.sources,
       question: frame.rawQuestion,
-      router: deps.router ?? null,
+      router: null,
     });
     facts = extracted.facts;
     const tracks = new Set(
@@ -780,17 +783,8 @@ export async function prepareExperienceSession(
     facts,
   });
 
-  /**
-   * 行动式标题（§24）：只改**标题**，正文仍是逐字片段。
-   * 模型不可用 / 标题不合规时原样保留 —— 不编一个凑数的。
-   */
-  const unlocks = await withUnlockTitles({
-    unlocks: compiled.unlocks,
-    facts,
-    router: deps.router ?? null,
-  });
-  const blueprint =
-    unlocks === compiled.unlocks ? compiled : { ...compiled, unlocks };
+  // 标题润色不再阻塞首屏；默认标题可直接进入世界。
+  const blueprint = compiled;
 
   return touch(session, {
     ...(liveRun ? { retrievalRun: liveRun } : {}),
