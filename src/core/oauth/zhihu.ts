@@ -665,6 +665,29 @@ export async function exchangeToken(
  * `/user` 没有正式响应 schema，因此只做宽松抽取；失败一律返回 null，
  * **不得伪造字段**，也不阻断五项正式用户接口。
  */
+export function normalizeAvatarUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return null;
+  }
+
+  const expanded = value
+    .trim()
+    .replace(/\{size\}|%7Bsize%7D/gi, 'xl');
+  const absolute = expanded.startsWith('//') ? `https:${expanded}` : expanded;
+
+  try {
+    const url = new URL(absolute);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    if (url.protocol === 'http:' && /(^|\.)zh(?:img|ihu)\.com$/i.test(url.hostname)) {
+      url.protocol = 'https:';
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 export async function fetchProfile(
   deps: OAuthDeps,
   token: string,
@@ -707,7 +730,49 @@ export async function fetchProfile(
   };
 
   const name = pick('name', 'Name', 'nickname', 'nick_name', 'Fullname', 'fullname');
-  const avatarUrl = pick('avatar_url', 'avatarUrl', 'AvatarURL', 'AvatarUrl', 'avatar');
+  let rawAvatar = pick(
+    'avatar_url',
+    'avatarUrl',
+    'AvatarURL',
+    'AvatarUrl',
+    'avatar_url_template',
+    'avatarUrlTemplate',
+    'AvatarURLTemplate',
+    'AvatarUrlTemplate',
+    'avatar',
+  );
+
+  if (!rawAvatar) {
+    const avatarContainers = ['avatar', 'Avatar', 'avatar_info', 'avatarInfo', 'AvatarInfo'];
+    const avatarFields = [
+      'url',
+      'Url',
+      'src',
+      'Src',
+      'url_template',
+      'urlTemplate',
+      'template',
+      'Template',
+      'large',
+      'medium',
+    ];
+
+    outer: for (const source of sources) {
+      for (const containerKey of avatarContainers) {
+        const container = source[containerKey];
+        if (!isRecord(container)) continue;
+        for (const field of avatarFields) {
+          const value = container[field];
+          if (typeof value === 'string' && value.trim().length > 0) {
+            rawAvatar = value.trim();
+            break outer;
+          }
+        }
+      }
+    }
+  }
+
+  const avatarUrl = normalizeAvatarUrl(rawAvatar);
   const headline = pick('headline', 'Headline', 'description', 'Description');
   const profileUrl = pick('url', 'Url', 'profile_url', 'profileUrl');
   const urlToken = pick('url_token', 'UrlToken');

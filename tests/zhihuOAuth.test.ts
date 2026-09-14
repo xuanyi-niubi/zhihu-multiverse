@@ -13,6 +13,7 @@ import {
   fingerprint,
   getSession,
   isPublicHttpsRedirect,
+  normalizeAvatarUrl,
   resolveOAuthConfig,
   resolveOAuthCredentials,
   safeEqual,
@@ -247,7 +248,7 @@ describe('OAuth 用户资料', () => {
     expect(headers).not.toHaveProperty('x-oauth-token');
   });
 
-  it('兼容资料包在 data.user 中以及 nickname/avatarUrl 字段', async () => {
+  it('兼容 data.user 中的昵称与知乎头像模板字段', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -255,7 +256,7 @@ describe('OAuth 用户资料', () => {
         data: {
           user: {
             nickname: '嵌套用户',
-            avatarUrl: 'https://pic.example.com/nested.jpg',
+            avatar_url_template: '//picx.zhimg.com/avatar_{size}.jpg',
             profile_url: 'https://www.zhihu.com/people/nested-user',
           },
         },
@@ -265,10 +266,17 @@ describe('OAuth 用户资料', () => {
 
     await expect(fetchProfile(deps(), 'oauth-access-token')).resolves.toEqual({
       name: '嵌套用户',
-      avatarUrl: 'https://pic.example.com/nested.jpg',
+      avatarUrl: 'https://picx.zhimg.com/avatar_xl.jpg',
       headline: null,
       url: 'https://www.zhihu.com/people/nested-user',
     });
+  });
+
+  it('兼容嵌套头像对象并拒绝非 HTTP 地址', () => {
+    expect(normalizeAvatarUrl('http://pic1.zhimg.com/avatar.jpg')).toBe(
+      'https://pic1.zhimg.com/avatar.jpg',
+    );
+    expect(normalizeAvatarUrl('data:image/png;base64,AAAA')).toBeNull();
   });
 
   it('资料接口失败时抛出脱敏错误，不泄露 OAuth token', async () => {

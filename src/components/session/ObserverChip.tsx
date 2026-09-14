@@ -47,7 +47,7 @@ export default function ObserverChip({ className = '' }: { readonly className?: 
           */
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={state.profile.avatarUrl}
+            src="/api/oauth/avatar"
             alt=""
             width={20}
             height={20}

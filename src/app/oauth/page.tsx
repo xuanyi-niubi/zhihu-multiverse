@@ -162,7 +162,7 @@ function OAuthPanel() {
             {session.profile?.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={session.profile.avatarUrl}
+                src="/api/oauth/avatar"
                 alt=""
                 className="h-11 w-11 rounded-full border border-[color:var(--sil-rule-strong)] object-cover"
                 referrerPolicy="no-referrer"
