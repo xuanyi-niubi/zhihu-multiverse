@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   OAuthError,
@@ -9,6 +9,7 @@ import {
   buildDiagnostics,
   credentialWarnings,
   describeCredential,
+  fetchProfile,
   fingerprint,
   getSession,
   isPublicHttpsRedirect,
@@ -207,6 +208,85 @@ describe('诊断输出不含明文', () => {
     expect(fingerprint(null)).toBeNull();
     expect(fingerprint('')).toBeNull();
     expect(fingerprint('x')).toHaveLength(12);
+  });
+});
+
+describe('OAuth 用户资料', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('用 OAuth access token 作为 /user 的 Bearer，而不是 Access Secret', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        name: '测试用户',
+        avatar_url: 'https://pic.example.com/avatar.jpg',
+        headline: '一句签名',
+        url_token: 'test-user',
+      }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const profile = await fetchProfile(deps(), 'oauth-access-token');
+
+    expect(profile).toEqual({
+      name: '测试用户',
+      avatarUrl: 'https://pic.example.com/avatar.jpg',
+      headline: '一句签名',
+      url: 'https://www.zhihu.com/people/test-user',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const headers = init.headers as Record<string, string>;
+
+    expect(url).toBe('https://openapi.zhihu.com/user');
+    expect(headers.authorization).toBe('Bearer oauth-access-token');
+    expect(headers.authorization).not.toContain('b'.repeat(64));
+    expect(headers).not.toHaveProperty('x-oauth-token');
+  });
+
+  it('兼容资料包在 data.user 中以及 nickname/avatarUrl 字段', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          user: {
+            nickname: '嵌套用户',
+            avatarUrl: 'https://pic.example.com/nested.jpg',
+            profile_url: 'https://www.zhihu.com/people/nested-user',
+          },
+        },
+      }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchProfile(deps(), 'oauth-access-token')).resolves.toEqual({
+      name: '嵌套用户',
+      avatarUrl: 'https://pic.example.com/nested.jpg',
+      headline: null,
+      url: 'https://www.zhihu.com/people/nested-user',
+    });
+  });
+
+  it('资料接口失败时抛出脱敏错误，不泄露 OAuth token', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'unauthorized' }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const token = 'oauth-token-that-must-not-leak';
+    await expect(fetchProfile(deps(), token)).rejects.toThrow('unauthorized');
+
+    try {
+      await fetchProfile(deps(), token);
+    } catch (error) {
+      expect(String(error)).not.toContain(token);
+    }
   });
 });
 

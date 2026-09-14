@@ -14,7 +14,9 @@ import { extractUrlToken } from '@/core/memoryStore';
  *   `app_id` / `app_key` / `grant_type=authorization_code` / `redirect_uri` / `code`
  *   注意 `grant_type` 是**固定枚举值**，不从回调读取；`code` 字段承载回调里的
  *   `authorization_code`（回调参数名两版并存，本实现兼容 `authorization_code` 与 `code`）。
- * - 用户接口：`Authorization: Bearer <Access Secret>` + `X-OAuth-Token: <OAuth access_token>`
+ * - OAuth 用户资料：`GET /user`，`Authorization: Bearer <OAuth access_token>`
+ * - 五项用户数据接口：`Authorization: Bearer <Access Secret>` +
+ *   `X-OAuth-Token: <OAuth access_token>`
  *
  * 三类凭证必须严格分离，不可串位：
  * | 凭证 | 用途 | 本实现的存放位置 |
@@ -494,6 +496,42 @@ async function postForm(url: string, form: URLSearchParams, timeoutMs: number): 
   }
 }
 
+/**
+ * OAuth 当前用户资料端点只认 OAuth access token 的 Bearer 鉴权。
+ *
+ * 这里刻意不复用 getUserApi：后者服务于 developer.zhihu.com 的五项数据接口，
+ * 需要 Access Secret + X-OAuth-Token。把两套鉴权混用会出现“授权成功但昵称/头像为空”。
+ */
+async function getOAuthUserProfile(
+  url: string,
+  oauthToken: string,
+  timeoutMs: number,
+): Promise<unknown> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${safeCredential(oauthToken)}`,
+        accept: 'application/json',
+      },
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw payloadError(payload, `用户资料接口失败（HTTP ${response.status}）`);
+    }
+
+    return payload;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function getUserApi(
   url: string,
   accessSecret: string,
@@ -631,36 +669,51 @@ export async function fetchProfile(
   deps: OAuthDeps,
   token: string,
 ): Promise<ZhihuProfile | null> {
-  const payload = await getUserApi(
+  const payload = await getOAuthUserProfile(
     `${ZHIHU_OPENAPI_BASE}/user`,
-    deps.credentials.accessSecret,
     token,
     deps.timeoutMs ?? 20_000,
   );
 
   const root = isRecord(payload) ? payload : {};
-  const source = [root.data, root.Data, root.user, root].find(
-    (candidate): candidate is Record<string, unknown> => isRecord(candidate),
-  );
+  const data = isRecord(root.data) ? root.data : null;
+  const legacyData = isRecord(root.Data) ? root.Data : null;
+  const sources = [
+    data?.user,
+    data?.User,
+    legacyData?.user,
+    legacyData?.User,
+    root.user,
+    root.User,
+    data,
+    legacyData,
+    root,
+  ].filter((candidate): candidate is Record<string, unknown> => isRecord(candidate));
 
-  if (!source) {
+  if (sources.length === 0) {
     return null;
   }
 
   const pick = (...keys: string[]): string | null => {
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
+    for (const source of sources) {
+      for (const key of keys) {
+        const value = source[key];
+        if (typeof value === 'string' && value.trim().length > 0) {
+          return value.trim();
+        }
       }
     }
     return null;
   };
 
-  const name = pick('name', 'Fullname', 'fullname');
-  const avatarUrl = pick('avatar_url', 'AvatarUrl');
-  const headline = pick('headline', 'Headline');
-  const url = pick('url', 'Url');
+  const name = pick('name', 'Name', 'nickname', 'nick_name', 'Fullname', 'fullname');
+  const avatarUrl = pick('avatar_url', 'avatarUrl', 'AvatarURL', 'AvatarUrl', 'avatar');
+  const headline = pick('headline', 'Headline', 'description', 'Description');
+  const profileUrl = pick('url', 'Url', 'profile_url', 'profileUrl');
+  const urlToken = pick('url_token', 'UrlToken');
+  const url =
+    profileUrl ??
+    (urlToken ? `https://www.zhihu.com/people/${encodeURIComponent(urlToken)}` : null);
 
   if (!name && !avatarUrl && !headline && !url) {
     return null;
