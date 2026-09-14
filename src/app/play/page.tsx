@@ -50,6 +50,7 @@ import {
   sessionEndgameViewOf,
   sessionPlaceholderView,
   sessionPlayViewOf,
+  sessionUnknownLockOf,
   storyViewOf,
 } from '@/components/game/session/viewModel';
 import type { SessionPlayView } from '@/components/game/session/types';
@@ -2637,6 +2638,12 @@ function PlayScreen() {
         act: displayAct,
         focusVariables: sessionFocusVariables,
       }),
+      /*
+        未知锁单独取：第三幕可以**同时**有反例与未知（composeEncounters
+        就是这么发的）。塞进 encounter 会被反例吃掉，实测真实对局里
+        未知因此从不出现。
+      */
+      unknownLock: sessionUnknownLockOf({ blueprint, act: displayAct }),
       counterFrame: counterFrameFor(blueprint),
       loading: state.dmLoading,
       loadingPhase,

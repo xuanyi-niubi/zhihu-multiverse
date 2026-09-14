@@ -6,6 +6,7 @@ import {
   UNKNOWN_CONTINUE_LABEL,
   UNKNOWN_STAGE_COPY,
   sessionEncounterViewOf,
+  sessionUnknownLockOf,
 } from '@/components/game/session/viewModel';
 
 /**
@@ -206,5 +207,41 @@ describe('Unknown：不猜答案（§十八）', () => {
     expect(UNKNOWN_CONTINUE_LABEL).toBe('继续到终局');
     const serialized = JSON.stringify(view);
     expect(serialized).not.toMatch(/retry|reroll|dice|cost|price|解锁费用/i);
+  });
+});
+
+/**
+ * 真实对局里第三幕会**同时**收到反例与未知（composeEncounters 就是这么发的）。
+ * 一个 `find` 只能拿到先出现的那个，于是未知会被反例吃掉 —— 这两块必须分开取。
+ */
+describe('同一幕同时有反例与未知（§十七 + §十八）', () => {
+  const both = blueprintWith([COLLISION_PLAN, UNKNOWN_PLAN]);
+
+  it('幕中那块 Stage 是反例，不被未知顶掉', () => {
+    const stage = sessionEncounterViewOf({ blueprint: both, act: 3, focusVariables: [] });
+    expect(stage?.type).toBe('experience-collision');
+  });
+
+  it('幕末的未知仍然拿得到，用来收尾', () => {
+    const lock = sessionUnknownLockOf({ blueprint: both, act: 3 });
+    expect(lock).not.toBeNull();
+    expect(lock!.explanation).toBe(UNKNOWN_STAGE_COPY);
+    expect(lock!.unknownLabel).toBe('我能不能连续两周每天稳定投入两小时');
+  });
+
+  it('只有反例时，未知锁为 null（不硬塞一块雾区）', () => {
+    expect(sessionUnknownLockOf({ blueprint: blueprintWith([COLLISION_PLAN]), act: 3 })).toBeNull();
+  });
+
+  it('只有未知时，两者指向同一件事（此时未知取代选项）', () => {
+    const only = blueprintWith([UNKNOWN_PLAN]);
+    const stage = sessionEncounterViewOf({ blueprint: only, act: 3, focusVariables: [] });
+    const lock = sessionUnknownLockOf({ blueprint: only, act: 3 });
+    expect(stage?.type).toBe('unknown-lock');
+    expect(lock).not.toBeNull();
+  });
+
+  it('未知锁只在它自己的那一幕出现', () => {
+    expect(sessionUnknownLockOf({ blueprint: both, act: 2 })).toBeNull();
   });
 });

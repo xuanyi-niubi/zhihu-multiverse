@@ -316,6 +316,22 @@ export interface SessionPlayView {
 
   readonly encounter: SessionEncounterView | null;
 
+  /**
+   * 本幕的 **UNKNOWN LOCK**（§十八），与 `encounter` 分开取。
+   *
+   * 为什么不能塞进 `encounter`：第三幕**可以同时**有反例（COLLISION）和
+   * 未知（UNKNOWN LOCK）—— 反例是这一幕的交互，未知是这一幕的收尾。
+   * 一个字段只能装一个，于是未知会被吃掉；真实对局里正是如此
+   * （`composeEncounters` 会给第三幕同时发 collision 与 unknown-lock）。
+   *
+   * 分工：
+   * ```text
+   * encounter    一幕中间那一块 Stage（反例分屏；没有反例时才是未知）
+   * unknownLock  一幕结束时的诚实收尾：「推演到此为止，其余回到现实验证」
+   * ```
+   */
+  readonly unknownLock: SessionUnknownView | null;
+
   /** 第三幕反例分屏（§二十 / §二十一 的叙事转场）。 */
   readonly counterFrame: {
     readonly previousLabel: string;

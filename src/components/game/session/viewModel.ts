@@ -1,4 +1,4 @@
-import type { ActionSpace, PlayAction } from '@/features/game-mechanics/domain';
+import type { ActionSpace, EncounterPlan, PlayAction } from '@/features/game-mechanics/domain';
 import type { RealityExperiment } from '@/features/decision-session/domain';
 import type { ExperienceCase } from '@/features/experience/domain';
 import type { WorldBlueprint } from '@/features/game-world/domain';
@@ -19,6 +19,7 @@ import type {
   SessionRealityPassView,
   SessionSourceView,
   SessionStoryView,
+  SessionUnknownView,
 } from '@/components/game/session/types';
 import { SESSION_ERROR_MESSAGE } from '@/components/game/session/types';
 
@@ -326,6 +327,59 @@ function caseById(
  * `path-reveal` 不在这里 —— 它的表现是「选项里多出一条」（§十），
  * 不是一个独立 Stage。没有 Encounter 时返回 `null`，页面什么都不显示。
  */
+function unknownViewOfPlan(
+  plan: EncounterPlan,
+  actionSpace: ActionSpace | null | undefined,
+): SessionUnknownView {
+  const locked = (actionSpace?.actions ?? []).filter((action) => action.state === 'locked');
+  return {
+    unknownLabel: plan.unknownLabel?.trim() || plan.unknownId || '',
+    explanation: UNKNOWN_STAGE_COPY,
+    blockedActions: locked.map((action) => action.label),
+  };
+}
+
+/**
+ * 本幕的 **UNKNOWN LOCK**（§十八），独立于 `sessionEncounterViewOf`。
+ *
+ * 为什么必须单独一个口：第三幕可以**同时**带反例与未知
+ * （`composeEncounters` 就是这么发的）。一个 `find` 只能拿到先出现的那个，
+ * 于是未知会被反例吃掉 —— 实测真实对局里正是如此。分开取之后：
+ *
+ * ```text
+ * 幕中   反例分屏 + 选项          （先看冲突，再选）
+ * 幕末   「这里没有足够的现实信息继续推演」+ 继续到终局
+ * ```
+ *
+ * 没有未知时返回 `null` —— 页面就正常收尾，不硬塞一块雾区。
+ */
+export function sessionUnknownLockOf(input: {
+  readonly blueprint: Pick<WorldBlueprint, 'encounters'>;
+  /** 1 基幕号（`plan.act` 的口径）。 */
+  readonly act: number;
+  readonly actionSpace?: ActionSpace | null;
+}): SessionUnknownView | null {
+  const plan = (input.blueprint.encounters ?? []).find(
+    (item) => item.act === input.act && item.type === 'unknown-lock',
+  );
+  return plan ? unknownViewOfPlan(plan, input.actionSpace) : null;
+}
+
+/**
+ * 本幕占据一块 Stage 的 Encounter（§十七 / §十八）。
+ *
+ * 只认两种需要「占一块 Stage」的机制：
+ *
+ * ```text
+ * experience-collision  两条真实走法并列，玩家选接下来观察什么
+ * unknown-lock          现实信息不足，只能继续到终局
+ * ```
+ *
+ * `path-reveal` 不在这里 —— 它的表现是「选项里多出一条」（§十），
+ * 不是一个独立 Stage。没有 Encounter 时返回 `null`，页面什么都不显示。
+ *
+ * 注意：未知锁还有第二条出口（幕末收尾），见 `sessionUnknownLockOf`。
+ */
 export function sessionEncounterViewOf(input: {
   readonly blueprint: Pick<WorldBlueprint, 'acts' | 'experienceCases' | 'encounters'>;
   /** 1 基幕号（`plan.act` 的口径）。 */
@@ -371,15 +425,7 @@ export function sessionEncounterViewOf(input: {
   }
 
   if (plan.type === 'unknown-lock') {
-    const locked = (input.actionSpace?.actions ?? []).filter((action) => action.state === 'locked');
-    return {
-      type: 'unknown-lock',
-      unknown: {
-        unknownLabel: plan.unknownLabel?.trim() || plan.unknownId || '',
-        explanation: UNKNOWN_STAGE_COPY,
-        blockedActions: locked.map((action) => action.label),
-      },
-    };
+    return { type: 'unknown-lock', unknown: unknownViewOfPlan(plan, input.actionSpace) };
   }
 
   // path-reveal 由选项本身承载（§十），不占 Stage。
@@ -519,6 +565,8 @@ export function sessionPlayViewOf(input: {
   readonly experiences: readonly ExperienceCardData[];
   readonly cardTitles: Readonly<Record<string, string>>;
   readonly encounter: SessionEncounterView | null;
+  /** 本幕的未知锁（幕末收尾用）；与 `encounter` 分开取。 */
+  readonly unknownLock: SessionUnknownView | null;
   readonly counterFrame: SessionPlayView['counterFrame'];
   readonly loading: boolean;
   readonly loadingPhase: SessionLoadingPhase;
@@ -545,6 +593,7 @@ export function sessionPlayViewOf(input: {
     experiences: input.experiences,
     cardTitles: input.cardTitles,
     encounter: input.encounter,
+    unknownLock: input.unknownLock,
     counterFrame: input.counterFrame,
     loading: input.loading,
     loadingPhase: input.loadingPhase,
@@ -584,6 +633,7 @@ export function sessionPlaceholderView(input: {
     experiences: [],
     cardTitles: {},
     encounter: null,
+    unknownLock: null,
     counterFrame: null,
     loading: input.error === null,
     loadingPhase: input.loadingPhase,

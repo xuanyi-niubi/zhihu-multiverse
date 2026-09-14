@@ -158,7 +158,16 @@ export function SessionPlayScreen({
 
   const encounter = view.encounter;
   const collision = encounter?.type === 'experience-collision' ? encounter.collision : null;
-  const unknown = encounter?.type === 'unknown-lock' ? encounter.unknown : null;
+  /**
+   * 未知锁有两条出口，这里合成一个变量（§十八）：
+   *
+   * ```text
+   * 本幕只有未知、别无交互 → encounter 本身就是它（此时它取代选项）
+   * 本幕同时有反例与未知   → encounter 是反例，未知在幕末收尾
+   * ```
+   */
+  const unknown =
+    view.unknownLock ?? (encounter?.type === 'unknown-lock' ? encounter.unknown : null);
 
   return (
     <main
@@ -246,7 +255,15 @@ export function SessionPlayScreen({
               </div>
             ) : null}
 
-            <SessionStoryStage story={view.story} loading={view.loading} />
+            {/*
+              叙事舞台。终局不再显示它：那一刻屏幕上只该有问题（§二十二），
+              而且 reducer 在收尾时会把 `dialogueText` 设成旧路径的过场文案
+              （「…生成《专属避坑指南》」）—— 那句话不属于新主链，绝不能
+              被当成终局的第一眼。
+            */}
+            {view.phase === 'ended' ? null : (
+              <SessionStoryStage story={view.story} loading={view.loading} />
+            )}
 
             {/* 这一幕的叙事讲完了：给一个明确的「继续」 */}
             {view.phase === 'story' && !view.loading && !checking ? (
@@ -263,11 +280,11 @@ export function SessionPlayScreen({
             ) : null}
 
             {/*
-              选项（§十三）。未知锁一旦出现，它**取代**选项：这里已经没有
-              可靠现实信息继续推演了，再给几个选项就是让玩家瞎猜（§十八）。
+              选项（§十三）。本幕**只有**未知锁、别无交互时，它取代选项：
+              这里已经没有可靠现实信息继续推演了，再给几个选项就是让玩家瞎猜（§十八）。
             */}
             {view.phase === 'choice' && !view.loading ? (
-              unknown ? (
+              unknown && !collision ? (
                 <SessionUnknownStage view={unknown} onContinue={onContinueFromUnknown ?? onAdvance} />
               ) : (
                 <>
@@ -283,22 +300,41 @@ export function SessionPlayScreen({
               )
             ) : null}
 
-            {/* 结果（这一幕发生了什么） */}
+            {/*
+              结果（这一幕发生了什么）。
+
+              最后一幕的结果之后，如果本局还留着一个未解的未知，收尾就不是
+              普通的「走完了」，而是**最诚实的那一句**：这里已经没得推了，
+              剩下的只能回到现实验证（§十八 / §二十三）。这正是 06_AGENT 的
+              E2E 清单里「第三幕反例 → Unknown → Endgame」的顺序 ——
+              反例与未知可以在同一幕同时存在，这时先看冲突，再看诚实。
+            */}
             {view.phase === 'reflection' ? (
-              <section className="mt-6">
-                <p className="text-[14px] font-semibold" style={{ color: 'var(--obs-text-1)' }}>
-                  {view.outcome?.title || '这一刻过去了'}
-                </p>
-                <p
-                  className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed"
-                  style={{ color: 'var(--obs-text-1)' }}
-                >
-                  {view.outcome?.detail ?? ''}
-                </p>
-                <button type="button" onClick={onAdvance} className="door-btn mt-5 max-w-[260px]">
-                  {view.act.display >= view.act.total ? '走完了' : '继续'}
-                </button>
-              </section>
+              <>
+                <section className="session-reflection mt-6">
+                  <p className="text-[14px] font-semibold" style={{ color: 'var(--obs-text-1)' }}>
+                    {view.outcome?.title || '这一刻过去了'}
+                  </p>
+                  <p
+                    className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed"
+                    style={{ color: 'var(--obs-text-1)' }}
+                  >
+                    {view.outcome?.detail ?? ''}
+                  </p>
+                  {unknown ? null : (
+                    <button type="button" onClick={onAdvance} className="door-btn mt-5 max-w-[260px]">
+                      {view.act.display >= view.act.total ? '走完了' : '继续'}
+                    </button>
+                  )}
+                </section>
+
+                {unknown ? (
+                  <SessionUnknownStage
+                    view={unknown}
+                    onContinue={onContinueFromUnknown ?? onAdvance}
+                  />
+                ) : null}
+              </>
             ) : null}
 
             {/* 终局（§十九 - §二十二） */}
