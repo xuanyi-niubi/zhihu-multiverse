@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -25,7 +25,23 @@ const stats = JSON.parse(readFileSync(join(root, 'scripts', 'test-stats.json'), 
 };
 
 const readme = readFileSync(join(root, 'README.md'), 'utf8');
-const plan = readFileSync(join(root, '产品说明计划书.md'), 'utf8');
+
+/*
+  ## 为什么产品说明计划书是「可能不存在」的
+
+  `产品说明计划书.md` 是参赛材料，属于**本人自用**，已在 `.gitignore` 里
+  （见 `.gitignore` 的「参赛材料与个人底稿」段）。所以：
+
+  - 本机有它 → 相关断言照跑，文档数字必须与统计一致；
+  - 新克隆的仓库没有它 → 跳过这一组，而不是让整个测试文件在加载期抛错。
+
+  之前这里是无条件 `readFileSync`：文件缺失会让**整个测试文件**在模块顶层
+  崩掉（不是某条用例失败，是这个文件加载不了），报错信息还指向
+  「找不到文件」而不是「这件文档不该入库」—— 排查成本很高。
+*/
+const planPath = join(root, '产品说明计划书.md');
+const planAvailable = existsSync(planPath);
+const plan = planAvailable ? readFileSync(planPath, 'utf8') : '';
 
 describe('scripts/test-stats.json 自身', () => {
   it('由生成器产出，且记录到真实的用例规模', () => {
@@ -54,7 +70,10 @@ describe('文档引用的数字与统计源一致', () => {
     expect(readme).toContain(`${stats.files} 个测试文件 · ${stats.tests} 个用例`);
   });
 
-  it('产品说明计划书引用同一组数字', () => {
+  it('产品说明计划书引用同一组数字（文件不在时跳过）', () => {
+    if (!planAvailable) {
+      return; // 参赛材料不入库，新克隆里没有这份文件
+    }
     expect(plan).toContain(`${stats.files} 个文件 ${stats.tests} 个用例`);
     /*
       这一条原来写死「${stats.tests} 个自动化测试全部通过」。
@@ -70,6 +89,9 @@ describe('文档引用的数字与统计源一致', () => {
   });
 
   it('文档不许把通过数说成总数（除非真的全绿）', () => {
+    if (!planAvailable) {
+      return;
+    }
     if (stats.failed === 0) {
       expect(plan).toContain(`${stats.tests} 个自动化测试`);
     } else {
@@ -82,7 +104,9 @@ describe('文档引用的数字与统计源一致', () => {
   it('两份文档都不再出现写死的旧口径', () => {
     for (const stale of ['13 个文件 262 个用例', '15 passed (15)', '303 passed (303)', '303 个自动化测试']) {
       expect(readme).not.toContain(stale);
-      expect(plan).not.toContain(stale);
+      if (planAvailable) {
+        expect(plan).not.toContain(stale);
+      }
     }
   });
 });
