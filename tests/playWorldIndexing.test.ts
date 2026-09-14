@@ -319,14 +319,17 @@ describe('Session 编译体验', () => {
     expect(source).not.toContain('ASSEMBLE_MS + READY_MS');
     // 收束动画仍在：assembling → ready 这一拍没被一起删掉
     expect(source).toContain("window.setTimeout(() => setForgeBeat('ready'), ASSEMBLE_MS)");
-    // 唯一出路是点它；点击走客户端推送（新开标签/中键保留原生跳转）
-    expect(source).toContain('enterWorld();');
-    expect(source).toContain('event.preventDefault();');
-    expect(source).toContain('data-destination="play-session"');
-    expect(source).toContain(
-      'href={`/play?session=${encodeURIComponent(id)}`}\n                  data-destination="play-session"\n                  className="sil-btn sil-btn--block"',
+    // 世界就绪后先进入真实人生显影；唯一的穿越动作仍由用户按钮触发。
+    expect(source).toContain('<ExperienceReveal');
+    expect(source).toContain('onEnterWorld={enterWorld}');
+    expect(source).toContain('router.push(\`/play?session=\${encodeURIComponent(view.id)}\`)');
+
+    const reveal = readFileSync(
+      new URL('../src/components/visual/ExperienceReveal.tsx', import.meta.url),
+      'utf8',
     );
-    expect(source).toContain('router.push(`/play?session=${encodeURIComponent(view.id)}`)');
+    expect(reveal).toContain('穿越我的平行宇宙');
+    expect(reveal).toContain('onClick={onEnterWorld}');
   });
 
   it('编译页的碎片能点开详情、且真的能点回知乎原文', () => {
