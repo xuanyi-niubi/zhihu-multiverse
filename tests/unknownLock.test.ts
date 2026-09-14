@@ -1,23 +1,32 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildInitialActionSpace, findAction } from '@/features/game-mechanics/actionSpace';
 import {
   applyUnknownLock,
+  realityRequiredLabel,
   releaseUnknownLock,
-  unknownLockCandidate,
+  unknownLockFromKey,
 } from '@/features/game-mechanics/unknownLock';
-import { initialSessionMechanics, resolveUnknown } from '@/features/game-mechanics/sessionMechanics';
-import { validateEncounterPlan } from '@/features/game-mechanics/validate';
-import type { ActionOption } from '@/features/game-mechanics/domain';
+import {
+  buildActionSpace,
+  getActionsByState,
+  getSelectableActions,
+  getVisibleActions,
+} from '@/features/game-mechanics/actionSpace';
+import { unknownViewOf } from '@/features/game-mechanics/view';
+import type { PlayAction } from '@/features/game-mechanics/domain';
 import type { UnknownVariable } from '@/features/experience/domain';
 
 /**
- * UNKNOWN LOCK（§11-§12 / §48 / §58 / §80）。
+ * UNKNOWN LOCK（§十五-§十六 / §二十五）。
  *
- * > 把「模型不知道」从一个缺陷变成玩法。
+ * ```text
+ * 无 unknown → no unknown lock
+ * ```
+ *
+ * 它不是 error，而是「这里 AI 已经没有可靠现实信息继续判断」。
  */
 
-const unknown: UnknownVariable = {
+const keyUnknown: UnknownVariable = {
   id: 'unknown-hours',
   label: '每周能否稳定投入 8 小时',
   whyItMatters: '它直接决定高强度比赛这条路是否成立。',
@@ -26,85 +35,80 @@ const unknown: UnknownVariable = {
   priority: 1,
 };
 
-function action(id: string, overrides: Partial<ActionOption> = {}): ActionOption {
-  return { id, label: `行动 ${id}`, source: 'user', sourceFactIds: [], requirements: [], ...overrides };
+function action(id: string, overrides: Partial<PlayAction> = {}): PlayAction {
+  return {
+    id,
+    label: `行动 ${id}`,
+    state: 'available',
+    origin: 'scenario',
+    sourceFactIds: [],
+    ...overrides,
+  };
 }
 
-describe('unknownLockCandidate', () => {
-  it('unknown 存在即生成锁定说明', () => {
-    const candidate = unknownLockCandidate({ unknown, affectsActionIds: ['action-比赛'] });
-    expect(candidate.unknownId).toBe('unknown-hours');
-    expect(candidate.explanation).toContain('每周能否稳定投入 8 小时');
-    expect(candidate.explanation).toContain('现实验证');
+describe('unknownLockFromKey', () => {
+  it('keyUnknown 存在即生成（realityRequired 恒为 true）', () => {
+    const lock = unknownLockFromKey({ keyUnknown, relatedActionIds: ['action-比赛'] });
+    expect(lock).not.toBeNull();
+    expect(lock!.id).toBe('unknown-lock-unknown-hours');
+    expect(lock!.label).toBe('每周能否稳定投入 8 小时');
+    expect(lock!.relatedActionIds).toEqual(['action-比赛']);
+    expect(lock!.realityRequired).toBe(true);
   });
 
-  it('世界线整体锁定（没有具体行动）也成立', () => {
-    const candidate = unknownLockCandidate({ unknown, affectsActionIds: [] });
-    expect(candidate.affectsActionIds).toEqual([]);
-    expect(candidate.explanation.length).toBeGreaterThan(0);
+  it('无 unknown → no unknown lock', () => {
+    expect(unknownLockFromKey({ keyUnknown: null })).toBeNull();
+  });
+
+  it('给不出具体行动时锁整条世界线（relatedActionIds 为空）', () => {
+    const lock = unknownLockFromKey({ keyUnknown });
+    expect(lock!.relatedActionIds).toEqual([]);
   });
 });
 
 describe('applyUnknownLock / releaseUnknownLock', () => {
-  it('锁定后行动不可用，且带 unknownId', () => {
-    const space = buildInitialActionSpace([action('action-比赛'), action('action-退课')]);
-    const next = applyUnknownLock(space, unknownLockCandidate({ unknown, affectsActionIds: ['action-比赛'] }));
-    expect(next.available.map((item) => item.id)).toEqual(['action-退课']);
-    expect(next.locked[0]!.reason).toBe('unknown_variable');
-    expect(next.locked[0]!.unknownId).toBe('unknown-hours');
+  it('锁定后行动不可选，但仍可见（看得见才谈得上现实验证）', () => {
+    const space = buildActionSpace([action('action-比赛'), action('action-退课')]);
+    const lock = unknownLockFromKey({ keyUnknown, relatedActionIds: ['action-比赛'] })!;
+    const next = applyUnknownLock(space, lock);
+
+    expect(getSelectableActions(next).map((item) => item.id)).toEqual(['action-退课']);
+    expect(getVisibleActions(next).map((item) => item.id)).toEqual(['action-比赛', 'action-退课']);
+    expect(getActionsByState(next, 'locked')[0]!.reason).toContain('现实验证');
   });
 
-  it('现实回填后解除锁定（§58）', () => {
-    const space = buildInitialActionSpace([action('action-比赛')]);
-    const locked = applyUnknownLock(space, unknownLockCandidate({ unknown, affectsActionIds: ['action-比赛'] }));
-    const released = releaseUnknownLock(locked, 'unknown-hours');
-    expect(released.available.map((item) => item.id)).toEqual(['action-比赛']);
-    expect(released.locked).toHaveLength(0);
-    expect(findAction(released, 'action-比赛')).not.toBeNull();
+  it('现实回填后还原到锁定之前的状态', () => {
+    const space = buildActionSpace([action('action-比赛')]);
+    const lock = unknownLockFromKey({ keyUnknown, relatedActionIds: ['action-比赛'] })!;
+    const restored = releaseUnknownLock(applyUnknownLock(space, lock), lock);
+    expect(restored.actions[0]!.state).toBe('available');
+    expect(restored.actions[0]!.reason).toBeUndefined();
   });
-});
 
-describe('SessionMechanics.resolveUnknown', () => {
-  it('清空 unknownLocks 并恢复行动', () => {
-    const mechanics = initialSessionMechanics([action('action-比赛')]);
-    const locked = {
-      space: applyUnknownLock(mechanics.space, unknownLockCandidate({ unknown, affectsActionIds: ['action-比赛'] })),
-      state: {
-        ...mechanics.state,
-        lockedActionIds: ['action-比赛'],
-        availableActionIds: [],
-        unknownLocks: ['unknown-hours'],
-      },
-    };
-    const resolved = resolveUnknown(locked, 'unknown-hours');
-    expect(resolved.state.unknownLocks).toEqual([]);
-    expect(resolved.state.availableActionIds).toEqual(['action-比赛']);
-    expect(resolved.state.lockedActionIds).toEqual([]);
+  it('没有相关行动时锁定本身仍然成立（世界线级）', () => {
+    const before = buildActionSpace([action('action-比赛')]);
+    const lock = unknownLockFromKey({ keyUnknown })!;
+    const next = applyUnknownLock(before, lock);
+    expect(next.actions).toHaveLength(1);
+    expect(next.actions[0]!.state).toBe('available');
+  });
+
+  it('幂等：重复施加同一把锁结果不变', () => {
+    const space = buildActionSpace([action('action-比赛')]);
+    const lock = unknownLockFromKey({ keyUnknown, relatedActionIds: ['action-比赛'] })!;
+    const once = applyUnknownLock(space, lock);
+    expect(JSON.stringify(applyUnknownLock(once, lock))).toBe(JSON.stringify(once));
   });
 });
 
-describe('validateEncounterPlan：unknown_lock 只能引用真实未知', () => {
-  const payload = {
-    kind: 'unknown_lock' as const,
-    unknownId: 'unknown-hours',
-    unknownLabel: '每周能否稳定投入 8 小时',
-    affectsActionIds: [],
-    explanation: '这条世界线还不能确认。',
-  };
-
-  it('真实未知 → 无 issue', () => {
-    const issues = validateEncounterPlan(
-      { id: 'e1', type: 'unknown_lock', act: 3, sourceFactIds: [], sourceCaseIds: [], payload },
-      { facts: [], cases: [], differences: [], unknownIds: ['unknown-hours'] },
-    );
-    expect(issues).toEqual([]);
+describe('给 UI 的最小形状', () => {
+  it('unknownViewOf 只给 id 与 label', () => {
+    const lock = unknownLockFromKey({ keyUnknown })!;
+    expect(unknownViewOf(lock)).toEqual({ id: 'unknown-lock-unknown-hours', label: '每周能否稳定投入 8 小时' });
   });
 
-  it('模型凭空猜的未知 → 报错', () => {
-    const issues = validateEncounterPlan(
-      { id: 'e1', type: 'unknown_lock', act: 3, sourceFactIds: [], sourceCaseIds: [], payload },
-      { facts: [], cases: [], differences: [], unknownIds: [] },
-    );
-    expect(issues.join(' ')).toContain('不存在的未知');
+  it('realityRequiredLabel 明确标出 REALITY REQUIRED', () => {
+    const lock = unknownLockFromKey({ keyUnknown })!;
+    expect(realityRequiredLabel(lock)).toContain('REALITY REQUIRED');
   });
 });

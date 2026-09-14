@@ -1,92 +1,77 @@
-import type { ActionSpace, UnknownLockPayload } from '@/features/game-mechanics/domain';
-import { lockAction } from '@/features/game-mechanics/actionSpace';
+import type { ActionSpace, UnknownLock } from '@/features/game-mechanics/domain';
+import { lockAction, restoreAction } from '@/features/game-mechanics/actionSpace';
 import type { UnknownVariable } from '@/features/experience/domain';
 
 /**
- * UNKNOWN LOCK（§11-§12 / §48 / §58 / §80）。
+ * UNKNOWN LOCK：把「模型不知道」从缺陷变成玩法（§十五-§十六）。
  *
- * ## 把「模型不知道」从缺陷变成玩法
+ * ## 它不是 error
  *
- * 系统明确承认「这里 AI 无法继续判断」，然后把一条 Action / Worldline
- * 标记为 UNKNOWN LOCK：
+ * 它表示：**这里 AI 已经没有可靠现实信息继续判断。**
+ * 最终 UI 会显示 `REALITY REQUIRED`。
  *
- * ```text
- * 这条世界线是否成立，取决于一个你现在还不知道的事实。
- * → 需要现实验证
- * ```
+ * ## 来源唯一
  *
- * 玩家因此不会觉得「AI 不够聪明」，而会觉得「这件事只能我自己去现实确认」。
- *
- * ## 禁止猜答案
- *
- * 这个模块只消费现有 `keyUnknown` / `UnknownVariable`，
- * **绝不用模型猜 unknown 的答案**。
+ * 只来自 `WorldBlueprint.keyUnknown`。没有 `keyUnknown` → **不生成**。
+ * 这个模块**绝不猜** unknown 的答案。
  */
-
-export interface UnknownLockCandidate {
-  readonly unknownId: string;
-  readonly unknownLabel: string;
-  readonly affectsActionIds: readonly string[];
-  readonly explanation: string;
-}
 
 /**
- * 未知 → 世界线锁定。
+ * keyUnknown → 世界线锁定（§十五）。
  *
- * unknown 存在即成立（世界线可以整体锁住）；如果同时能指向具体行动，
- * 就一并锁住那条行动。`affectsActionIds` 由调用方提供，本模块不发明。
+ * `relatedActionIds` 由调用方给出（哪些行动被这条未知卡住）；
+ * 给不出来就是空数组 —— 那表示锁的是整条世界线，而不是某条具体行动。
  */
-export function unknownLockCandidate(input: {
-  readonly unknown: UnknownVariable;
-  readonly affectsActionIds?: readonly string[];
-}): UnknownLockCandidate {
-  const affects = [...new Set(input.affectsActionIds ?? [])].sort();
+export function unknownLockFromKey(input: {
+  readonly keyUnknown: UnknownVariable | null;
+  readonly relatedActionIds?: readonly string[];
+}): UnknownLock | null {
+  if (!input.keyUnknown) {
+    return null;
+  }
+  const related = [...new Set(input.relatedActionIds ?? [])]
+    .filter((id) => id.length > 0)
+    .sort();
+
   return {
-    unknownId: input.unknown.id,
-    unknownLabel: input.unknown.label,
-    affectsActionIds: affects,
-    explanation: `这条世界线还不能确认：你现在还不知道「${input.unknown.label}」。${input.unknown.whyItMatters} 留到现实验证。`,
+    id: `unknown-lock-${input.keyUnknown.id}`,
+    label: input.keyUnknown.label,
+    relatedActionIds: related,
+    realityRequired: true,
   };
 }
 
-/** 把未知锁落进行动空间（只锁行动，不改数值）。 */
-export function applyUnknownLock(space: ActionSpace, candidate: UnknownLockCandidate): ActionSpace {
+/** 把未知锁落进行动空间（只锁行动，不扣任何数值）。 */
+export function applyUnknownLock(
+  space: ActionSpace,
+  lock: UnknownLock,
+  reason?: string,
+): ActionSpace {
+  const explanation =
+    reason ??
+    `这条世界线还不能确认：你现在还不知道「${lock.label}」。留到现实验证（REALITY REQUIRED）。`;
   let next = space;
-  for (const actionId of candidate.affectsActionIds) {
-    next = lockAction(next, actionId, 'unknown_variable', candidate.explanation, {
-      unknownId: candidate.unknownId,
-    });
+  for (const actionId of lock.relatedActionIds) {
+    next = lockAction(next, actionId, explanation);
   }
   return next;
 }
 
 /**
- * 现实回填后解除锁定（§58 / §2）。
+ * 现实回填后解除锁定（§十六）。
  *
- * 未来支持「用户回到现实做了验证」时，同一个 unknownId 解除锁定。
+ * 玩家回到现实做了验证之后，对应的未知被消掉，被它锁住的行动还原到
+ * 锁定之前的状态与原因。
  */
-export function releaseUnknownLock(space: ActionSpace, unknownId: string): ActionSpace {
-  const stillLocked = space.locked.filter(
-    (locked) => !(locked.reason === 'unknown_variable' && locked.unknownId === unknownId),
-  );
-  const released = space.locked
-    .filter((locked) => locked.reason === 'unknown_variable' && locked.unknownId === unknownId)
-    .map((locked) => locked.action);
-
-  return {
-    ...space,
-    available: [...space.available, ...released].sort((left, right) => left.id.localeCompare(right.id)),
-    locked: stillLocked,
-  };
+export function releaseUnknownLock(space: ActionSpace, lock: UnknownLock): ActionSpace {
+  let next = space;
+  for (const actionId of lock.relatedActionIds) {
+    next = restoreAction(next, actionId);
+  }
+  return next;
 }
 
-/** 便捷：未知锁候选 → Encounter payload。 */
-export function unknownLockPayload(candidate: UnknownLockCandidate): UnknownLockPayload {
-  return {
-    kind: 'unknown_lock',
-    unknownId: candidate.unknownId,
-    unknownLabel: candidate.unknownLabel,
-    affectsActionIds: candidate.affectsActionIds,
-    explanation: candidate.explanation,
-  };
+/** 声明式 UI 文案：这个未知需要玩家回到现实才能继续。 */
+export function realityRequiredLabel(lock: UnknownLock): string {
+  return `REALITY REQUIRED · ${lock.label}`;
 }
