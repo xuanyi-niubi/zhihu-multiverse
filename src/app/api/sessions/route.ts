@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
 
 import { fail, newTrace, ok, readBody } from '@/features/decision-session/api';
-import { liveSearchWith } from '@/features/decision-session/liveSearch';
 import { createSession } from '@/features/decision-session/service';
 import { FileDecisionSessionRepository } from '@/features/decision-session/store';
-import { extractProfile, generateProfile } from '@/core/dm/profile';
-import { createOpenAiCompatibleClient } from '@/core/dm/provider';
+import { extractProfile } from '@/core/dm/profile';
 import { observedClaimsOf } from '@/features/reality-memory/service';
 import { FileRealityMemoryRepository } from '@/features/reality-memory/store';
-import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
 import { readOwnSettings } from '@/features/run/identity';
 import { appSessionQuota } from '@/core/usage/rateLimit';
 import { appIpSessionQuota, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
-import { allocateAppLlmCall, appDailyLlmBudget, appSessionLlmBudget } from '@/core/usage/budget';
-import { resolveZhihuConfigForRequest, secretOriginFor } from '@/features/run/keyResolution';
+import { secretOriginFor } from '@/features/run/keyResolution';
 
 import type { RealityMemoryEntry } from '@/features/reality-memory/domain';
 
@@ -51,7 +47,7 @@ export async function POST(request: Request): Promise<Response> {
    * 身份：登录用户按 url_token，未登录按匿名 cookie（与 `keyResolution` 同口径）。
    * **不要求登录** —— 方案 §2.4：不要求登录后才能获得第一次价值。
    */
-  const { identity, stored } = readOwnSettings(request);
+  const { identity } = readOwnSettings(request);
 
   /**
    * 现实记忆（P1-3）：这个身份已经**观测到**的事实，这一局当硬条件用。
@@ -67,25 +63,13 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   /**
-   * 实时检索能力由**用户自己的**知乎凭证提供；没有就只走黄金案例快照。
-   *
-   * 这不是缺陷：方案 §6.6 明确要求「黄金问题使用审核过的来源快照，保证稳定」。
+   * 首页只做确定性框定并立即创建会话。
+   * 模型理解原来会阻塞 session id 最多 30 秒，导致穿越动画看起来卡死；
+   * 深层归纳留到用户看得见的“编译世界”阶段。
    */
-  /** 知乎凭证同样走三级来源（account > app > none），不自己读账号配置。 */
-  const zhihu = resolveZhihuConfigForRequest(request);
-  const liveSearch = zhihu ? liveSearchWith(zhihu) : undefined;
-
-  /**
-   * 处境档案（Phase 2）：**复用现有管线，不新造第二套画像**。
-   *
-   * 与 `/api/profile` 完全同一套纪律：
-   * 有模型配置 → `generateProfile()`（模型解析）；
-   * 没有、或模型失败 → `extractProfile()`（确定性规则兜底）。
-   *
-   * 之所以在**建会话时**就算好：这样 `/play` 后面不需要再
-   * `fetchProfile(goal)` 一次 —— 档案跟着会话走，只有一份。
-   */
-  const resolvedModelConfig = resolveModelConfigForRequest(request);
+  const profile = extractProfile(question);
+  const profileAnalysis: string | null = null;
+  trace.note('profile-deterministic-fast-path');
 
   /**
    * App provider 的开局配额（产品化方案 §7 / §45）。
@@ -134,36 +118,6 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  /**
-   * 全局每日软上限（产品化方案 §7 / §13）：用满之后**只暂停 App provider**。
-   *
-   * 这一局的档案退回确定性规则、叙事退回离线 —— 会话照常建得出来（不是 500）。
-   * 自带模型 key 的访客是 `origin.model === 'account'`，根本不经过这里。
-   */
-  let modelConfig = resolvedModelConfig;
-  if (origin.model === 'app' && !appDailyLlmBudget.peek().allowed) {
-    modelConfig = null;
-    trace.note('app-daily-budget-exhausted');
-  }
-
-  let profile = extractProfile(question);
-  let profileAnalysis: string | null = null;
-  if (modelConfig) {
-    try {
-      const generated = await generateProfile(question, {
-        client: createOpenAiCompatibleClient(modelConfig),
-      });
-      profile = generated.profile;
-      profileAnalysis = generated.analysis;
-      trace.note(`profile-${generated.source}`);
-    } catch {
-      // 模型失败不阻断：确定性档案已经在那儿了
-      trace.note('profile-model-failed-fallback');
-    }
-  } else {
-    trace.note('profile-deterministic');
-  }
-
   const session = await createSession({
     ownerId: identity.key,
     question,
@@ -188,29 +142,7 @@ export async function POST(request: Request): Promise<Response> {
      * 读取失败就当没有记忆 —— 记忆是加分项，不该让「新建会话」失败。
      */
     ...(observedClaims.length > 0 ? { observedClaims } : {}),
-    ...(liveSearch ? { liveSearch } : {}),
   });
-
-  /**
-   * 档案这一步的模型调用记入**本局预算**（方案 §8 的「调用 1：理解」）。
-   *
-   * 用 sessionId 做键，与后面 `/api/dm` 的叙事调用共享同一个池子 ——
-   * 单局上限才有意义（少记一次会让上限虚高）。
-   *
-   * 只有**花服务器模型 key** 时才记（`origin.model === 'app'`）：旧写法用
-   * `usesAppProvider`，会把「自己配了模型 key、只是借用了 App 知乎」的访客
-   * 也算进来 —— 那笔钱是他自己出的，不该扣服务器的账。
-   */
-  if (origin.model === 'app' && modelConfig) {
-    const allocation = allocateAppLlmCall({
-      session: appSessionLlmBudget,
-      daily: appDailyLlmBudget,
-      key: session.id,
-    });
-    if (!allocation.allowed) {
-      trace.note(`app-${allocation.scope}-budget-exhausted`);
-    }
-  }
 
   await repository.create(session);
 
