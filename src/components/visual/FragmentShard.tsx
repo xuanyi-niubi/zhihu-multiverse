@@ -20,6 +20,23 @@ import * as React from 'react';
  *
  * 逐字引用。组件不做截断以外的任何加工：没有摘要、没有改写、没有「AI 总结」。
  * 视觉组件不得 fetch API（§7）。
+ *
+ * ## 可点：传 `onSelect` 就变成一枚按钮
+ *
+ * 编译页去掉自动跳转之后（见 `src/app/session/[id]/page.tsx`），它是玩家
+ * **真正会停留**的一屏 —— 那一屏此前一个可点的东西都没有：两行截断的引文，
+ * 想看完整、想回原文都无处可去。
+ *
+ * 所以这里增加**可选**的交互能力，而不是改成一个链接：
+ *
+ * ```text
+ * 不传 onSelect  → 仍然是 <article>，行为与视觉和以前逐字节一致
+ * 传了 onSelect  → 同一份结构包在 <button> 里，点击交给调用方开详情
+ * ```
+ *
+ * 为什么不是「直接外链到知乎」：外层是链接时，里面就再也不能放任何可点的
+ * 东西（不能嵌套交互元素），而且用户点一下会被整页带走 ——
+ * 这里需要的是先看清「这句完整是什么、谁说的」，再由他自己决定要不要去原文。
  */
 
 export type FragmentCategory = 'similar' | 'alternative' | 'counter';
@@ -59,6 +76,14 @@ export interface FragmentShardProps {
   /** 允许调用方错开归位时间（六块同时出现会同时占用 blur/transform 预算）。 */
   readonly style?: React.CSSProperties;
   readonly className?: string;
+  /**
+   * 点击切片时打开详情（完整逐字原文 + 回知乎原文的出路）。
+   *
+   * 不传时切片不可交互 —— 编译页必须传，否则玩家在这一屏没有任何出口。
+   */
+  readonly onSelect?: () => void;
+  /** 当前详情开的就是这一条：给一次「你点的是它」的可见反馈。 */
+  readonly selected?: boolean;
 }
 
 export function FragmentShard({
@@ -68,32 +93,69 @@ export function FragmentShard({
   state = 'materialized',
   style,
   className = '',
+  onSelect,
+  selected = false,
 }: FragmentShardProps) {
   const materialized = state === 'materialized';
+  const interactive = typeof onSelect === 'function';
 
-  return (
-    <article
-      className={[
-        'sil-fragment',
-        `sil-fragment--${FRAGMENT_MODIFIER[category]}`,
-        // 显影（DESIGN-SYSTEM §0 机制 1）：碎片是「从暗房里浮出来」的
-        materialized ? 'sil-develop' : 'opacity-0',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      data-fragment-category={category}
-      data-fragment-state={state}
-      style={style}
-    >
+  const content = (
+    <>
       <p className="sil-fragment__quote">{quote}</p>
       <p className="sil-fragment__meta">
         <span className={`sil-mark sil-mark--${FRAGMENT_MODIFIER[category]}`}>
           {FRAGMENT_CATEGORY_LABEL[category]}
         </span>
         <span className="truncate">{sourceLabel}</span>
+        {/*
+          指示可点的唯一一处文字。它出现在 meta 行尾 —— 与来源标签同一行，
+          不改变两行引文的排版高度。
+        */}
+        {interactive ? <span className="sil-fragment__peek">看详情 ↗</span> : null}
       </p>
-    </article>
+    </>
+  );
+
+  const classes = [
+    'sil-fragment',
+    `sil-fragment--${FRAGMENT_MODIFIER[category]}`,
+    // 显影（DESIGN-SYSTEM §0 机制 1）：碎片是「从暗房里浮出来」的
+    materialized ? 'sil-develop' : 'opacity-0',
+    interactive ? 'sil-fragment--tappable' : '',
+    selected ? 'sil-fragment--selected' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (!interactive) {
+    return (
+      <article
+        className={classes}
+        data-fragment-category={category}
+        data-fragment-state={state}
+        style={style}
+      >
+        {content}
+      </article>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-haspopup="dialog"
+      aria-expanded={selected}
+      aria-label={`查看这条真实经历的原文详情：${quote.slice(0, 40)}`}
+      className={[classes, 'w-full text-left'].join(' ')}
+      data-fragment-category={category}
+      data-fragment-state={state}
+      data-fragment-interactive="true"
+      style={style}
+    >
+      {content}
+    </button>
   );
 }
 

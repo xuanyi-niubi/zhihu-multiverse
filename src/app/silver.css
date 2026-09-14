@@ -2763,6 +2763,48 @@ a {
   color: var(--sil-ink-300);
 }
 
+/*
+  ## 可点切片（编译页）
+
+  编译页去掉自动跳转之后，玩家会停在这一屏读这些碎片 —— 所以它们必须
+  可点（完整原文 + 回知乎原回答）。三条约束：
+
+  1. **不新增卡片样式**：材质、圆角、内边距全部沿用 `.sil-fragment`，
+     可点与不可点的区别只有「悬停时的边框提亮」与一行 `看详情 ↗`。
+  2. **`button` 必须重置字体与对齐**：浏览器给 button 的默认字体是系统 UI 字体，
+     不重置的话同一块碎片在编译页与别处会显示成两种字形。
+  3. **焦点环不能省**：纯装饰的 hover 提亮对键盘用户等于没有反馈。
+*/
+.sil-fragment--tappable {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 200ms var(--sil-ease),
+    background-color 200ms var(--sil-ease);
+}
+
+.sil-fragment--tappable:hover {
+  border-color: rgb(var(--sil-rgb-ink-100) / 0.28);
+}
+
+.sil-fragment--tappable:focus-visible {
+  outline: 1px solid rgb(var(--sil-rgb-alternate) / 0.7);
+  outline-offset: 2px;
+}
+
+.sil-fragment--selected {
+  border-color: rgb(var(--sil-rgb-alternate) / 0.55);
+}
+
+.sil-fragment__peek {
+  color: var(--sil-alternate-soft);
+  white-space: nowrap;
+}
+
 .sil-unlock-rail {
   position: relative;
 }

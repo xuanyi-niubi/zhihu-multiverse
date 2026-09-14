@@ -329,6 +329,45 @@ describe('Session 编译体验', () => {
     expect(source).toContain('router.push(`/play?session=${encodeURIComponent(view.id)}`)');
   });
 
+  it('编译页的碎片能点开详情、且真的能点回知乎原文', () => {
+    /*
+      回归哨兵。编译页去掉自动跳转之前，碎片只是「已找到」的证据 ——
+      页面把 `ArchiveFragment` 转成 `ForgeShard` 时把 `sourceUrl` 丢掉了，
+      碎片本身也是无交互的 <article>：玩家停在这一屏，哪儿都点不了。
+    */
+    const session = stripComments(page());
+    // 1) 页面把 author / sourceUrl 一并交给上墙层，而不是只给两行引文
+    expect(session).toContain('sourceUrl: item.sourceUrl');
+    expect(session).toContain('const shards: readonly ForgeShard[] = fragments.map');
+    // 2) 点击 → 选中 → 弹层，三段都在同一条链上
+    expect(session).toContain('onSelectFragment={(fragmentId) => setSelectedFragmentId(fragmentId)}');
+    expect(session).toContain('<SessionSourceDialog data={selectedFragment}');
+    // 3) 弹层与上墙层各自把这条纪律写进实现
+    const shard = readFileSync(
+      new URL('../src/components/visual/FragmentShard.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(shard).toContain("interactive ? 'sil-fragment--tappable' : ''");
+    expect(shard).toContain('看详情 ↗');
+    expect(shard).toContain('aria-haspopup="dialog"');
+    const forge = readFileSync(
+      new URL('../src/components/visual/WorldForge.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(forge).toContain('onSelect: () => onSelectFragment(fragment.id)');
+    expect(forge).toContain('readonly sourceUrl?: string | null;');
+    // 4) 详情弹层的两条硬要求：完整逐字原文 + 原文外链（新开标签）
+    const dialog = readFileSync(
+      new URL('../src/components/session/SessionSourceDialog.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(dialog).toContain('{data.quote}');
+    expect(dialog).toContain('去知乎看原回答 ↗');
+    expect(dialog).toContain('rel="noreferrer noopener"');
+    // 没有原链接时如实说明，不伪造一个入口
+    expect(dialog).toContain('我们不会伪造一个');
+  });
+
   it('刘看山第一次出现仍在会话页（§35）', () => {
     expect(page()).toContain('我去找找，有没有人活过你正在纠结的这几种人生。');
   });

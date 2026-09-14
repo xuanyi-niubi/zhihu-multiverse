@@ -53,6 +53,14 @@ export interface ForgeShard {
   readonly quote: string;
   readonly sourceLabel: string;
   readonly category: FragmentCategory;
+  /**
+   * 这条切片能点回的原回答地址（来自 `ExperienceFact.sourceUrl`）。
+   *
+   * 在编译页去掉自动跳转之前，碎片只是「已找到」的证据，不需要出路；
+   * 现在玩家会停在这一屏，所以必须能点回原文 —— 没有链接的经验等于传说。
+   * 缺失时为 null：**不伪造一个链接**，详情里如实说明。
+   */
+  readonly sourceUrl?: string | null;
 }
 
 export interface WorldForgeProps {
@@ -62,6 +70,10 @@ export interface WorldForgeProps {
   readonly fragments: readonly ForgeShard[];
   /** 编译完成后交给调用方的真实总数（用于「进入 Play」的那一步）。 */
   readonly className?: string;
+  /** 点了某条切片：开那条的详情（完整逐字原文 + 回原文的出路）。 */
+  readonly onSelectFragment?: (fragmentId: string) => void;
+  /** 详情当前开的是哪一条：给它一次选中反馈。 */
+  readonly selectedFragmentId?: string | null;
 }
 
 /** §18 允许的固定文案：三类检索意图各自一句。 */
@@ -117,6 +129,8 @@ export function WorldForge({
   phase,
   fragments,
   className = '',
+  onSelectFragment,
+  selectedFragmentId = null,
 }: WorldForgeProps) {
   const foundTotal = stages.reduce((sum, stage) => sum + (stage.found ?? 0), 0);
   const ready = phase === 'ready';
@@ -222,6 +236,17 @@ export function WorldForge({
                 category={fragment.category}
                 state="materialized"
                 className="sm:col-span-1"
+                /*
+                  可点：编译页是玩家真正会停留的一屏，碎片必须能展开成
+                  完整逐字原文并给出回原文的出路。不传 onSelect 时组件
+                  退回原来的静态 article，行为不变。
+                */
+                {...(onSelectFragment
+                  ? {
+                      onSelect: () => onSelectFragment(fragment.id),
+                      selected: selectedFragmentId === fragment.id,
+                    }
+                  : {})}
                 // 齐次错位，避免六块同时出现（性能与节奏）
                 style={{ animationDelay: `${Math.min(index, 5) * 90}ms` }}
               />

@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 import { ClarificationStep } from '@/components/session/ClarificationStep';
+import {
+  SessionSourceDialog,
+  type SessionSourceDialogData,
+} from '@/components/session/SessionSourceDialog';
 import { AuroraBand } from '@/components/visual/AuroraBand';
 import { ArrivalFlash } from '@/components/visual/UniverseJump';
 import { WorldForge, type ForgePhase, type ForgeShard, type ForgeStage } from '@/components/visual/WorldForge';
@@ -300,6 +304,24 @@ export default function SessionPage() {
     router.push(`/play?session=${encodeURIComponent(view.id)}`);
   }, [busy, router, view]);
 
+  /**
+   * 详情开着的是哪一条切片（`null` = 没开）。
+   *
+   * 只存 id，不存整条数据：会话每次 PATCH 都会换掉 `view`，把引文也存进
+   * 状态就会出现「详情里是上一版原文」的漂移；id 对着当前派生数据取，
+   * 数据换代时对不上就自然关闭。
+   */
+  const [selectedFragmentId, setSelectedFragmentId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (selectedFragmentId === null || view === null) {
+      return;
+    }
+    const exists = (view.experienceFacts ?? []).some((fact) => fact.id === selectedFragmentId);
+    if (!exists) {
+      setSelectedFragmentId(null);
+    }
+  }, [selectedFragmentId, view]);
+
   if (loading) {
     /**
      * 首屏骨架（§16「它不是页面，是一段连续转场」的延伸）。
@@ -401,14 +423,39 @@ export default function SessionPage() {
   const fragmentGroups = worldReady
     ? archiveFragments(view.experienceFacts ?? [], SHARDS_PER_TRACK, trackResolverFor(view))
     : [];
-  const shards: readonly ForgeShard[] = fragmentGroups.flatMap((group) =>
+  /**
+   * 碎片上墙需要的东西 + 详情需要的东西。
+   *
+   * `archiveFragments` 其实**已经**算好了完整逐字引文、答主与 `sourceUrl`，
+   * 只是在自动跳转时代之前，编译页只用来上墙、不需要出路，于是这一层
+   * 把 `sourceUrl` 丢掉了 —— 结果玩家停在这一屏看着碎片，却哪儿都点不了。
+   * 现在两份都从这里派生，**同一个事实只有一份来源**。
+   */
+  const fragments: readonly {
+    readonly shard: ForgeShard;
+    readonly detail: SessionSourceDialogData;
+  }[] = fragmentGroups.flatMap((group) =>
     group.items.map((item) => ({
-      id: item.id,
-      quote: item.quote,
-      sourceLabel: `知乎 · ${item.author}`,
-      category: group.track,
+      shard: {
+        id: item.id,
+        quote: item.quote,
+        sourceLabel: `知乎 · ${item.author}`,
+        category: group.track,
+        sourceUrl: item.sourceUrl,
+      },
+      detail: {
+        id: item.id,
+        quote: item.quote,
+        author: item.author,
+        sourceUrl: item.sourceUrl,
+        track: group.track,
+      },
     })),
   );
+  const shards: readonly ForgeShard[] = fragments.map((entry) => entry.shard);
+  /** 详情开着的是哪一条：都从同一份派生数据里取，不另存一份引文。 */
+  const selectedFragment =
+    fragments.find((entry) => entry.shard.id === selectedFragmentId)?.detail ?? null;
 
   const phase: ForgePhase = showClarify || !worldReady ? (showClarify ? 'understanding' : 'searching') : forgeBeat;
 
@@ -482,7 +529,15 @@ export default function SessionPage() {
             </p>
           </div>
 
-          <WorldForge question={view.question} stages={stages} phase={phase} fragments={shards} />
+          <WorldForge
+            question={view.question}
+            stages={stages}
+            phase={phase}
+            fragments={shards}
+            /* 碎片可点：完整逐字原文 + 回知乎原回答（`sourceUrl` 就在这里落地） */
+            onSelectFragment={(fragmentId) => setSelectedFragmentId(fragmentId)}
+            selectedFragmentId={selectedFragmentId}
+          />
 
           {error ? (
             <p role="alert" className="mt-4 text-[13px] leading-relaxed text-[color:var(--sil-counter-soft)]">
@@ -582,6 +637,12 @@ export default function SessionPage() {
 
       {/* 落点：从首页「穿越」过来时的一次环收 + 闪白（§15 升级版） */}
       {arrived ? <ArrivalFlash /> : null}
+
+      {/*
+        碎片的来源详情：完整逐字原文 + 去知乎看原回答。
+        连 `sourceUrl` 一起显示 —— 「必须能点回原文，没有链接的经验等于传说」。
+      */}
+      <SessionSourceDialog data={selectedFragment} onClose={() => setSelectedFragmentId(null)} />
     </main>
   );
 }
