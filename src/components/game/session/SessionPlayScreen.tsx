@@ -265,14 +265,11 @@ export function SessionPlayScreen({
           没有血条、没有分数 —— 未知数刻意用未显影灰，它不是待解锁的成就。
           终局不显示：那一刻屏幕上只该有问题（§二十二）。
         */}
-        {view.phase === 'ended' ? null : (
+        {view.phase !== 'ended' && unknown ? (
           <div className="sil-hud mt-3" aria-label="本局状态">
-            <span className={gained ? 'sil-hud__cards sil-hud__cards--pulse' : 'sil-hud__cards'}>
-              ◈ 经验卡 ×{view.experiences.length}
-            </span>
-            <span className="sil-hud__unknown">? 未知 ×{unknown ? 1 : 0}</span>
+            <span className="sil-hud__unknown">? 还有一项现实未知</span>
           </div>
-        )}
+        ) : null}
 
         {view.error ? (
           <ErrorState message={view.error} onRetry={onRetry} onBackToQuestion={onBackToQuestion} />
