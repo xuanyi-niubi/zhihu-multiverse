@@ -80,7 +80,7 @@
   /* ------------------------------------------------------------------ */
   --sil-undev: #1b2029;
   --sil-undev-line: #2c333f;
-  --sil-undev-text: #545c6a;
+  --sil-undev-text: #818a99;
 
   /* ------------------------------------------------------------------ */
   /* 发丝线与阴影                                                         */
@@ -1228,7 +1228,7 @@ a {
 .sil-cardgain__kicker {
   display: block;
   font-family: var(--sil-font-mono);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--sil-alternate);
@@ -2613,7 +2613,7 @@ a {
   align-items: center;
   gap: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--sil-ink-300);
