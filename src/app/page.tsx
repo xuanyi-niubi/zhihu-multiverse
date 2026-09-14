@@ -51,7 +51,7 @@ import { NETWORK_UNAVAILABLE, playerFacingError, type PlayerFacingError } from '
  * 原始约束是 600~800ms（「不要拖」）；用户反馈「穿越那一下不能省」之后取 900ms
  * —— 仍是 1 秒以内，而且转场与真实请求并行，不增加任何等待。
  */
-const ENTER_MS = 900;
+const ENTER_MS = 720;
 
 /**
  * 观测台前的星尘：9 颗，坐标写死。
@@ -79,6 +79,7 @@ export default function HomePage() {
   const router = useRouter();
   const [goal, setGoal] = React.useState('');
   const [launching, setLaunching] = React.useState(false);
+  const [jumping, setJumping] = React.useState(false);
   const [focused, setFocused] = React.useState(false);
   const [error, setError] = React.useState<PlayerFacingError | null>(null);
 
@@ -92,16 +93,21 @@ export default function HomePage() {
       return;
     }
     setLaunching(true);
+    setJumping(true);
     setError(null);
     try {
-      const [response] = await Promise.all([
-        fetch('/api/sessions', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ question: trimmed }),
-        }),
-        delay(ENTER_MS),
-      ]);
+      /**
+       * 穿越只负责 720ms 的空间转场，不再替网络请求“站岗”。
+       * 即使创建接口变慢，白色核心也会准时退场，页面回到可读的工作态。
+       */
+      const request = fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question: trimmed }),
+      });
+      await delay(ENTER_MS);
+      setJumping(false);
+      const response = await request;
       const payload = (await response.json()) as {
         ok?: boolean;
         data?: { id?: string };
@@ -121,6 +127,7 @@ export default function HomePage() {
     } catch {
       setError(NETWORK_UNAVAILABLE);
     } finally {
+      setJumping(false);
       setLaunching(false);
     }
   }, [goal, launching, router]);
@@ -220,7 +227,7 @@ export default function HomePage() {
             onChange={setGoal}
             onSubmit={() => void onSubmit()}
             busy={launching}
-            collapsing={launching}
+            collapsing={jumping}
             onFocusChange={setFocused}
             title="你最近真正纠结什么？"
             placeholder="大三法学，想转计算机，但怕脱产以后找不到工作。"
@@ -278,7 +285,7 @@ export default function HomePage() {
       </div>
 
       {/* 穿越平行宇宙：观测台上的一次空间转场 */}
-      <UniverseJump active={launching} question={goal.trim()} />
+      <UniverseJump active={jumping} question={goal.trim()} />
     </main>
   );
 }
