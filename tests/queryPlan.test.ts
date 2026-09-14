@@ -109,3 +109,24 @@ describe('确定性', () => {
     expect(similar?.query).toContain('大二');
   });
 });
+
+
+describe('检索词只使用用户明确身份', () => {
+  it('parser-synthesis 的软条件不会混进查询', () => {
+    const plan = buildSearchPlan({
+      frame: frameOf('大二想参加比赛', {
+        constraints: [
+          { id: 'soft', text: '家庭无法支持', origin: 'parser-synthesis', hard: false },
+        ],
+      }),
+    });
+    expect(plan.queries.map((item) => item.query).join(' ')).not.toContain('家庭无法支持');
+  });
+
+  it('相似检索明确寻找亲历与后续结果', () => {
+    const similar = buildSearchPlan({ frame: frameOf('大二想参加比赛') })
+      .queries.find((item) => item.purpose === 'similar-person');
+    expect(similar?.query).toContain('亲身经历');
+    expect(similar?.query).toContain('后来');
+  });
+});

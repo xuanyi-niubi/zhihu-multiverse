@@ -42,6 +42,9 @@ export function searchItemToSource(item: ZhihuSearchItem, retrievedAt: string): 
   return {
     id: `live:${id}`,
     author: item.AuthorName?.trim().length ? item.AuthorName.trim() : '匿名用户',
+    title: item.Title?.trim().length ? item.Title.trim() : null,
+    authorBadge: item.AuthorBadgeText?.trim().length ? item.AuthorBadgeText.trim() : null,
+    contentType: item.ContentType?.trim().length ? item.ContentType.trim() : null,
     quote,
     upvotes: Number.isFinite(item.VoteUpCount) ? item.VoteUpCount : null,
     url,
@@ -66,19 +69,26 @@ function searchSources(
   config: ZhihuConfig,
   query: string,
   count: number,
+  strict = false,
 ): Promise<readonly KnowledgeSource[]> {
   return (async () => {
     try {
       const client = createZhihuClient(config);
       const result = await client.search(query, count);
       if (!result.ok) {
+        if (strict) {
+          throw new Error(`zhihu-search:${result.code}`);
+        }
         return [];
       }
       const now = new Date().toISOString();
       return result.data
         .map((item) => searchItemToSource(item, now))
         .filter((source): source is KnowledgeSource => source !== null);
-    } catch {
+    } catch (error) {
+      if (strict) {
+        throw error;
+      }
       return [];
     }
   })();
@@ -97,5 +107,5 @@ export function liveSearchWith(config: ZhihuConfig): (query: string) => Promise<
  * 多 intent 去重后通常还剩得下足够样本，又比 10 条省一点传输。
  */
 export function experienceSearchWith(config: ZhihuConfig): ExperienceSearch {
-  return (query: string, count = 8) => searchSources(config, query, count);
+  return (query: string, count = 8) => searchSources(config, query, count, true);
 }

@@ -42,8 +42,13 @@ export const FRAGMENT_TRACK_LABEL: Readonly<Record<FragmentTrack, string>> = {
 
 export interface ArchiveFragment {
   readonly id: string;
+  readonly sourceId: string;
   readonly quote: string;
   readonly author: string;
+  readonly title: string | null;
+  readonly sourceEditTime: number | null;
+  readonly relevance: number;
+  readonly qualification?: ExperienceFact['qualification'];
   readonly sourceUrl: string | null;
   readonly track: FragmentTrack;
 }
@@ -114,6 +119,7 @@ export function archiveFragments(
     fragmentTrackOf(fact.purposes),
 ): readonly { readonly track: FragmentTrack; readonly items: readonly ArchiveFragment[] }[] {
   const seen = new Set<string>();
+  const seenSources = new Set<string>();
   const buckets: Record<FragmentTrack, ArchiveFragment[]> = {
     similar: [],
     alternative: [],
@@ -122,7 +128,7 @@ export function archiveFragments(
 
   for (const fact of facts) {
     const quote = typeof fact.exactQuote === 'string' ? fact.exactQuote.trim() : '';
-    if (quote.length === 0 || seen.has(fact.id)) {
+    if (quote.length === 0 || seen.has(fact.id) || seenSources.has(fact.sourceId)) {
       continue;
     }
     const track = resolveTrack(fact);
@@ -130,10 +136,16 @@ export function archiveFragments(
       continue;
     }
     seen.add(fact.id);
+    seenSources.add(fact.sourceId);
     buckets[track].push({
       id: fact.id,
+      sourceId: fact.sourceId,
       quote,
       author: fact.author,
+      title: fact.sourceTitle ?? null,
+      sourceEditTime: fact.sourceEditTime ?? null,
+      relevance: fact.relevance,
+      ...(fact.qualification ? { qualification: fact.qualification } : {}),
       sourceUrl: fact.sourceUrl ?? null,
       track,
     });

@@ -305,11 +305,20 @@ export function compileWorldBlueprint(input: CompileWorldBlueprintInput): WorldB
     paths: input.paths,
   });
 
+  const counterFacts = counterexampleFacts(input.paths, input.facts);
+  const worldMode =
+    input.facts.length === 0
+      ? 'hypothesis'
+      : cases.length >= 2 && counterFacts.length > 0
+        ? 'evidence-backed'
+        : 'mixed-evidence';
+
   return {
     version: 'world-blueprint-v1',
     sessionId: input.sessionId,
     problemFrame: input.frame,
     centralTension: input.frame.centralTension,
+    worldMode,
     paths: input.paths,
     keyUnknown,
     acts: actsOf(input.paths, input.facts, unlocks),

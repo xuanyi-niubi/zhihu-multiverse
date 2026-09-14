@@ -5,6 +5,7 @@ import { buildExperienceCases } from '@/features/experience/cases';
 import { extractExperienceFacts } from '@/features/experience/extract';
 import { legacyExperiencePaths } from '@/features/experience/legacyAdapter';
 import { buildSearchPlan } from '@/features/experience/queryPlan';
+import { qualifyExperienceSource } from '@/features/experience/qualification';
 import { retrieveExperienceSources, type ExperienceSearch } from '@/features/experience/retrieve';
 import { synthesizeExperiencePaths } from '@/features/experience/pathSynthesis';
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
@@ -542,6 +543,14 @@ function experienceFactsFromLegacy(session: DecisionSession): readonly Experienc
       editTime: null,
       authority: null,
     };
+    const qualification = qualifyExperienceSource({
+      source,
+      frame,
+      purposes: [],
+    });
+    if (!qualification.eligibleAsCase) {
+      return [];
+    }
     const type = fact.factType === 'opinion' ? ('reflection' as const) : fact.factType;
     return [
       validateExtractedFact({
@@ -550,6 +559,7 @@ function experienceFactsFromLegacy(session: DecisionSession): readonly Experienc
         type,
         id: `fact:${fact.sourceId}:${fact.id}`,
         relevance: relevanceOf(question, fact.quote),
+        qualification,
       }),
     ].filter((item): item is ExperienceFact => item !== null);
   });
@@ -621,7 +631,7 @@ export async function prepareExperienceSession(
   let liveRun: RetrievalRun | null = null;
   if (deps.search) {
     const plan = buildSearchPlan({ frame });
-    const retrieved = await retrieveExperienceSources({ plan, search: deps.search });
+    const retrieved = await retrieveExperienceSources({ plan, search: deps.search, frame });
     /**
      * 直接把 `retrieved.sources` 交给提取层（P0-6）。
      *
@@ -635,19 +645,54 @@ export async function prepareExperienceSession(
       router: deps.router ?? null,
     });
     facts = extracted.facts;
+    const tracks = new Set(
+      retrieved.sources.flatMap((item) =>
+        item.qualification ? [item.qualification.assignedTrack] : [],
+      ),
+    );
+    const hasFullCoverage =
+      tracks.has('similar') && tracks.has('alternative') && tracks.has('counter');
+    const onlyAdjacent = !tracks.has('similar') && tracks.has('adjacent');
+    const anyFailed = retrieved.runs.some((run) => run.status === 'failed');
+    const failureKind =
+      retrieved.sources.length > 0
+        ? 'none'
+        : anyFailed
+          ? 'upstream-error'
+          : retrieved.rawSourceCount > 0
+            ? 'no-qualified-person'
+            : 'no-result';
+    const outcome =
+      retrieved.sources.length === 0
+        ? 'evidence-gap'
+        : hasFullCoverage
+          ? 'full'
+          : onlyAdjacent
+            ? 'adjacent'
+            : 'limited';
     liveRun = {
       queries: plan.queries.map((query) => query.query),
       provenance: 'live',
       retrievedAt: new Date().toISOString(),
       sourceCount: retrieved.sources.length,
+      rawSourceCount: retrieved.rawSourceCount,
+      qualifiedSourceCount: retrieved.sources.length,
+      uniqueAuthorCount: new Set(retrieved.sources.map((item) => item.source.author)).size,
+      rejectedCount: retrieved.rejectedCount,
+      outcome,
+      failureKind,
       factCount: facts.length,
-      filteredCount: 0,
+      filteredCount: retrieved.rejectedCount,
       unsupportedSynthesisCount: 0,
       factual: retrieved.sources.length > 0,
       notes: [
         retrieved.sources.length > 0
-          ? `按 ${plan.queries.length} 个检索意图找到 ${retrieved.sources.length} 条真实来源，得到 ${facts.length} 条逐字片段。`
-          : '这次检索没有返回可用来源。',
+          ? `从 ${retrieved.rawSourceCount} 条候选中筛出 ${retrieved.sources.length} 位可核验亲历者，得到 ${facts.length} 条逐字片段。`
+          : failureKind === 'upstream-error'
+            ? '知乎检索暂时不可用；这不是“没有人讨论”，而是上游请求失败。'
+            : failureKind === 'no-qualified-person'
+              ? `搜到 ${retrieved.rawSourceCount} 条候选，但没有一条通过亲历者资格审查。`
+              : '这次检索没有返回候选来源。',
         ...((extracted.proposed ?? 0) > 0
           ? [
               `模型提议 ${extracted.proposed} 条片段，${extracted.accepted ?? 0} 条通过逐字校验${
@@ -676,6 +721,33 @@ export async function prepareExperienceSession(
         ? session
         : await hydrateLegacyEvidence(session);
     facts = experienceFactsFromLegacy(session);
+  }
+
+  /**
+   * 实时结果为空时，黄金案例作为“证据地板”而不是竞争来源。
+   * 只有人工快照自身也通过亲历资格审查才启用；界面保留 curated provenance，
+   * 不会把快照伪装成实时结果。
+   */
+  if (deps.search && facts.length === 0) {
+    const fallbackSession = await hydrateLegacyEvidence(session);
+    const fallbackFacts = experienceFactsFromLegacy(fallbackSession);
+    if (fallbackFacts.length > 0 && fallbackSession.retrievalRun) {
+      const liveNotes = liveRun?.notes ?? [];
+      const liveFailureKind = liveRun?.failureKind;
+      session = fallbackSession;
+      facts = fallbackFacts;
+      liveRun = {
+        ...fallbackSession.retrievalRun,
+        qualifiedSourceCount: new Set(fallbackFacts.map((fact) => fact.sourceId)).size,
+        uniqueAuthorCount: new Set(fallbackFacts.map((fact) => fact.author)).size,
+        outcome: 'limited',
+        ...(liveFailureKind ? { failureKind: liveFailureKind } : {}),
+        notes: [
+          ...liveNotes,
+          '实时结果没有形成合格人物经历，本次改用通过同一资格审查的人工来源快照。',
+        ],
+      };
+    }
   }
 
   const cases = buildExperienceCases(facts);

@@ -50,7 +50,12 @@ export interface ForgeStage {
 
 export interface ForgeShard {
   readonly id: string;
+  readonly sourceId?: string;
   readonly quote: string;
+  readonly title?: string | null;
+  readonly sourceEditTime?: number | null;
+  readonly relevance?: number;
+  readonly qualification?: import('@/features/experience/domain').SourceQualification;
   readonly sourceLabel: string;
   readonly category: FragmentCategory;
   /**
@@ -120,7 +125,7 @@ function stageCaption(phase: ForgePhase, stage: ForgeStage): string {
   if (stage.found === 0) {
     return '这一类暂时没找到 —— 我们不会编一条补上';
   }
-  return `找到 ${stage.found} 条真实经历`;
+  return `找到 ${stage.found} 位可核验亲历者`;
 }
 
 export function WorldForge({
@@ -190,7 +195,7 @@ export function WorldForge({
             .join(' ')}
         >
           {FORGE_PHASE_TEXT[phase]}
-          {ready ? <span className="ml-2 text-[color:var(--sil-ink-300)]">· {foundTotal} 段真实经历</span> : null}
+          {ready ? <span className="ml-2 text-[color:var(--sil-ink-300)]">· {foundTotal} 位可核验亲历者</span> : null}
         </p>
 
         {/* 三条轨道的此刻：只写真实状态（§18） */}

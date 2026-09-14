@@ -172,11 +172,34 @@ export interface SearchPlan {
   readonly maxRequests: number;
 }
 
+export type QualificationTrack = 'similar' | 'adjacent' | 'alternative' | 'counter';
+
+export interface SourceQualification {
+  readonly topicRelation: 'relevant' | 'partial' | 'irrelevant';
+  readonly firsthand: 'yes' | 'uncertain' | 'no';
+  readonly matchedConstraints: readonly string[];
+  readonly differentConstraints: readonly string[];
+  readonly unknownConstraints: readonly string[];
+  readonly completeness: {
+    readonly condition: boolean;
+    readonly action: boolean;
+    readonly cost: boolean;
+    readonly outcome: boolean;
+  };
+  readonly commercialRisk: 'low' | 'medium' | 'high';
+  readonly eligibleAsCase: boolean;
+  /** 0..1，仅供内部排序，不作为用户可见的“匹配度”。 */
+  readonly rankScore: number;
+  readonly assignedTrack: QualificationTrack;
+  readonly reasons: readonly string[];
+}
+
 /** 一条来源 + 它命中了哪些检索意图。 */
 export interface RetrievedExperienceSource {
   readonly source: KnowledgeSource;
   readonly purposes: readonly SearchPurpose[];
   readonly matchedQueryIds: readonly string[];
+  readonly qualification?: SourceQualification;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -198,6 +221,10 @@ export interface ExperienceFact {
   readonly sourceId: string;
   readonly sourceUrl: string;
   readonly author: string;
+  readonly sourceTitle?: string | null;
+  readonly sourceEditTime?: number | null;
+  /** 人物资格审查随片段传递，避免展示层再猜一次。 */
+  readonly qualification?: SourceQualification;
 
   /** 必须是来源 `quote` 的逐字子串。 */
   readonly exactQuote: string;

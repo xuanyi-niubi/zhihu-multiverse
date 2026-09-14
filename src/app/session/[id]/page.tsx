@@ -106,7 +106,13 @@ function trackResolverFor(
       }
     }
   }
-  return (fact) => fragmentTrackOf(fact.purposes) ?? roleByFact.get(fact.id) ?? null;
+  return (fact) => {
+    const qualifiedTrack = fact.qualification?.assignedTrack;
+    if (qualifiedTrack === 'similar' || qualifiedTrack === 'adjacent') return 'similar';
+    if (qualifiedTrack === 'alternative') return 'alternative';
+    if (qualifiedTrack === 'counter') return 'counter';
+    return fragmentTrackOf(fact.purposes) ?? roleByFact.get(fact.id) ?? null;
+  };
 }
 
 /**
@@ -121,7 +127,11 @@ function stagesFrom(view: SessionView | null, settled: boolean): readonly ForgeS
     id,
     found: view === null || !settled
       ? null
-      : facts.filter((fact) => resolveTrack(fact) === INTENT_TRACK[id]).length,
+      : new Set(
+          facts
+            .filter((fact) => resolveTrack(fact) === INTENT_TRACK[id])
+            .map((fact) => fact.sourceId),
+        ).size,
   }));
 }
 
@@ -439,7 +449,12 @@ export default function SessionPage() {
     group.items.map((item) => ({
       shard: {
         id: item.id,
+        sourceId: item.sourceId,
         quote: item.quote,
+        title: item.title,
+        sourceEditTime: item.sourceEditTime,
+        relevance: item.relevance,
+        ...(item.qualification ? { qualification: item.qualification } : {}),
         sourceLabel: `知乎 · ${item.author}`,
         category: group.track,
         sourceUrl: item.sourceUrl,
@@ -448,6 +463,9 @@ export default function SessionPage() {
         id: item.id,
         quote: item.quote,
         author: item.author,
+        title: item.title,
+        sourceEditTime: item.sourceEditTime,
+        ...(item.qualification ? { qualification: item.qualification } : {}),
         sourceUrl: item.sourceUrl,
         track: group.track,
       },
@@ -525,7 +543,9 @@ export default function SessionPage() {
             </span>
             <p className="sil-prose text-[14px] leading-relaxed text-[color:var(--sil-ink-300)]">
               {worldReady
-                ? '找到了。走吧。'
+                ? foundTotal > 0
+                  ? `筛出了 ${foundTotal} 位可核验亲历者。走吧。`
+                  : '这里暂时是观测盲区。你仍可进入明确标注的假设推演。'
                 : '我去找找，有没有人活过你正在纠结的这几种人生。'}
             </p>
           </div>
@@ -583,7 +603,7 @@ export default function SessionPage() {
                       data-destination="play-session"
                       className="ml-1 underline decoration-dotted transition-opacity duration-200 hover:opacity-80"
                     >
-                      这一局没有别人的经验，世界仍然会走完
+                      进入假设推演（不含真实人物经验）
                     </Link>
                   </p>
                 </div>

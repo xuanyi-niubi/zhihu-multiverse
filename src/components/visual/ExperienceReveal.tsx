@@ -58,7 +58,15 @@ export interface ExperienceRevealProps {
 }
 
 function firstFragmentOf(fragments: readonly ForgeShard[], track: RevealTrack): ForgeShard | null {
-  return fragments.find((fragment) => fragment.category === track) ?? null;
+  return [...fragments]
+    .filter((fragment) => fragment.category === track)
+    .sort((left, right) => (right.relevance ?? 0) - (left.relevance ?? 0))[0] ?? null;
+}
+
+function sourceYearOf(timestamp: number | null | undefined): string | null {
+  if (!timestamp) return null;
+  const year = new Date(timestamp * 1000).getUTCFullYear();
+  return Number.isFinite(year) ? String(year) : null;
 }
 
 export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: ExperienceRevealProps) {
@@ -93,6 +101,14 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
 
   const chapter = CHAPTERS[Math.min(chapterIndex, CHAPTERS.length - 1)]!;
   const representative = firstFragmentOf(fragments, chapter.track);
+  const qualification = representative?.qualification;
+  const displayLabel =
+    qualification?.assignedTrack === 'adjacent' ? '目标相同，条件不同' : chapter.label;
+  const displayLead =
+    qualification?.assignedTrack === 'adjacent'
+      ? '没有找到条件完全相同的人，先看一段目标相同的邻近经历。'
+      : chapter.lead;
+  const sourceYear = sourceYearOf(representative?.sourceEditTime);
 
   const next = () => setChapterIndex((current) => Math.min(current + 1, CHAPTERS.length));
   const previous = () => setChapterIndex((current) => Math.max(current - 1, 0));
@@ -127,7 +143,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
           </div>
 
           <p className="mt-5 text-[15px] font-semibold leading-relaxed" style={{ color: 'var(--sil-ink-100)' }}>
-            {chapter.lead}
+            {displayLead}
           </p>
 
           {representative ? (
@@ -136,6 +152,26 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
               className="mt-5 border-l pl-4"
               style={{ borderColor: chapter.tone, animation: 'fragment-materialize 520ms var(--sil-ease) both' }}
             >
+              {representative.title ? (
+                <h3 className="mb-3 text-[16px] font-semibold leading-relaxed text-[color:var(--sil-ink-100)]">
+                  {representative.title}
+                </h3>
+              ) : null}
+              {qualification ? (
+                <div className="mb-3 space-y-1 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                  {qualification.matchedConstraints.length > 0 ? (
+                    <p>与你相同：{qualification.matchedConstraints.join('、')}</p>
+                  ) : (
+                    <p>没有确认到与你完全相同的条件。</p>
+                  )}
+                  {qualification.differentConstraints.length > 0 ? (
+                    <p>与你不同：{qualification.differentConstraints.join('、')}</p>
+                  ) : null}
+                  {qualification.unknownConstraints.length > 0 ? (
+                    <p>尚不确定：{qualification.unknownConstraints.slice(0, 2).join('、')}</p>
+                  ) : null}
+                </div>
+              ) : null}
               <blockquote
                 className="max-h-[8.8em] overflow-hidden text-[15px] leading-[1.82] text-[color:var(--sil-ink-200)]"
               >
@@ -143,9 +179,11 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
               </blockquote>
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="sil-mark" style={{ color: chapter.tone }}>
-                  {chapter.label}
+                  {displayLabel}
                 </span>
-                <span className="text-[12px] text-[color:var(--sil-ink-300)]">{representative.sourceLabel}</span>
+                <span className="text-[12px] text-[color:var(--sil-ink-300)]">
+                  {representative.sourceLabel}{sourceYear ? ` · ${sourceYear}` : ''}
+                </span>
                 <button
                   type="button"
                   onClick={() => {

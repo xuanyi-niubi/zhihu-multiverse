@@ -15,6 +15,12 @@ export type SourceStatus = 'verified' | 'scripted';
 export interface KnowledgeSource {
   readonly id: string;
   readonly author: string;
+  /** 知乎问题 / 文章标题。旧快照可能没有，因此可选。 */
+  readonly title?: string | null;
+  /** 作者认证或简介原文，只作身份线索，不等于真实性背书。 */
+  readonly authorBadge?: string | null;
+  /** 开放平台返回的内容类型。 */
+  readonly contentType?: string | null;
   readonly quote: string;
   /** 真实赞同数；`null` 表示接口没给。 */
   readonly upvotes: number | null;
@@ -119,6 +125,15 @@ export function normalizeKnowledgeSource(raw: unknown, fallbackId: string): Know
   return {
     id: typeof record.id === 'string' && record.id.length > 0 ? record.id : fallbackId,
     author: author.slice(0, 64),
+    title: typeof record.title === 'string' && record.title.trim().length > 0
+      ? record.title.trim().slice(0, 160)
+      : null,
+    authorBadge: typeof record.authorBadge === 'string' && record.authorBadge.trim().length > 0
+      ? record.authorBadge.trim().slice(0, 120)
+      : null,
+    contentType: typeof record.contentType === 'string' && record.contentType.trim().length > 0
+      ? record.contentType.trim().slice(0, 32)
+      : null,
     quote: quote.slice(0, 200),
     upvotes,
     url,

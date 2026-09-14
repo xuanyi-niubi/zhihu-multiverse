@@ -152,3 +152,65 @@ describe('失败纪律', () => {
     expect(result.runs.length).toBeGreaterThan(0);
   });
 });
+
+
+describe('人物资格审查与均衡选人', () => {
+  it('有 frame 时只让亲历者进入经验层，并记录淘汰数', async () => {
+    const plan = buildSearchPlan({ frame: frame() });
+    const similar = plan.queries.find((item) => item.purpose === 'similar-person')!;
+    const lived = source({
+      id: 'lived',
+      title: '大二第一次参加比赛是什么体验？',
+      quote: '我当时大二，第一次参加比赛，后来完成了项目，但也耽误了两周课程。',
+      url: 'https://www.zhihu.com/lived',
+    });
+    const advice = source({
+      id: 'advice',
+      title: '大学生要不要参加比赛？',
+      author: '建议型答主',
+      quote: '建议基础一般的大学生先学习知识，再决定要不要参加比赛。',
+      url: 'https://www.zhihu.com/advice',
+    });
+    const result = await retrieveExperienceSources({
+      plan,
+      frame: frame(),
+      search: searchOf({ [similar.query]: [lived, advice] }),
+    });
+
+    expect(result.rawSourceCount).toBe(2);
+    expect(result.sources.map((item) => item.source.id)).toEqual(['lived']);
+    expect(result.sources[0]?.qualification?.firsthand).toBe('yes');
+    expect(result.sources[0]?.qualification?.assignedTrack).toBe('similar');
+    expect(result.rejectedCount).toBe(1);
+  });
+
+  it('同一作者的多条回答只选择一条，人数不会膨胀', async () => {
+    const plan = buildSearchPlan({ frame: frame() });
+    const similar = plan.queries.find((item) => item.purpose === 'similar-person')!;
+    const result = await retrieveExperienceSources({
+      plan,
+      frame: frame(),
+      search: searchOf({
+        [similar.query]: [
+          source({ id: 'a', author: '同一个人', title: '参加比赛经历', url: 'https://www.zhihu.com/a' }),
+          source({ id: 'b', author: '同一个人', title: '我的比赛复盘', url: 'https://www.zhihu.com/b' }),
+        ],
+      }),
+    });
+    expect(result.sources).toHaveLength(1);
+  });
+
+  it('抛错与空结果分别记为 failed / empty', async () => {
+    const plan = buildSearchPlan({ frame: frame() });
+    const first = plan.queries[0]!;
+    const result = await retrieveExperienceSources({
+      plan,
+      search: async (query) => {
+        if (query === first.query) throw new Error('upstream');
+        return [];
+      },
+    });
+    expect(result.runs.find((item) => item.queryId === first.id)?.status).toBe('failed');
+    expect(result.runs.some((item) => item.status === 'empty')).toBe(true);
+  });
+});

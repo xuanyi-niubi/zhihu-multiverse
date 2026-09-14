@@ -126,6 +126,9 @@ export interface WorldBlueprint {
   readonly problemFrame: ProblemFrame;
   readonly centralTension: string;
 
+  /** 证据充分度决定玩法口吻；旧蓝图缺失时按 mixed-evidence 兼容。 */
+  readonly worldMode?: 'evidence-backed' | 'mixed-evidence' | 'hypothesis';
+
   readonly paths: readonly ExperiencePath[];
 
   /** 当前最该先弄清的那一个未知（没有就是 null，不编一个）。 */

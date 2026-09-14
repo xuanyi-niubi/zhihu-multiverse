@@ -231,6 +231,9 @@ async function search(query, count = 10) {
 /** 把官方条目映射成落盘来源；没有 https 链接或作者就丢弃。 */
 function toSource(id, item, retrievedAt) {
   const author = String(item?.AuthorName ?? item?.author ?? '').trim();
+  const title = String(item?.Title ?? item?.title ?? '').trim();
+  const authorBadge = String(item?.AuthorBadgeText ?? item?.authorBadgeText ?? '').trim();
+  const contentType = String(item?.ContentType ?? item?.contentType ?? '').trim();
   const url = String(item?.Url ?? item?.url ?? '').trim();
   const quote = String(item?.ContentText ?? item?.Content ?? item?.Excerpt ?? item?.Summary ?? '')
     .replace(/\s+/g, ' ')
@@ -247,13 +250,21 @@ function toSource(id, item, retrievedAt) {
   const authorityRaw = item?.AuthorityLevel ?? item?.authorityLevel ?? null;
   const authority = authorityRaw === null || authorityRaw === undefined ? null : String(authorityRaw);
 
-  if (!/^https:\/\//.test(url) || author.length === 0 || quote.length === 0) {
+  const firsthand = /(我当时|我曾经|我自己|后来我|最后我|我的经历|亲身经历|本人经历)/.test(quote)
+    || (/(^|[，。！？；\s])我(?:们)?/.test(quote)
+      && /(参加|报名|开始|决定|选择|准备|学习|复习|做了|转行|投递|联系|组队|退出|辞职)/.test(quote));
+  const promoHits = quote.match(/私信|加微|微信|咨询|付费|课程|训练营|辅导|保过|报名链接|闭眼复制/g)?.length ?? 0;
+
+  if (!/^https:\/\//.test(url) || author.length === 0 || quote.length === 0 || !firsthand || promoHits >= 2) {
     return null;
   }
 
   return {
     id,
     author: author.slice(0, 64),
+    title: title ? title.slice(0, 160) : null,
+    authorBadge: authorBadge ? authorBadge.slice(0, 120) : null,
+    contentType: contentType ? contentType.slice(0, 32) : null,
     quote: quote.slice(0, 200),
     upvotes,
     url,
@@ -322,9 +333,14 @@ for (const target of TARGETS) {
       throw lastError ?? new Error('未知失败');
     }
 
-    const ranked = [...items].sort(
-      (left, right) => Number(right?.VoteUpCount ?? 0) - Number(left?.VoteUpCount ?? 0),
-    );
+    const ranked = [...items].sort((left, right) => {
+      const firsthand = (item) => /(我当时|我曾经|我自己|后来我|最后我|我的经历|亲身经历|本人经历)/
+        .test(String(item?.ContentText ?? ''));
+      const firsthandGap = Number(firsthand(right)) - Number(firsthand(left));
+      return firsthandGap !== 0
+        ? firsthandGap
+        : Number(right?.VoteUpCount ?? 0) - Number(left?.VoteUpCount ?? 0);
+    });
 
     let pickedCount = 0;
     for (const item of ranked) {

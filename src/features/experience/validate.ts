@@ -2,6 +2,7 @@ import type {
   ExperienceFact,
   ExperienceFactType,
   SearchPurpose,
+  SourceQualification,
 } from '@/features/experience/domain';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
@@ -54,6 +55,7 @@ export interface ValidateExtractedFactInput {
   /** 只用于排序。 */
   readonly relevance?: number;
   readonly purposes?: readonly SearchPurpose[];
+  readonly qualification?: SourceQualification;
 }
 
 /**
@@ -85,6 +87,9 @@ export function validateExtractedFact(input: ValidateExtractedFactInput): Experi
     sourceId: input.source.id,
     sourceUrl: input.source.url,
     author: input.source.author,
+    sourceTitle: input.source.title ?? null,
+    sourceEditTime: input.source.editTime,
+    ...(input.qualification ? { qualification: input.qualification } : {}),
     exactQuote,
     type: input.type,
     relevance: input.relevance ?? 0,

@@ -210,6 +210,13 @@ export interface RetrievalRun {
   readonly provenance: 'live' | 'snapshot' | 'curated' | 'offline' | 'deferred';
   readonly retrievedAt: string;
   readonly sourceCount: number;
+  /** 原始候选数与人物审查后的数量分开，避免把“搜到”说成“找到人”。 */
+  readonly rawSourceCount?: number;
+  readonly qualifiedSourceCount?: number;
+  readonly uniqueAuthorCount?: number;
+  readonly rejectedCount?: number;
+  readonly outcome?: 'full' | 'limited' | 'adjacent' | 'evidence-gap';
+  readonly failureKind?: 'none' | 'upstream-error' | 'no-result' | 'no-qualified-person';
   readonly factCount: number;
   /**
    * 被过滤掉的来源数。

@@ -34,6 +34,9 @@ export interface SessionSourceDialogData {
   /** 逐字原文（`ExperienceFact.exactQuote`）。 */
   readonly quote: string;
   readonly author: string;
+  readonly title?: string | null;
+  readonly sourceEditTime?: number | null;
+  readonly qualification?: import('@/features/experience/domain').SourceQualification;
   /** 没有可点回的原链接时为 null —— 此时如实说明，不伪造一个入口。 */
   readonly sourceUrl: string | null;
   readonly track: SourceDialogTrack;
@@ -141,6 +144,28 @@ export function SessionSourceDialog({ data, onClose }: SessionSourceDialogProps)
           </button>
         </header>
 
+        {data.title ? (
+          <h4 className="mt-3 text-[15px] font-semibold leading-relaxed text-[color:var(--sil-ink-100)]">
+            {data.title}
+          </h4>
+        ) : null}
+
+        {data.qualification ? (
+          <div className="mt-3 border-l border-[color:rgb(var(--sil-rgb-counter-soft)/0.45)] pl-3 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+            {data.qualification.matchedConstraints.length > 0 ? (
+              <p>与你相同：{data.qualification.matchedConstraints.join('、')}</p>
+            ) : (
+              <p>没有确认到与你完全相同的条件。</p>
+            )}
+            {data.qualification.differentConstraints.length > 0 ? (
+              <p>与你不同：{data.qualification.differentConstraints.join('、')}</p>
+            ) : null}
+            {data.qualification.unknownConstraints.length > 0 ? (
+              <p>尚不确定：{data.qualification.unknownConstraints.slice(0, 3).join('、')}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* 纪律写在界面上：「逐字」不是我们的润色，是校验过的事实 */}
         <p className="mt-3 border border-[color:rgb(var(--sil-rgb-alternate-soft)/0.28)] bg-[color:rgb(var(--sil-rgb-alternate-soft)/0.06)] px-3 py-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-200)]">
           这段话<strong className="font-semibold text-[color:var(--sil-ink-100)]">逐字</strong>
@@ -162,6 +187,9 @@ export function SessionSourceDialog({ data, onClose }: SessionSourceDialogProps)
               {TRACK_LABEL[data.track]}
             </span>
             <span>{data.author}</span>
+            {data.sourceEditTime ? (
+              <span>{new Date(data.sourceEditTime * 1000).getUTCFullYear()}</span>
+            ) : null}
           </figcaption>
         </figure>
 

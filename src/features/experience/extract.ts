@@ -6,6 +6,7 @@ import type {
   ExperienceFactType,
   RetrievedExperienceSource,
   SearchPurpose,
+  SourceQualification,
 } from '@/features/experience/domain';
 import { MAX_EXPERIENCE_SOURCES } from '@/features/experience/retrieve';
 import {
@@ -103,6 +104,7 @@ export function fallbackFactsFor(input: {
   readonly source: KnowledgeSource;
   readonly question: string;
   readonly purposes?: readonly SearchPurpose[];
+  readonly qualification?: SourceQualification;
   readonly index?: number;
 }): readonly ExperienceFact[] {
   return splitQuoteAtSentence(input.source.quote).flatMap((part, partIndex) => {
@@ -113,6 +115,7 @@ export function fallbackFactsFor(input: {
       id: `fact:${input.source.id}:${input.index ?? 0}${partIndex === 0 ? '' : `-${partIndex}`}`,
       relevance: relevanceOf(input.question, part),
       purposes: input.purposes ?? [],
+      ...(input.qualification ? { qualification: input.qualification } : {}),
     });
     return fact ? [fact] : [];
   });
@@ -132,6 +135,7 @@ interface ProposedFact {
 interface SourceBundle {
   readonly source: KnowledgeSource;
   readonly purposes: readonly SearchPurpose[];
+  readonly qualification?: SourceQualification;
 }
 
 function sourceIndex(sources: readonly KnowledgeSource[]): Map<string, KnowledgeSource> {
@@ -219,7 +223,11 @@ function bundlesOf(input: ExtractExperienceFactsInput): readonly SourceBundle[] 
   const globalPurposes = input.purposes ?? [];
   return input.sources.slice(0, MAX_EXTRACT_SOURCES).map((item) =>
     isRetrievedSource(item)
-      ? { source: item.source, purposes: item.purposes }
+      ? {
+          source: item.source,
+          purposes: item.purposes,
+          ...(item.qualification ? { qualification: item.qualification } : {}),
+        }
       : { source: item, purposes: globalPurposes },
   );
 }
@@ -284,6 +292,7 @@ export async function extractExperienceFacts(
       source: bundle.source,
       question: input.question,
       purposes: bundle.purposes,
+      ...(bundle.qualification ? { qualification: bundle.qualification } : {}),
       index,
     }),
   );
@@ -321,6 +330,7 @@ function topUpThinSources(
       source: bundle.source,
       question,
       purposes: bundle.purposes,
+      ...(bundle.qualification ? { qualification: bundle.qualification } : {}),
       index,
     });
     for (const fact of extra) {
@@ -339,6 +349,7 @@ async function extractWithModel(input: {
 }): Promise<{ readonly facts: readonly ExperienceFact[]; readonly proposed: number }> {
   const indexById = sourceIndex(input.bundles.map((bundle) => bundle.source));
   const purposesBySource = new Map(input.bundles.map((bundle) => [bundle.source.id, bundle.purposes]));
+  const qualificationBySource = new Map(input.bundles.map((bundle) => [bundle.source.id, bundle.qualification]));
 
   const userContent = JSON.stringify({
     question: input.question,
@@ -388,6 +399,9 @@ async function extractWithModel(input: {
       id: `fact:${proposal.sourceId}:${used}`,
       relevance,
       purposes: purposesBySource.get(proposal.sourceId) ?? [],
+      ...(qualificationBySource.get(proposal.sourceId)
+        ? { qualification: qualificationBySource.get(proposal.sourceId)! }
+        : {}),
     });
     if (fact) {
       facts.push(fact);
