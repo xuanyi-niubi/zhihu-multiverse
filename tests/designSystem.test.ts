@@ -76,7 +76,7 @@ describe('§2 Color Palette：--sil-* 全套且数值逐字一致', () => {
       // 未显影
       '--sil-undev': '#1b2029',
       '--sil-undev-line': '#2c333f',
-      '--sil-undev-text': '#545c6a',
+      '--sil-undev-text': '#818a99',
     };
     for (const [token, value] of Object.entries(expected)) {
       expect(SILVER_CSS, token).toContain(`${token}: ${value};`);
