@@ -69,6 +69,14 @@ AGENTS.md
 /.codegraph/
 /.ua/
 
+# agent 技能目录。
+#
+# 这里装的是**下载来的第三方 Skill 包**（知乎官方 zhihu-cli skill 快照），
+# 不是本项目的代码。把它提交进公开仓库有三个问题：许可证不明、
+# 体积与更新节奏不受控、以及它会在 skill 更新后与上游产生无意义的 diff。
+# 技能的分发走 agent 自己的技能目录（见本机 AGENTS.md 的 skill 同步说明）。
+/.codex/
+
 # Yan Agent 会话快照 / 本地运行时状态（可能含工具输出，不入库）
 /.yanagent/
 

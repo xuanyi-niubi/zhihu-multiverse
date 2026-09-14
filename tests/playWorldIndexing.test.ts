@@ -275,7 +275,8 @@ describe('Session 编译体验', () => {
     // §18（04_AGENT）：阶段文案由 WorldForge 统一负责，页面自身不得编进度
     expect(source).not.toMatch(/\d+\s*%/);
     expect(source).not.toContain("'compiling'");
-    // §20：收束 + WORLD READY 是两拍真实渲染，且有明确时间预算
+    // §20：收束 + WORLD READY 是两拍真实渲染，且有明确时间预算；
+    // 但**收束完就停住**：走向 Play 只能由用户点击触发（见下一个用例）
     expect(source).toContain('const ASSEMBLE_MS');
     expect(source).toContain('const READY_MS');
     // 「正在编译你的世界」只能在世界**真的**编译完成（ready_to_play）之后出现
@@ -304,6 +305,28 @@ describe('Session 编译体验', () => {
     // 错误态只出人话：服务端消息先经 playerFacingError 翻译
     expect(source).toContain('playerFacingError');
     expect(source).not.toContain('这一步没有成功');
+  });
+
+  it('编译页收束完就停住：进入剧情只能由用户点击触发（没有自动跳转）', () => {
+    const source = stripComments(page());
+    /*
+      回归哨兵。原先这里有一发定时跳转 —— 世界就绪且至少找到一条真实经历时，
+      `ASSEMBLE_MS + READY_MS`（1120ms）后 `router.replace` 把玩家带走。
+      结果是：编译结果读不完（三轨各找到几条只闪一眼）、那一屏的 CTA 形同虚设、
+      且与剧情页的「回到问题」构成弹回循环。
+    */
+    expect(source).not.toContain('router.replace');
+    expect(source).not.toContain('ASSEMBLE_MS + READY_MS');
+    // 收束动画仍在：assembling → ready 这一拍没被一起删掉
+    expect(source).toContain("window.setTimeout(() => setForgeBeat('ready'), ASSEMBLE_MS)");
+    // 唯一出路是点它；点击走客户端推送（新开标签/中键保留原生跳转）
+    expect(source).toContain('enterWorld();');
+    expect(source).toContain('event.preventDefault();');
+    expect(source).toContain('data-destination="play-session"');
+    expect(source).toContain(
+      'href={`/play?session=${encodeURIComponent(id)}`}\n                  data-destination="play-session"\n                  className="sil-btn sil-btn--block"',
+    );
+    expect(source).toContain('router.push(`/play?session=${encodeURIComponent(view.id)}`)');
   });
 
   it('刘看山第一次出现仍在会话页（§35）', () => {

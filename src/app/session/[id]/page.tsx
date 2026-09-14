@@ -265,7 +265,7 @@ export default function SessionPage() {
     }
   }, [act, busy, compileFailed, view]);
 
-  /** 世界就绪 → 三轨收束 → WORLD READY → 自动进入 Play（§20）。 */
+  /** 世界就绪 → 三轨收束 → WORLD READY（§20）。**到这里就停住，不再往前带走玩家。** */
   React.useEffect(() => {
     if (!worldReady || !view) {
       setForgeBeat('assembling');
@@ -273,28 +273,32 @@ export default function SessionPage() {
     }
     setForgeBeat('assembling');
     const toReady = window.setTimeout(() => setForgeBeat('ready'), ASSEMBLE_MS);
-
-    /**
-     * 一条可靠经历都没找到时**不自动带走**玩家（05_AGENT §9）。
-     *
-     * 原本这里无条件跳转，于是「这次没找到足够可靠的真实经历」只闪一下就被
-     * 世界接走了 —— 那句话根本读不完。现在这种情况停在编译页，把
-     * 「修改问题 / 重新尝试」交给玩家；想先进入也留着一条明确的出路。
-     */
-    if ((view.experienceFacts ?? []).length === 0) {
-      return () => {
-        window.clearTimeout(toReady);
-      };
-    }
-
-    const enter = window.setTimeout(() => {
-      router.replace(`/play?session=${encodeURIComponent(view.id)}`);
-    }, ASSEMBLE_MS + READY_MS);
     return () => {
       window.clearTimeout(toReady);
-      window.clearTimeout(enter);
     };
-  }, [router, view, worldReady]);
+  }, [view, worldReady]);
+
+  /**
+   * 走向 Play —— **只由用户点击触发，这条主链上没有自动跳转**。
+   *
+   * 原先这里还有一发 `router.replace`，在「世界就绪 + 至少找到一条真实经历」时
+   * 于 `ASSEMBLE_MS + READY_MS`（1120ms）后把玩家带走。三个后果：
+   *
+   * ```text
+   * 1. 编译结果读不完：三条轨道各找到几条、碎片上墙的那一眼，都被这一跳截断；
+   * 2. 那一屏的 CTA 形同虚设：它只在「自动跳转恰好没生效」时才可点；
+   * 3. 和剧情页的「回到问题」构成弹回：回来看一眼 → 又被弹进剧情，像甩不掉。
+   * ```
+   *
+   * 现在把「走不走」还给玩家：收束动画照旧（三轨 → WORLD READY），
+   * 但停在编译页等人点。`ASSEMBLE_MS` 仍是收束节拍，`READY_MS` 不再用于跳转。
+   */
+  const enterWorld = React.useCallback(() => {
+    if (!view || busy) {
+      return;
+    }
+    router.push(`/play?session=${encodeURIComponent(view.id)}`);
+  }, [busy, router, view]);
 
   if (loading) {
     /**
@@ -531,6 +535,14 @@ export default function SessionPage() {
                   href={`/play?session=${encodeURIComponent(id)}`}
                   data-destination="play-session"
                   className="sil-btn sil-btn--block"
+                  onClick={(event) => {
+                    // 中键 / 新开标签保留原生跳转：只有左键单击才走客户端推送
+                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                      return;
+                    }
+                    event.preventDefault();
+                    enterWorld();
+                  }}
                 >
                   进入我的平行宇宙
                 </Link>
@@ -552,7 +564,7 @@ export default function SessionPage() {
               </Link>
             </div>
           ) : (
-            /* 兜底入口：自动跳转被拦时，用户仍有明确的一步可走 */
+            /* 还没就绪就停在这一屏：用户始终有明确的一步可点（不再有自动跳转兜底） */
             <div className="mt-8">
               <button
                 type="button"
