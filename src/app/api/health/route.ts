@@ -65,9 +65,25 @@ export async function GET(request: Request): Promise<Response> {
        * 用户有权知道这一局花的是谁的钱。
        */
       secretOrigin,
-      // 只报模型名与端点，不含密钥
-      model: modelConfig ? { name: modelConfig.model, baseUrl: modelConfig.baseUrl } : null,
-      zhihu: zhihuConfig ? { baseUrl: zhihuConfig.baseUrl } : null,
+      /**
+       * 只报**模型名**，不报端点。
+       *
+       * 产品化方案 §16 明令禁止回传完整 baseUrl：App 端点很可能是部署者自己的
+       * 中转服务，写进公开响应等于把内部拓扑挂在公网上。（`meshClient` 也只读
+       * `name`，所以这里没有信息损失。）
+       */
+      model: modelConfig ? { name: modelConfig.model } : null,
+      /**
+       * 最小就绪视图（方案 §16 的契约形态）：给探针与监控用。
+       *
+       * 只有三档结论，没有任何值、端点或来源名 —— 需要「这一局用谁的钱」的是
+       * 界面，它读上面的 `secretOrigin`；探针不该也不需要看到那些。
+       */
+      readiness: {
+        ai: modelConfig ? 'ready' : 'fallback',
+        zhihu: zhihuConfig ? 'ready' : 'fallback',
+        publicRuntimeReady: modelConfig !== null || zhihuConfig !== null,
+      },
       // 快慢双流的说明（不含密钥）
       tiering: { ...tiers, description: describeTiers(resolveTieredModels()) },
     },

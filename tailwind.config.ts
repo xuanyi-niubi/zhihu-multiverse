@@ -12,32 +12,61 @@ const config: Config = {
     './src/components/**/*.{ts,tsx}',
     './src/core/**/*.{ts,tsx}',
     './src/data/**/*.{ts,tsx}',
+    './src/features/**/*.{ts,tsx}',
     './src/types/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
       colors: {
         ink: {
-          900: '#04060B',
-          800: '#070A11',
-          700: '#0B111D',
-          600: '#111A2A',
-          500: '#1A2940',
+          900: '#07080C',
+          800: '#0B0D14',
+          700: '#10141F',
+          600: '#131824',
+          500: '#171C27',
         },
         zhihu: {
           50: '#EAF5FF',
           100: '#CFE8FF',
-          200: '#A9D8FF',
-          300: '#7CC0FF',
-          400: '#3D9BFF',
-          500: '#0084FF',
-          600: '#0073DE',
-          700: '#005CB0',
+          200: '#A9CDFF',
+          300: '#7DB4FF',
+          400: '#5C9FFF',
+          500: '#3D8BFF',
+          600: '#2A6BEB',
+          700: '#1C5FD6',
         },
         relic: {
           gold: '#F5B841',
           danger: '#FF4D6D',
           jade: '#3DD6A0',
+        },
+        /**
+         * 平行人生档案馆（报告 §2）—— 新主链专用语义色。
+         *
+         * 三种强调色各只承担一件事，避免同一屏出现第四种：
+         * `archive` 深夜基底 / `unlock` 青绿=新行动 / `counter` 低饱和琥珀=反例。
+         */
+        archive: {
+          950: '#07080C',
+          900: '#0B0D14',
+          850: '#10141F',
+          800: '#131824',
+          /* 文本层级：与画布提案的正文/次要/未知一致 */
+          600: '#5F6C80',
+          400: '#667284',
+          300: '#8C97A8',
+          200: '#A3AEC0',
+          100: '#EEF1F6',
+        },
+        unlock: {
+          DEFAULT: '#6FE3D8',
+          soft: '#9AEADE',
+          deep: '#2E7D72',
+        },
+        counter: {
+          DEFAULT: '#C9A45E',
+          soft: '#DCC08A',
+          deep: '#8A6E3C',
         },
       },
       fontFamily: {

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>游戏化体验层 · 活体预览 — GAME-DESIGN.md</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;900&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+:root{
+  --ds-void-950:#03040A; --ds-void-900:#06080F; --ds-void-800:#0A0E18;
+  --ds-blue-700:#0052D9; --ds-blue-500:#0084FF;
+  --ds-text-0:#F5F7FB; --ds-text-1:#C5D0DE; --ds-text-2:#8B9BB1; --ds-text-3:#5C6879;
+  --ds-undev-ink:#2A3242; --ds-undev-text:#5C6879; --ds-undev-line:#3A4455;
+  --ds-hairline:rgba(245,247,251,.13);
+  --ds-aurora-seek:linear-gradient(115deg,#0052D9 0%,#0084FF 46%,#66F2FF 100%);
+  --ds-ease:cubic-bezier(.22,1,.36,1);
+  --gd-energy:#66F2FF; --gd-energy-soft:#8AF5D1;
+  --gd-coin:#F5B841; --gd-jade:#3DD6A0; --gd-danger:#FF4D6D;
+  --gd-kanshan:#DCE9FB; --gd-ghost:#7CC0FF; --gd-glitch:#FF3D7A;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --serif:"Noto Serif SC","Songti SC",Georgia,serif;
+  --sans:"Noto Sans SC",system-ui,"PingFang SC",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(56% 40% at 50% -8%, rgba(0,132,255,.10), transparent 68%),
+    radial-gradient(40% 30% at 12% 64%, rgba(102,242,255,.045), transparent 74%),
+    linear-gradient(180deg,var(--ds-void-950) 0%,var(--ds-void-900) 46%,var(--ds-void-950) 100%);
+  color:var(--ds-text-1); font-family:var(--sans); min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+/* CRT 静态扫描线（材质，非动画） */
+body::after{
+  content:'';position:fixed;inset:0;z-index:99;pointer-events:none;
+  background-image:repeating-linear-gradient(0deg,rgba(245,247,251,.028) 0 1px,transparent 1px 4px);
+}
+.aurora{height:2px;width:100%;background:var(--ds-aurora-seek);opacity:.55;animation:sweep 2.4s var(--ds-ease) infinite}
+@keyframes sweep{0%,100%{opacity:.32}50%{opacity:.72}}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 32px 96px}
+
+header{padding:64px 0 40px}
+.kicker{font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--ds-text-2);margin:0 0 16px}
+h1{font-family:var(--serif);font-size:clamp(30px,4vw,48px);font-weight:700;line-height:1.1;letter-spacing:-.01em;color:var(--ds-text-0);margin:0 0 14px}
+.lede{font-size:16px;line-height:1.8;letter-spacing:.02em;max-width:660px;margin:0;color:var(--ds-text-1)}
+.lede b{color:var(--gd-kanshan);font-weight:600}
+
+section{margin-top:64px}
+.sec-tag{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ds-text-3);margin:0 0 8px}
+.sec-tag b{color:var(--gd-energy);font-weight:500}
+h2{font-size:24px;font-weight:600;color:var(--ds-text-0);margin:0 0 6px}
+.sub{font-size:12px;line-height:1.7;color:var(--ds-text-2);margin:0 0 24px;letter-spacing:.02em}
+
+.glass{
+  position:relative;border:1px solid var(--ds-hairline);border-radius:3px;
+  background:linear-gradient(180deg,rgba(245,247,251,.05),rgba(245,247,251,.012)),
+             linear-gradient(180deg,rgba(3,4,10,.72),rgba(3,4,10,.86));
+  box-shadow:inset 0 1px 0 rgba(245,247,251,.07),0 34px 80px -60px rgba(0,0,0,.96);
+}
+.brackets::before,.brackets::after{content:'';position:absolute;width:15px;height:15px;pointer-events:none;border-color:rgba(245,247,251,.34)}
+.brackets::before{top:-1px;left:-1px;border-top:1px solid;border-left:1px solid}
+.brackets::after{right:-1px;bottom:-1px;border-right:1px solid;border-bottom:1px solid}
+
+/* §4.8 极简 HUD */
+.gd-hud{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:10px 16px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+  border-bottom:1px solid var(--ds-hairline);
+}
+.gd-hud .act{color:var(--ds-text-2)}
+.gd-hud .cards{color:var(--gd-jade)}
+.gd-hud .unknown{color:var(--ds-undev-text)}
+
+/* §4.1 看山引导员 */
+.stage{position:relative;padding:40px 32px 36px;display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:center;min-height:300px}
+.gd-kanshan{position:relative;width:160px;height:160px;display:grid;place-items:end center}
+.gd-kanshan img{width:100%;height:auto;filter:drop-shadow(0 12px 20px rgba(0,0,0,.5));transition:transform 320ms var(--ds-ease),opacity 320ms var(--ds-ease),filter 320ms var(--ds-ease)}
+.gd-kanshan::after{content:'';position:absolute;bottom:-4px;left:50%;width:72%;height:14px;transform:translateX(-50%);border-radius:9999px;
+  background:radial-gradient(50% 100% at 50% 50%,rgba(220,233,251,.22),transparent 80%)}
+.gd-kanshan.speaking img{transform:scale(1.04)}
+.gd-kanshan.ghost img{opacity:.6;filter:saturate(.4) drop-shadow(0 12px 20px rgba(0,0,0,.5))}
+.gd-kanshan__name{margin-top:10px;display:inline-block;padding:3px 10px;border:1px solid rgba(220,233,251,.3);border-radius:2px;
+  background:rgba(220,233,251,.08);color:var(--gd-kanshan);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.kanshan-col{display:flex;flex-direction:column;align-items:center}
+
+.gd-dialogue{position:relative;border-top:1px solid rgba(0,132,255,.28);border-radius:3px;
+  background:linear-gradient(180deg,rgba(3,4,10,.82),rgba(3,4,10,.94));padding:20px 22px 18px;width:100%}
+.gd-dialogue__speaker{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--ds-text-2);margin-bottom:10px}
+.gd-dialogue.kanshan-mode .gd-dialogue__speaker{color:var(--gd-kanshan);text-shadow:0 0 12px rgba(220,233,251,.4)}
+.gd-dialogue.ghost-mode{border-top-color:rgba(124,192,255,.3)}
+.gd-dialogue__body{font-family:var(--serif);font-size:17px;line-height:1.85;letter-spacing:.01em;color:var(--ds-text-0);min-height:64px}
+.gd-dialogue__caret{animation:caret 1s step-end infinite;color:var(--ds-text-2)}
+@keyframes caret{0%,100%{opacity:1}50%{opacity:0}}
+
+.timeline{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.step{padding:6px 12px;border:1px solid var(--ds-hairline);border-radius:2px;background:transparent;color:var(--ds-text-2);
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;cursor:pointer;transition:all 240ms var(--ds-ease)}
+.step:hover{border-color:rgba(245,247,251,.3);color:var(--ds-text-0)}
+.step.on{border-color:rgba(102,242,255,.5);color:var(--gd-energy)}
+.controls{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+
+/* 按钮 */
+.btn{display:inline-block;padding:13px 26px;border-radius:3px;font-size:14px;font-weight:600;letter-spacing:.04em;cursor:pointer;
+  transition:transform 220ms var(--ds-ease),box-shadow 220ms var(--ds-ease),border-color 220ms var(--ds-ease);user-select:none}
+.gd-btn-arcade{border:1px solid rgba(102,242,255,.5);color:var(--ds-text-0);
+  background:linear-gradient(180deg,rgba(102,242,255,.18),rgba(102,242,255,.06));
+  box-shadow:0 4px 0 rgba(102,242,255,.22),0 12px 30px -18px rgba(102,242,255,.5)}
+.gd-btn-arcade:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(102,242,255,.22),0 16px 36px -18px rgba(102,242,255,.6)}
+.gd-btn-arcade:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(102,242,255,.22)}
+.btn-ghost{border:1px solid rgba(245,247,251,.12);color:var(--ds-text-1);background:transparent}
+.btn-ghost:hover{border-color:rgba(245,247,251,.28);color:var(--ds-text-0)}
+
+/* §4.3 经验卡 */
+.card-zone{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start}
+.gd-exp-card{position:relative;width:280px;aspect-ratio:5/7;border-radius:4px;border:1px solid rgba(102,242,255,.34);
+  background:linear-gradient(160deg,rgba(102,242,255,.08),rgba(3,4,10,.6)),
+    repeating-linear-gradient(45deg,transparent 0 10px,rgba(102,242,255,.03) 10px 11px);
+  box-shadow:0 24px 60px -36px rgba(102,242,255,.45),inset 0 1px 0 rgba(102,242,255,.12);
+  padding:20px;display:flex;flex-direction:column;transform-style:preserve-3d;transition:transform 600ms var(--ds-ease)}
+.gd-exp-card.flip{transform:rotateY(180deg)}
+.gd-exp-card .face{backface-visibility:hidden;display:flex;flex-direction:column;height:100%}
+.gd-exp-card .back{position:absolute;inset:20px;transform:rotateY(180deg)}
+.gd-exp-card__type{font-family:var(--mono);font-size:10px;letter-spacing:.34em;color:rgba(102,242,255,.8);text-transform:uppercase}
+.gd-exp-card__action{font-size:17px;font-weight:700;line-height:1.45;color:var(--ds-text-0);margin-top:14px}
+.gd-exp-card__quote{font-family:var(--serif);font-size:13px;line-height:1.75;color:var(--ds-text-1);margin-top:12px;flex:1}
+.gd-exp-card__source{font-family:var(--mono);font-size:10px;color:var(--ds-text-2);letter-spacing:.06em;margin-top:10px}
+.gd-exp-card.draw{animation:card-draw 900ms var(--ds-ease) both}
+@keyframes card-draw{0%{opacity:0;transform:translateY(28px) scale(.94)}60%{opacity:1;transform:translateY(-4px) scale(1.01)}100%{transform:none}}
+.flip-hint{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--ds-text-3);margin-top:14px}
+
+/* §4.5 世界线分叉 */
+.fork-stage{position:relative;height:260px;padding:0;overflow:hidden}
+.fork-stage svg{position:absolute;inset:0;width:100%;height:100%}
+.fork-line{fill:none;stroke-width:1.5;stroke-linecap:round}
+.fork-main{stroke:rgba(102,242,255,.55)}
+.fork-new{stroke:var(--gd-energy);stroke-dasharray:6 6;transition:stroke-dashoffset 800ms var(--ds-ease),opacity 600ms var(--ds-ease)}
+.fork-pulse{fill:none;stroke:rgba(102,242,255,.55);stroke-width:1}
+.pulse-anim{animation:fork-pulse 620ms var(--ds-ease) both}
+@keyframes fork-pulse{0%{opacity:.9;r:4}100%{opacity:0;r:26}}
+.fork-caption{position:absolute;bottom:20px;left:24px;font-family:var(--serif);font-size:15px;color:var(--ds-text-1);opacity:0;transition:opacity 500ms var(--ds-ease)}
+.fork-caption.show{opacity:1}
+.fork-card{position:absolute;right:32px;top:50%;transform:translateY(-50%) scale(.94);opacity:0;width:190px;
+  border:1px solid rgba(102,242,255,.34);border-radius:4px;padding:14px 16px;
+  background:linear-gradient(160deg,rgba(102,242,255,.1),rgba(3,4,10,.7));
+  transition:all 600ms var(--ds-ease)}
+.fork-card.show{opacity:1;transform:translateY(-50%)}
+.fork-card .t{font-size:14px;font-weight:700;color:var(--ds-text-0);margin-top:8px}
+.fork-card .badge{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--gd-energy)}
+
+/* §4.7 glitch 转场 */
+.glitch-demo{position:relative;padding:44px 28px;text-align:center;overflow:hidden}
+.glitch-demo .act-title{font-family:var(--serif);font-size:34px;font-weight:700;color:var(--ds-text-0);letter-spacing:-.01em}
+.glitching{animation:glitch 320ms steps(2,end) both}
+@keyframes glitch{
+  0%{transform:translate(0);filter:none}
+  20%{transform:translate(-3px,1px);filter:drop-shadow(3px 0 var(--gd-glitch)) drop-shadow(-3px 0 var(--gd-energy))}
+  40%{transform:translate(3px,-1px);filter:drop-shadow(-2px 0 var(--gd-glitch)) drop-shadow(2px 0 var(--gd-energy))}
+  60%{transform:translate(-2px,0);clip-path:inset(30% 0 40% 0)}
+  80%{transform:translate(2px,1px);clip-path:inset(10% 0 60% 0)}
+  100%{transform:translate(0);clip-path:none;filter:none}
+}
+
+/* §4.6 Toast */
+.gd-toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:100;
+  padding:8px 16px;border-radius:2px;border:1px solid rgba(245,184,65,.4);
+  background:rgba(3,4,10,.92);color:var(--gd-coin);font-size:15px;font-weight:600;letter-spacing:.04em;
+  animation:toast-in 2400ms var(--ds-ease) both;pointer-events:none}
+@keyframes toast-in{0%{opacity:0;transform:translate(-50%,-12px)}12%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-8px)}}
+
+/* §4.4 卡册 */
+.book{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.book .slot-owned{padding:16px;border:1px solid rgba(102,242,255,.28);border-radius:4px;min-height:120px;
+  background:linear-gradient(160deg,rgba(102,242,255,.06),rgba(3,4,10,.5))}
+.book .slot-owned .a{font-size:14px;font-weight:600;color:var(--ds-text-0);line-height:1.5;margin-top:8px}
+.book .slot-owned .d{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--ds-text-2);margin-top:10px}
+.book .slot-empty{padding:16px;border:1px dashed var(--ds-undev-line);border-radius:4px;min-height:120px;
+  background-image:repeating-linear-gradient(45deg,var(--ds-undev-ink) 0 1px,transparent 1px 8px);
+  color:var(--ds-undev-text);font-size:12px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.book .slot-empty .l{font-family:var(--mono);font-size:9px;letter-spacing:.22em;text-transform:uppercase}
+.book .type{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:rgba(102,242,255,.8);text-transform:uppercase}
+
+/* 剂量表 */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ds-text-3);
+  text-align:left;padding:10px 12px;border-bottom:1px solid var(--ds-hairline)}
+td{padding:10px 12px;border-bottom:1px solid rgba(245,247,251,.06);color:var(--ds-text-1);line-height:1.6}
+td:first-child{color:var(--ds-text-0);font-weight:500}
+
+footer{margin-top:72px;padding-top:24px;border-top:1px solid rgba(245,247,251,.08);
+  font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ds-text-3)}
+
+@media (max-width:720px){
+  .wrap{padding:0 18px 72px}
+  .stage{grid-template-columns:1fr;gap:24px;justify-items:center}
+  .gd-kanshan{width:120px;height:120px}
+  .card-zone{justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="aurora"></div>
+
+<div class="wrap">
+  <header>
+    <p class="kicker">Living Preview · GAME-DESIGN.md</p>
+    <h1>游戏化体验层 · 活体预览</h1>
+    <p class="lede">一场由真实人生驱动的文字 AVG，<b>刘看山是你的地下城主</b>。本页与 GAME-DESIGN.md 逐节对应，每个区块标注了章节号与 CSS 类名，确认观感后可让 AI 直接照着改代码。</p>
+  </header>
+
+  <!-- ===================== §4.8 极简 HUD ===================== -->
+  <section>
+    <p class="sec-tag">§4.8 · <b>.gd-hud</b> · 极简 HUD</p>
+    <h2>只有三样东西：幕次、经验卡、未知</h2>
+    <p class="sub">没有血条、没有属性、没有分数 —— 这是本产品与 RPG 的分界线。</p>
+    <div class="glass brackets">
+      <div class="gd-hud">
+        <span class="act">ACT 02 / 03</span>
+        <span class="cards">◈ 经验卡 ×2</span>
+        <span class="unknown">? 未知 ×1</span>
+      </div>
+      <div style="padding:22px 20px;font-size:13px;color:var(--ds-text-2);line-height:1.8">
+        幕次用灰（它是坐标）、经验卡用翡翠 <span style="color:var(--gd-jade)">#3DD6A0</span>（它是收获）、未知用未显影灰 <span style="color:var(--ds-undev-text)">#5C6879</span>（它刻意不亮）。
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== §4.1 看山引导员 ===================== -->
+  <section>
+    <p class="sec-tag">§4.1 · <b>.gd-kanshan</b> · 刘看山引导员</p>
+    <h2>刘看山 = NPC 状态机，不是装饰贴纸</h2>
+    <p class="sub">点「播放一局」看完整状态机：6 皮肤 × 6 动作，ghost 专属反例，dribble 是唯一彩蛋。</p>
+    <div class="glass brackets stage">
+      <div class="kanshan-col">
+        <div class="gd-kanshan" id="kanshanBox">
+          <img id="kanshanImg" src="public/kanshan/idle.gif" alt="刘看山"
+               onerror="this.onerror=null;this.src='https://zhihu.xuanyi888.cloud:8443/kanshan/idle.gif'">
+        </div>
+        <span class="gd-kanshan__name" id="kanshanName">KANSHAN · GUIDE</span>
+      </div>
+      <div>
+        <div class="gd-dialogue" id="dialogue">
+          <p class="gd-dialogue__speaker" id="speaker">刘看山</p>
+          <p class="gd-dialogue__body"><span id="line"></span><span class="gd-dialogue__caret">▌</span></p>
+        </div>
+        <div class="timeline" id="timeline"></div>
+        <div class="controls">
+          <a class="btn gd-btn-arcade" id="playRun">播放一局</a>
+          <a class="btn btn-ghost" id="stopRun">停在本幕</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== §4.3 经验卡 ===================== -->
+  <section>
+    <p class="sec-tag">§4.3 · <b>.gd-exp-card</b> · 经验卡</p>
+    <h2>正面是行动，背面是出处</h2>
+    <p class="sub">点击翻面。收集品是「你借来的人生」，禁止稀有度标签。</p>
+    <div class="card-zone">
+      <div class="gd-exp-card draw" id="expCard">
+        <div class="face">
+          <div class="gd-exp-card__type">EXPERIENCE CARD · 借来的经验</div>
+          <div class="gd-exp-card__action">先报名，把基础补在实战里</div>
+          <div class="gd-exp-card__quote">「我直接参赛了，边做边学，课程成绩掉了但拿到了实习。」</div>
+          <div class="gd-exp-card__source">知乎答主 · 2024 · 876 赞同</div>
+        </div>
+        <div class="face back">
+          <div class="gd-exp-card__type">SOURCE · 原文出处</div>
+          <div class="gd-exp-card__quote">「我直接参赛了，边做边学，课程成绩掉了但拿到了实习。现在回头看，那是我做过最对的决定。」</div>
+          <div class="gd-exp-card__source">@匿名答主 · 2024-03 · 876 赞同<br>zhihu.com/answer/···（可点击回原回答）</div>
+        </div>
+      </div>
+      <div>
+        <p class="flip-hint">← 点击卡片翻面（rotateY 180° / 600ms）</p>
+        <p class="flip-hint" style="margin-top:20px">获得演出：card-draw 900ms 从下方升起<br>入库动作：获得后飞入 /journal 卡册</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== §4.5 世界线分叉 ===================== -->
+  <section>
+    <p class="sec-tag">§4.5 · <b>WorldlineFork</b> · 世界线分叉演出</p>
+    <h2>经验解锁：一条原本不存在的路亮起来</h2>
+    <p class="sub">产品最独特的一刻，必须走完整演出。全程 ≤ 2.6s，不用弹窗。</p>
+    <div class="glass brackets fork-stage" id="forkStage">
+      <svg viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true">
+        <path class="fork-line fork-main" d="M 0 130 C 200 130, 300 130, 420 130 C 600 130, 800 130, 1000 130"/>
+        <path class="fork-line fork-new" id="forkNew" d="M 420 130 C 520 130, 560 60, 680 60 C 780 60, 850 60, 920 60"
+              pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" opacity="0"/>
+        <circle cx="420" cy="130" r="4" fill="#66F2FF"/>
+        <circle class="fork-pulse" id="forkPulse" cx="420" cy="130" r="4" opacity="0"/>
+      </svg>
+      <div class="fork-card" id="forkCard">
+        <span class="badge">UNLOCKED</span>
+        <div class="t">先报名，把基础补在实战里</div>
+      </div>
+      <p class="fork-caption" id="forkCaption">他这样走过。现在，你也可以。</p>
+    </div>
+    <div class="controls" style="margin-top:16px">
+      <a class="btn gd-btn-arcade" id="playFork">播放分叉演出</a>
+    </div>
+  </section>
+
+  <!-- ===================== §4.7 幕转场 ===================== -->
+  <section>
+    <p class="sec-tag">§4.7 · <b>.glitching</b> · 幕转场 glitch</p>
+    <h2>幕与幕之间的 320ms</h2>
+    <p class="sub">统一用 glitch 形成节奏记忆，不要每幕换一种花样。一局 ≤ 3 次。</p>
+    <div class="glass brackets glitch-demo">
+      <div class="act-title" id="actTitle">第二幕 · 代价出现</div>
+      <div class="controls" style="justify-content:center;margin-top:24px">
+        <a class="btn btn-ghost" id="playGlitch">触发转场</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== §4.6 成就 Toast ===================== -->
+  <section>
+    <p class="sec-tag">§4.6 · <b>.gd-toast</b> · 成就浮字</p>
+    <h2>一局最多两个</h2>
+    <p class="sub">只给两件事：完整看完一条反例（「直面现实」）、认下现实支线（「行动派」）。</p>
+    <div class="glass brackets" style="padding:32px 28px;display:flex;gap:14px;flex-wrap:wrap">
+      <a class="btn gd-btn-arcade" data-toast="直面现实">触发「直面现实」</a>
+      <a class="btn gd-btn-arcade" data-toast="行动派">触发「行动派」</a>
+    </div>
+  </section>
+
+  <!-- ===================== §4.4 卡册 ===================== -->
+  <section>
+    <p class="sec-tag">§4.4 · <b>CardBook</b> · 卡册（/journal）</p>
+    <h2>你借来的人生，与还没走过的世界</h2>
+    <p class="sub">空槽用未显影语法。禁止「未解锁 0/10」这类成就语言。</p>
+    <div class="book">
+      <div class="slot-owned"><span class="type">EXPERIENCE</span><div class="a">先报名，把基础补在实战里</div><div class="d">大二的夏天 · 2026-09-14</div></div>
+      <div class="slot-owned"><span class="type">EXPERIENCE</span><div class="a">脱产之前，先算出资金缓冲月数</div><div class="d">辞职信 · 2026-09-14</div></div>
+      <div class="slot-empty"><span>还没走过的世界</span><span class="l">NOT YET</span></div>
+      <div class="slot-empty"><span>还没走过的世界</span><span class="l">NOT YET</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== 附录 B 剂量表 ===================== -->
+  <section>
+    <p class="sec-tag">附录 B · 游戏化剂量表</p>
+    <h2>一局 3 分钟，演出总时长 ≤ 40 秒</h2>
+    <p class="sub">克制地游戏化 —— 差异化是「真实 + 克制」，不是「更像游戏」。</p>
+    <div class="glass brackets" style="padding:8px 12px">
+      <table>
+        <thead><tr><th>元素</th><th>频次上限</th><th>单次时长</th></tr></thead>
+        <tbody>
+          <tr><td>看山出场</td><td>4 次</td><td>≤15s</td></tr>
+          <tr><td>幕转场 glitch</td><td>3 次</td><td>320ms</td></tr>
+          <tr><td>经验卡获得演出</td><td>1–3 次</td><td>900ms</td></tr>
+          <tr><td>世界线分叉</td><td>1 次</td><td>2.6s</td></tr>
+          <tr><td>成就 Toast</td><td>2 次</td><td>2.4s</td></tr>
+          <tr><td>彩蛋（dribble）</td><td>1 次</td><td>1.5s</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>知乎平行宇宙 · GAME-DESIGN.md · 游戏化体验层活体预览</footer>
+</div>
+
+<script>
+(function () {
+  var CDN = 'https://zhihu.xuanyi888.cloud:8443/kanshan/';
+  var LOCAL = 'public/kanshan/';
+  var img = document.getElementById('kanshanImg');
+  var box = document.getElementById('kanshanBox');
+  var nameEl = document.getElementById('kanshanName');
+  var dialogue = document.getElementById('dialogue');
+  var speaker = document.getElementById('speaker');
+  var line = document.getElementById('line');
+  var timeline = document.getElementById('timeline');
+
+  function setGif(file) {
+    img.onerror = function () { img.onerror = null; img.src = CDN + file; };
+    img.src = LOCAL + file;
+  }
+
+  /* 一局的状态机时序（对应 GAME-DESIGN.md §4.1） */
+  var SCRIPT = [
+    { gif: 'idle.gif',       name: 'KANSHAN · GUIDE',  sp: '刘看山', mode: 'kanshan', text: '你最近真正纠结什么？' },
+    { gif: 'wave.gif',       name: 'KANSHAN · GUIDE',  sp: '刘看山', mode: 'kanshan', text: '走吧。' },
+    { gif: 'computer.gif',   name: 'KANSHAN · SEARCH', sp: '刘看山', mode: 'kanshan', text: '我去找找，有没有人活过你正在纠结的这几种人生。' },
+    { gif: 'sway.gif',       name: 'KANSHAN · ASK',    sp: '刘看山', mode: 'kanshan', text: '先问一句——你最多能承受几个月没有收入？这个答案会改变我接下来找谁。' },
+    { gif: 'idle.gif',       name: 'ACT 01 · 进入世界', sp: '旁白',  mode: '',        text: '你走进了那个平行版本的自己。条件和你一模一样，只是有人已经替你走过了一遍。' },
+    { gif: 'ghost_sway.gif', name: 'GHOST · 反例',      sp: '虚影',  mode: 'ghost',   text: '等等。这个人的结果，和前面完全相反。' },
+    { gif: 'wave.gif',       name: 'KANSHAN · 终局',    sp: '刘看山', mode: 'kanshan', text: '这个，只有你能回答。' },
+    { gif: 'dribble.gif',    name: 'KANSHAN · 彩蛋',    sp: '刘看山', mode: 'kanshan', text: '…' }
+  ];
+
+  var typeTimer = null, runTimer = null, current = -1;
+
+  function typeText(t) {
+    clearInterval(typeTimer);
+    line.textContent = '';
+    var i = 0;
+    typeTimer = setInterval(function () {
+      i++;
+      line.textContent = t.slice(0, i);
+      if (i >= t.length) clearInterval(typeTimer);
+    }, 42);
+  }
+
+  function renderSteps() {
+    timeline.innerHTML = '';
+    SCRIPT.forEach(function (s, i) {
+      var b = document.createElement('button');
+      b.className = 'step' + (i === current ? ' on' : '');
+      b.textContent = String(i + 1).padStart(2, '0');
+      b.title = s.text;
+      b.addEventListener('click', function () { stopRun(); go(i); });
+      timeline.appendChild(b);
+    });
+  }
+
+  function go(i) {
+    current = i;
+    var s = SCRIPT[i];
+    box.classList.toggle('ghost', s.mode === 'ghost');
+    box.classList.add('speaking');
+    dialogue.classList.toggle('ghost-mode', s.mode === 'ghost');
+    dialogue.classList.toggle('kanshan-mode', s.mode === 'kanshan');
+    nameEl.textContent = s.name;
+    speaker.textContent = s.sp;
+    setGif(s.gif);
+    typeText(s.text);
+    renderSteps();
+  }
+
+  function play() {
+    stopRun();
+    var i = 0;
+    go(0);
+    runTimer = setInterval(function () {
+      i++;
+      if (i >= SCRIPT.length) { stopRun(); return; }
+      go(i);
+    }, 2600);
+  }
+
+  function stopRun() {
+    if (runTimer) { clearInterval(runTimer); runTimer = null; }
+  }
+
+  document.getElementById('playRun').addEventListener('click', play);
+  document.getElementById('stopRun').addEventListener('click', stopRun);
+  go(0);
+
+  /* 经验卡翻面 */
+  var card = document.getElementById('expCard');
+  card.addEventListener('click', function () { card.classList.toggle('flip'); });
+
+  /* 世界线分叉 */
+  var forkNew = document.getElementById('forkNew');
+  var forkPulse = document.getElementById('forkPulse');
+  var forkCard = document.getElementById('forkCard');
+  var forkCaption = document.getElementById('forkCaption');
+  document.getElementById('playFork').addEventListener('click', function () {
+    forkNew.style.opacity = '0';
+    forkNew.style.strokeDashoffset = '100';
+    forkPulse.setAttribute('opacity', '0');
+    forkPulse.classList.remove('pulse-anim');
+    forkCard.classList.remove('show');
+    forkCaption.classList.remove('show');
+    void forkNew.getBoundingClientRect();
+    setTimeout(function () { forkNew.style.opacity = '1'; forkNew.style.strokeDashoffset = '0'; }, 60);
+    setTimeout(function () { forkPulse.setAttribute('opacity', '.9'); forkPulse.classList.add('pulse-anim'); }, 200);
+    setTimeout(function () { forkCard.classList.add('show'); }, 850);
+    setTimeout(function () { forkCaption.classList.add('show'); }, 1400);
+  });
+
+  /* glitch 转场 */
+  var actTitle = document.getElementById('actTitle');
+  var acts = ['第二幕 · 代价出现', '第三幕 · 遇见反例', '终局 · 问题重写'];
+  var actIdx = 0;
+  document.getElementById('playGlitch').addEventListener('click', function () {
+    actTitle.classList.remove('glitching');
+    void actTitle.offsetWidth;
+    actTitle.classList.add('glitching');
+    setTimeout(function () {
+      actIdx = (actIdx + 1) % acts.length;
+      actTitle.textContent = acts[actIdx];
+    }, 160);
+  });
+
+  /* Toast */
+  document.querySelectorAll('[data-toast]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var old = document.querySelector('.gd-toast');
+      if (old) old.remove();
+      var t = document.createElement('div');
+      t.className = 'gd-toast';
+      t.textContent = '◆ ' + btn.getAttribute('data-toast');
+      document.body.appendChild(t);
+      setTimeout(function () { t.remove(); }, 2500);
+    });
+  });
+})();
+</script>
+</body>
+</html>

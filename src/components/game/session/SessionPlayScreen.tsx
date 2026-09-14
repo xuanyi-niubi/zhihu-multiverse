@@ -12,8 +12,10 @@ import { SessionStoryStage } from '@/components/game/session/SessionStoryStage';
 import { SessionUnknownStage } from '@/components/game/session/SessionUnknownStage';
 import { loadingCopyOf } from '@/components/game/session/viewModel';
 import type { SessionActObjective, SessionPlayScreenProps } from '@/components/game/session/types';
+import { AuroraBand } from '@/components/visual/AuroraBand';
 import { CounterOrbit } from '@/components/visual/CounterOrbit';
 import { OrbitField } from '@/components/visual/OrbitField';
+import { KanshanSprite } from '@/components/characters/KanshanSprite';
 import { AI_UNAVAILABLE } from '@/features/run/errorCopy';
 import { actAtmosphereOf } from '@/features/visual/archive';
 
@@ -149,6 +151,43 @@ export function SessionPlayScreen({
   /** 经验抽屉是**屏幕自己的**局部状态：它不影响 reducer，也不该进页面状态。 */
   const [dockOpen, setDockOpen] = React.useState(false);
 
+  /**
+   * 经验卡获得演出（GAME-DESIGN §4.3）。
+   *
+   * 「借来一张卡」是这个产品的核心时刻之一，不能只是抽屉里的数字 +1 ——
+   * 卡片入册的瞬间要有一次可见的获得演出 + HUD 脉冲。纪律：
+   *
+   * - 初次挂载时已有的卡片**不算获得**（那是开局就借到的，不是这一刻发生的）；
+   * - 只有 `view.experiences` 真的长出新 id 才播，且一局内每张卡只播一次；
+   * - 入场复用 fragment-materialize，出场是 380ms transition —— 零新增 keyframes。
+   */
+  const [gained, setGained] = React.useState<{ readonly id: string; readonly title: string } | null>(null);
+  const [gainLeaving, setGainLeaving] = React.useState(false);
+  const seenExperienceIdsRef = React.useRef<ReadonlySet<string> | null>(null);
+
+  React.useEffect(() => {
+    const current = new Set(view.experiences.map((card) => card.id));
+    const seen = seenExperienceIdsRef.current;
+    seenExperienceIdsRef.current = current;
+    // 初次渲染：把已有卡片登记为「开局就有」，不播获得演出。
+    if (seen === null) {
+      return;
+    }
+    const fresh = view.experiences.filter((card) => !seen.has(card.id));
+    if (fresh.length === 0) {
+      return;
+    }
+    const card = fresh[fresh.length - 1]!;
+    setGained({ id: card.id, title: view.cardTitles[card.id] ?? '一个人的一段经历' });
+    setGainLeaving(false);
+    const leaveTimer = window.setTimeout(() => setGainLeaving(true), 2600);
+    const removeTimer = window.setTimeout(() => setGained(null), 3050);
+    return () => {
+      window.clearTimeout(leaveTimer);
+      window.clearTimeout(removeTimer);
+    };
+  }, [view.experiences, view.cardTitles]);
+
   const atmosphere = actAtmosphereOf(view.act.objective, view.phase === 'ended');
   const actKey = actKeyOf(view.act.objective, view.phase === 'ended');
 
@@ -177,6 +216,9 @@ export function SessionPlayScreen({
       data-act={actKey}
       data-atmosphere={atmosphere}
     >
+      {/* §4.7 极光带：全站唯一的情绪指示器（一幕一个颜色，最多两种强调色同屏） */}
+      <AuroraBand tone={actKey === 'end' ? 'end' : actKey === '3' ? 'counter' : 'seek'} />
+
       {/* §22：每一幕的轨道密度不同；END 时逐渐退出 */}
       <OrbitField
         count={ACT_ORBITS[actKey]}
@@ -185,6 +227,9 @@ export function SessionPlayScreen({
       />
 
       <div className="relative mx-auto w-full max-w-[720px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+        {/* 每一幕开始时，一条极细的扫描线扫过 —— 幕与幕之间有一个明确的「换场」 */}
+        <span key={`sweep-${actKey}`} aria-hidden="true" className="obs-act-sweep" />
+
         <SessionActHeader act={view.act} className="pt-5">
           <SessionExperienceDock
             experiences={view.experiences}
@@ -202,6 +247,23 @@ export function SessionPlayScreen({
             换一个问题
           </button>
         </SessionActHeader>
+
+        {/*
+          极简 HUD（GAME-DESIGN §4.8）：幕次 / 经验卡 / 未知。
+          没有血条、没有分数 —— 未知数刻意用未显影灰，它不是待解锁的成就。
+          终局不显示：那一刻屏幕上只该有问题（§二十二）。
+        */}
+        {view.phase === 'ended' ? null : (
+          <div className="gd-hud mt-3" aria-label="本局状态">
+            <span className="gd-hud__act">
+              ACT {String(view.act.display).padStart(2, '0')} / {String(view.act.total).padStart(2, '0')}
+            </span>
+            <span className={gained ? 'gd-hud__cards gd-hud__cards--pulse' : 'gd-hud__cards'}>
+              ◈ 经验卡 ×{view.experiences.length}
+            </span>
+            <span className="gd-hud__unknown">? 未知 ×{unknown ? 1 : 0}</span>
+          </div>
+        )}
 
         {view.error ? (
           <ErrorState message={view.error} onRetry={onRetry} onBackToQuestion={onBackToQuestion} />
@@ -225,26 +287,46 @@ export function SessionPlayScreen({
             view.phase === 'story' &&
             view.counterFrame ? (
               <div className="mt-5">
-                <p
-                  className="text-[15px] font-bold"
-                  style={{
-                    color: 'var(--obs-counter-soft)',
-                    animation: 'fragment-materialize 520ms var(--obs-ease) both',
-                  }}
-                >
-                  等等。
-                </p>
-                <p
-                  className="mt-1 text-[13px] leading-relaxed"
-                  style={{
-                    color: 'var(--obs-counter-soft)',
-                    opacity: 0.8,
-                    animation: 'fragment-materialize 560ms var(--obs-ease) both',
-                    animationDelay: '560ms',
-                  }}
-                >
-                  这个人的结果和前面完全相反。
-                </p>
+                <div className="flex items-start gap-3">
+                  {/*
+                    看山状态机 · 反例揭示态 ghost（GAME-DESIGN §4.1）：
+                    虚影模式 —— 去饱和 + 降透明度，视觉上先感到不对，再读到内容。
+                    原先立在旁边的线稿剪影（信号源）已随整体下架，这里只留 ghost 实体。
+                  */}
+                  <span className="gd-guide gd-guide--ghost">
+                    <span className="gd-guide__base">
+                      <KanshanSprite
+                        characterId="ghost"
+                        action="sway"
+                        className="gd-guide__sprite gd-guide__sprite--sm"
+                        alt=""
+                      />
+                    </span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-[15px] font-bold"
+                      style={{
+                        color: 'var(--obs-counter-soft)',
+                        animation: 'fragment-materialize 520ms var(--obs-ease) both',
+                      }}
+                    >
+                      等等。
+                    </p>
+                    <p
+                      className="mt-1 text-[13px] leading-relaxed"
+                      style={{
+                        color: 'var(--obs-counter-soft)',
+                        opacity: 0.8,
+                        animation: 'fragment-materialize 560ms var(--obs-ease) both',
+                        animationDelay: '560ms',
+                      }}
+                    >
+                      这个人的结果和前面完全相反。
+                    </p>
+                  </div>
+                </div>
+
                 <CounterOrbit
                   active
                   className="mt-5"
@@ -343,6 +425,14 @@ export function SessionPlayScreen({
             ) : null}
           </>
         )}
+
+        {/* 仪表脚注：观象厅里永远显示你现在在回答哪个问题 —— 它是一台仪器 */}
+        <div className="obs-instrument-bar">
+          <span className="obs-instrument-bar__key">Coordinate</span>
+          <span className="min-w-0 flex-1 truncate" title={view.question}>
+            {view.question}
+          </span>
+        </div>
       </div>
 
       <ExperienceSourceModal
@@ -351,6 +441,24 @@ export function SessionPlayScreen({
         facts={view.source.facts}
         differences={view.source.differences}
       />
+
+      {/*
+        经验卡获得演出（GAME-DESIGN §4.3）：一张借来的人生入册的瞬间。
+        不是 Toast（成就语言），是「收集」—— 所以它报的是谁的哪段经历，
+        而不是「你获得了什么奖励」。
+      */}
+      {gained ? (
+        <div
+          className={['gd-card-gain', gainLeaving ? 'gd-card-gain--leaving' : '']
+            .filter(Boolean)
+            .join(' ')}
+          role="status"
+        >
+          <span className="gd-card-gain__kicker">Borrowed Experience</span>
+          <span className="gd-card-gain__title">{gained.title}</span>
+          <span className="gd-card-gain__line">借来的经验 +1 · 它可能会在某一幕打开一条新路。</span>
+        </div>
+      ) : null}
     </main>
   );
 }

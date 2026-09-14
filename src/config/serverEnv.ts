@@ -51,6 +51,34 @@ function readEnv(env: Record<string, string | undefined>, key: string): string |
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/**
+ * Base URL 一律去掉末尾 `/`。
+ *
+ * 否则 `https://x/v1` 与 `https://x/v1/` 拼出来的路径会有两副面孔
+ * （`//chat/completions`），而报错信息里只会看到一个 404，很难联想到是配置。
+ */
+function normalizeBaseUrl(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
+/**
+ * 读一个布尔 env：只有明确的假值才算 false，其余非空值都算 true。
+ *
+ * 这样 `true` / `1` / `yes` 都能用，而**写错的字符串不会静默关掉结构化输出**
+ * —— 关掉它主链的 JSON 解析就要走兜底，属于「现场很难查」的那类故障。
+ */
+function readEnvBool(
+  env: Record<string, string | undefined>,
+  key: string,
+  fallback: boolean,
+): boolean {
+  const raw = readEnv(env, key);
+  if (raw === null) {
+    return fallback;
+  }
+  return !/^(0|false|no|off)$/i.test(raw);
+}
+
 export interface AppLlmEnv {
   readonly apiKey: string;
   readonly baseUrl: string;
@@ -58,6 +86,8 @@ export interface AppLlmEnv {
   readonly fastModel: string | null;
   /** 贵的档位：世界编译。缺省就跟着 fast 走。 */
   readonly deepModel: string | null;
+  /** 是否要求结构化输出（`APP_LLM_JSON_MODE`，缺省 true：JSON 是主链契约）。 */
+  readonly jsonMode: boolean;
 }
 
 const DEFAULT_APP_BASE_URL = 'https://api.deepseek.com/v1';
@@ -77,9 +107,10 @@ export function appLlmFromEnv(
   }
   return {
     apiKey,
-    baseUrl: readEnv(env, 'APP_LLM_BASE_URL') ?? DEFAULT_APP_BASE_URL,
+    baseUrl: normalizeBaseUrl(readEnv(env, 'APP_LLM_BASE_URL') ?? DEFAULT_APP_BASE_URL),
     fastModel: readEnv(env, 'APP_LLM_FAST_MODEL'),
     deepModel: readEnv(env, 'APP_LLM_DEEP_MODEL'),
+    jsonMode: readEnvBool(env, 'APP_LLM_JSON_MODE', true),
   };
 }
 
@@ -102,7 +133,7 @@ export function appModelConfigFromEnv(
     apiKey: app.apiKey,
     baseUrl: app.baseUrl,
     model,
-    jsonMode: true,
+    jsonMode: app.jsonMode,
     timeoutMs: 30_000,
     temperature: 0.85,
     maxTokens: 1_400,

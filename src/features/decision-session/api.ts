@@ -28,6 +28,7 @@ import { createTrace } from '@/core/observability';
  * | 参数错误 | 400 |
  * | 未登录但请求私有资源 | 401 |
  * | 会话不存在或不属于你 | 404 |
+ * | 配额／预算用满（可恢复） | 429 + `retryAfter`（秒） |
  * | 上游（知乎／模型）失败 | 502 / 503 |
  * | **业务成功但数据降级** | 200 + `meta.degraded = true` |
  *
@@ -43,7 +44,13 @@ export type ApiResult<T> =
   | { readonly ok: true; readonly data: T; readonly meta?: ApiMeta }
   | {
       readonly ok: false;
-      readonly error: { readonly code: string; readonly message: string; readonly retryable: boolean };
+      readonly error: {
+        readonly code: string;
+        readonly message: string;
+        readonly retryable: boolean;
+        /** 建议多少**秒**之后再试（仅 429/503 这类可恢复拒绝会有）。 */
+        readonly retryAfter?: number;
+      };
       readonly traceId: string;
     };
 
@@ -51,6 +58,16 @@ export const ERROR_STATUS: Readonly<Record<string, number>> = {
   'bad-request': 400,
   unauthorized: 401,
   'not-found': 404,
+  /**
+   * 配额 / 预算类拒绝（产品化方案 §14）：**429** 才对。
+   *
+   * 落成 400 是错的：前端会把它当成「我参数写错了」而不再给「稍后再试」的出口，
+   * 监控里也会把限流算进客户端错误率。
+   */
+  'quota-exceeded': 429,
+  'budget-exhausted': 429,
+  /** App provider 整体不可用（不是这一局用满，而是压根没有可用来源）。 */
+  'app-provider-unavailable': 503,
   'upstream-failed': 502,
   'upstream-unavailable': 503,
 };
@@ -99,10 +116,25 @@ export function fail(input: {
   readonly traceId: string;
   /** 需要写回 cookie 时（匿名身份首次出现）。 */
   readonly setCookie?: string | null;
+  /**
+   * 建议多久之后再试（毫秒）。
+   *
+   * **换算成秒只在这里做一次**：对外契约用秒（HTTP `Retry-After` 与前端弹窗
+   * 都按秒说话），内部配额计算仍用毫秒。不填就是「没有恢复时间」，
+   * 此时连响应头都不发，避免前端拿到一个 `Retry-After: 0` 空转重试。
+   */
+  readonly retryAfterMs?: number | null;
 }): NextResponse {
+  const retryAfterSeconds =
+    typeof input.retryAfterMs === 'number' && input.retryAfterMs > 0
+      ? Math.ceil(input.retryAfterMs / 1000)
+      : null;
   const headers: Record<string, string> = { 'cache-control': 'no-store' };
   if (input.setCookie) {
     headers['set-cookie'] = input.setCookie;
+  }
+  if (retryAfterSeconds !== null) {
+    headers['retry-after'] = String(retryAfterSeconds);
   }
   return NextResponse.json(
     {
@@ -111,6 +143,7 @@ export function fail(input: {
         code: input.code,
         message: input.message,
         retryable: input.retryable ?? false,
+        ...(retryAfterSeconds !== null ? { retryAfter: retryAfterSeconds } : {}),
       },
       traceId: input.traceId,
     },

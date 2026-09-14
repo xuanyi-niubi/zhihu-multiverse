@@ -60,13 +60,13 @@ export function SessionStoryStage({ story, loading, className = '' }: SessionSto
       className={['mt-5', className].filter(Boolean).join(' ')}
       aria-label="这一幕的场景与叙事"
     >
-      {/* 场景 + 立绘：它们是氛围，不是数值 */}
-      <div className="relative h-[220px] overflow-hidden rounded-3xl border border-white/8 bg-archive-900">
+      {/* 场景 + 立绘：它们是氛围，不是数值。
+          用观测窗把它压成「舱外的一格视野」，而不是一张浮起来的截图。 */}
+      <div className="session-scene-frame relative h-[220px] overflow-hidden border border-[color:rgb(var(--obs-rgb-text-0)/0.1)] bg-[color:rgb(var(--obs-rgb-bg-0)/0.6)]">
         <SceneStage sceneId={story.scene.sceneId} />
         <PortraitLayer stage={story.stage} speaker={story.speaker} />
-        <div className="absolute bottom-2.5 left-3.5 font-mono text-[11px] text-archive-400">
-          {story.scene.timeLabel}
-        </div>
+        <span aria-hidden="true" className="session-scene-frame__veil" />
+        <div className="absolute bottom-2.5 left-3.5 z-10 obs-kicker">{story.scene.timeLabel}</div>
       </div>
 
       {story.tension ? (

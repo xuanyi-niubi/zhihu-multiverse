@@ -73,8 +73,8 @@ export function SessionChoiceCard({
         aria-label={`暂时关闭的选择：${choice.title}`}
       >
         <span className="min-w-0 flex-1">
-          <span className="obs-kicker">这条路暂时关闭</span>
-          <span className="session-choice__title mt-1">{choice.title}</span>
+          <span className="ds-badge ds-badge--unknown">这条路暂时关闭</span>
+          <span className="session-choice__title mt-2">{choice.title}</span>
           {choice.description ? (
             <span className="session-choice__hint">{choice.description}</span>
           ) : null}
@@ -107,13 +107,27 @@ export function SessionChoiceCard({
         onClick={() => onChoose(choice.id)}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left"
       >
+        {/* 序号由 CSS counter 生成：观象厅的每一条路都有编号 */}
+        <span aria-hidden="true" className="session-choice__index" />
         <ChoiceWorldline accent={isUnlock ? 'unlock' : 'normal'} />
         <span className="min-w-0 flex-1">
-          {isUnlock ? <span className="session-choice__badge">◆ 借来的经验</span> : null}
+          {isUnlock ? <span className="ds-badge ds-badge--unlock">经验解锁</span> : null}
           <span className="session-choice__title">{choice.title}</span>
           {choice.description ? (
             <span className="session-choice__hint">{choice.description}</span>
           ) : null}
+        </span>
+        {/* 箭头一律内联 SVG，不用 `→` 字符（DESIGN-SYSTEM §7 Don't #6） */}
+        <span aria-hidden="true" className="session-choice__chevron">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path
+              d="M2.8 7h7.4M7.4 3.6 10.8 7l-3.4 3.4"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </span>
       </button>
 

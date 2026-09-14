@@ -109,17 +109,17 @@ export function SessionCollisionStage({
                   aria-pressed={active}
                   disabled={onSelectFocus === undefined}
                   onClick={() => onSelectFocus?.(focus.id)}
-                  className="min-h-11 rounded-full border px-4 font-mono text-[12px] transition-colors duration-200 disabled:opacity-60"
+                  className="ds-badge min-h-11 px-4 text-[12px] transition-colors duration-200 disabled:opacity-60"
                   style={
                     active
                       ? {
-                          borderColor: 'rgb(var(--obs-rgb-counter) / 0.6)',
-                          background: 'rgb(var(--obs-rgb-counter) / 0.12)',
-                          color: 'var(--obs-counter-soft)',
+                          borderColor: 'rgb(var(--ds-rgb-counter) / 0.6)',
+                          background: 'rgb(var(--ds-rgb-counter) / 0.12)',
+                          color: 'var(--ds-counter-soft)',
                         }
                       : {
-                          borderColor: 'var(--obs-hairline)',
-                          color: 'var(--obs-text-1)',
+                          borderColor: 'var(--ds-hairline)',
+                          color: 'var(--ds-text-1)',
                         }
                   }
                 >

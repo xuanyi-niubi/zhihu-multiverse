@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 
 import { createOpenAiCompatibleClient, type DmModelClient } from '@/core/dm/provider';
-import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
+import { resolveModelConfigForRequest, secretOriginFor } from '@/features/run/keyResolution';
 import { createTrace } from '@/core/observability';
+import { appDailyLlmBudget } from '@/core/usage/budget';
+import { appIpLlmWindow, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
 import { createBossCache, evaluateBoss, type BossCache, type BossVerdict } from '@/core/run/bossJudge';
 import { clampUnit, type WorldState } from '@/core/run/worldState';
 
@@ -96,10 +98,28 @@ export function normalizeWorld(raw: unknown): WorldState | null {
 /**
  * 解析模型客户端：**账号配置优先，环境变量兜底**（见 `keyResolution`）。
  * 没配任何 key 时返回 null —— 判卷自动走本地规则，终局不会卡住。
+ *
+ * 防刷纪律（方案 §7 补充层）：本端点不带会话上下文，任何人都能反复 POST
+ * 让服务器 key 逐次判卷。所以 `origin.model === 'app'` 时必须先过
+ * IP 窗口 + 全站每日预算 —— 超限**不报错**，直接返回 null 让判卷走
+ * 本地规则（与「模型不可用」同一条降级路径，终局绝不因此卡住）。
+ * 自带 key 的访客不经过任何一道闸。
  */
 export function resolveBossClient(request: Request): DmModelClient | null {
   const config = resolveModelConfigForRequest(request);
-  return config ? createOpenAiCompatibleClient(config) : null;
+  if (!config) {
+    return null;
+  }
+  if (secretOriginFor(request).model === 'app') {
+    const ipDecision = appIpLlmWindow.consume(clientIpFromHeaders(request.headers));
+    if (!ipDecision.allowed) {
+      return null;
+    }
+    if (!appDailyLlmBudget.consume().allowed) {
+      return null;
+    }
+  }
+  return createOpenAiCompatibleClient(config);
 }
 
 /** 判卷主体。抽成函数是为了让测试注入假客户端与独立缓存。 */

@@ -22,6 +22,8 @@
  * 这里用「记录最近 N 次的时间戳」的滑动窗口，实现同样没有外部依赖。
  */
 
+import { usageLimitsFromEnv } from './limits';
+
 export interface QuotaDecision {
   readonly allowed: boolean;
   /** 被拒时的一句话原因；允许时为 null。 */
@@ -118,5 +120,15 @@ export class SessionQuota {
   }
 }
 
-/** 进程级默认配额：路由直接用这一个（单实例前提同 budget）。 */
-export const appSessionQuota = new SessionQuota();
+/**
+ * 进程级默认配额：路由直接用这一个（单实例前提同 budget）。
+ *
+ * 数字来自 `APP_MAX_SESSIONS_PER_HOUR` / `APP_MAX_SESSIONS_PER_DAY`（`limits.ts`），
+ * 模块加载时读一次。
+ */
+const appLimits = usageLimitsFromEnv();
+
+export const appSessionQuota = new SessionQuota({
+  perHour: appLimits.sessionsPerHour,
+  perDay: appLimits.sessionsPerDay,
+});

@@ -11,7 +11,8 @@ import { FileRealityMemoryRepository } from '@/features/reality-memory/store';
 import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
 import { readOwnSettings } from '@/features/run/identity';
 import { appSessionQuota } from '@/core/usage/rateLimit';
-import { appSessionLlmBudget } from '@/core/usage/budget';
+import { appIpSessionQuota, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
+import { allocateAppLlmCall, appDailyLlmBudget, appSessionLlmBudget } from '@/core/usage/budget';
 import { resolveZhihuConfigForRequest, secretOriginFor } from '@/features/run/keyResolution';
 
 import type { RealityMemoryEntry } from '@/features/reality-memory/domain';
@@ -84,12 +85,12 @@ export async function POST(request: Request): Promise<Response> {
    * 之所以在**建会话时**就算好：这样 `/play` 后面不需要再
    * `fetchProfile(goal)` 一次 —— 档案跟着会话走，只有一份。
    */
-  const modelConfig = resolveModelConfigForRequest(request);
+  const resolvedModelConfig = resolveModelConfigForRequest(request);
 
   /**
    * App provider 的开局配额（产品化方案 §7 / §45）。
    *
-   * 只在这一局**会用服务器 key** 时计入：用户自带 key 时花的是他自己的钱，
+   * 只在这一局**会用服务器资源**时计入：用户自带 key 时花的是他自己的钱，
    * 没有理由限制他。两道闸（每局调用数 / 每身份局数）见 `src/core/usage/`。
    */
   const origin = secretOriginFor(request);
@@ -98,12 +99,51 @@ export async function POST(request: Request): Promise<Response> {
     const quota = appSessionQuota.consume(identity.key);
     if (!quota.allowed) {
       trace.note('app-quota-exceeded');
+      /**
+       * 429 + `retryAfter`（产品化方案 §14）。
+       *
+       * 配额拒绝是**可恢复**的，所以必须把已经算好的恢复时间如实下发 ——
+       * 否则前端只能显示一句「稍后再试」，用户就一次次白撞。
+       */
       return fail({
         code: 'quota-exceeded',
         message: quota.reason ?? '这一小时的开局次数用完了，稍后再试。',
+        retryable: true,
+        retryAfterMs: quota.retryAfterMs,
         traceId: trace.traceId,
       });
     }
+
+    /**
+     * IP 闸（防刷兜底）：身份是匿名 cookie，刷子清掉 cookie 就能绕过上面
+     * 那道闸；IP 是单实例部署下客户端唯一无法凭空重置的标识。
+     *
+     * 默认比身份闸宽（`APP_MAX_SESSIONS_PER_IP_HOUR=10`）：公司 / 校园网
+     * 出口共用 IP 是正常情形，这道闸只拦「明显不是人」的量级。
+     */
+    const ipQuota = appIpSessionQuota.consume(clientIpFromHeaders(request.headers));
+    if (!ipQuota.allowed) {
+      trace.note('app-ip-quota-exceeded');
+      return fail({
+        code: 'quota-exceeded',
+        message: ipQuota.reason ?? '这个网络环境这一小时的开局次数用完了，稍后再试。',
+        retryable: true,
+        retryAfterMs: ipQuota.retryAfterMs,
+        traceId: trace.traceId,
+      });
+    }
+  }
+
+  /**
+   * 全局每日软上限（产品化方案 §7 / §13）：用满之后**只暂停 App provider**。
+   *
+   * 这一局的档案退回确定性规则、叙事退回离线 —— 会话照常建得出来（不是 500）。
+   * 自带模型 key 的访客是 `origin.model === 'account'`，根本不经过这里。
+   */
+  let modelConfig = resolvedModelConfig;
+  if (origin.model === 'app' && !appDailyLlmBudget.peek().allowed) {
+    modelConfig = null;
+    trace.note('app-daily-budget-exhausted');
   }
 
   let profile = extractProfile(question);
@@ -156,9 +196,20 @@ export async function POST(request: Request): Promise<Response> {
    *
    * 用 sessionId 做键，与后面 `/api/dm` 的叙事调用共享同一个池子 ——
    * 单局上限才有意义（少记一次会让上限虚高）。
+   *
+   * 只有**花服务器模型 key** 时才记（`origin.model === 'app'`）：旧写法用
+   * `usesAppProvider`，会把「自己配了模型 key、只是借用了 App 知乎」的访客
+   * 也算进来 —— 那笔钱是他自己出的，不该扣服务器的账。
    */
-  if (usesAppProvider && modelConfig) {
-    appSessionLlmBudget.consume(session.id);
+  if (origin.model === 'app' && modelConfig) {
+    const allocation = allocateAppLlmCall({
+      session: appSessionLlmBudget,
+      daily: appDailyLlmBudget,
+      key: session.id,
+    });
+    if (!allocation.allowed) {
+      trace.note(`app-${allocation.scope}-budget-exhausted`);
+    }
   }
 
   await repository.create(session);

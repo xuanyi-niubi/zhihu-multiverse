@@ -35,11 +35,23 @@ const DIMENSIONS: readonly Dimension[] = [
   { key: 'reversibility', label: '可逆性管理', question: '你有没有给自己留退路' },
 ];
 
+/**
+ * 把浮点坐标压到 3 位小数。
+ *
+ * SSR 跑在 Node、水合跑在浏览器，两者的 `Math.cos/sin` 可能差 1 ULP。
+ * 这里的坐标还会被拼进 `points="x,y x,y …"` 字符串属性，
+ * 任何一位小数不同都会触发 hydration mismatch —— React 会丢掉整棵 SVG 重渲染，
+ * 视觉上就是一次闪烁。压到 3 位后两边逐字节一致（viewBox 100 下毫无损失）。
+ */
+function snap(value: number): number {
+  return Number(value.toFixed(3));
+}
+
 /** 四维落在四个象限上；半径按分值缩放。 */
 function polar(index: number, value: number): { readonly x: number; readonly y: number } {
   const angle = (Math.PI * 2 * index) / DIMENSIONS.length - Math.PI / 2;
   const radius = (Math.max(0, Math.min(100, value)) / 100) * 46;
-  return { x: 50 + radius * Math.cos(angle), y: 50 + radius * Math.sin(angle) };
+  return { x: snap(50 + radius * Math.cos(angle)), y: snap(50 + radius * Math.sin(angle)) };
 }
 
 export function ClarityRadar({ score, className = '' }: ClarityRadarProps) {

@@ -116,8 +116,12 @@ export function BossTerminal({
           {trimmed.length} / {maxLength}（至少 {minLength}）
         </span>
         {error ? (
-          <span className="text-[10px] text-relic-danger">
-            提交失败：{error} —— 可以重试，或直接放弃提交
+          /**
+           * 05_AGENT §9：原因码（`invalid-response` / `network-error` 这类技术细节）
+           * 不进页面文案，只留在 `data-boss-error` 里给排查用。
+           */
+          <span className="text-[10px] text-relic-danger" data-boss-error={error}>
+            这次提交没能完成 —— 可以重试，或直接放弃提交
           </span>
         ) : null}
       </div>

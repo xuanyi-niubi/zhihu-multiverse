@@ -5,9 +5,9 @@ import * as React from 'react';
 import type { ClarifyQuestion } from '@/features/decision-session/clarify';
 
 /**
- * 澄清：**一题一屏**（产品化方案 §15 / §46）。
+ * 澄清：**一题一屏**（产品化方案 §15 / §46；观象厅外观 04_AGENT §17 / §18）。
  *
- * ## 为什么改成一题一屏
+ * ## 为什么是一题一屏
  *
  * 旧版把所有澄清问题一次性铺在一个面板里，还要在问题外层再套 panel ——
  * 「panel 套 panel」在手机上会变成一屏三四个框，用户不知道先看哪个。
@@ -25,8 +25,13 @@ import type { ClarifyQuestion } from '@/features/decision-session/clarify';
  *
  * 1. **能跳过**：跳过是明确动作（再点一次取消选择），跳过的地方系统写
  *    「待验证」，不替用户猜。
- * 2. **不造第二题**：只有服务端真的返回了第二题才显示 —— 方案 §7 的原则是
+ * 2. **不造第二题**：只有服务端真的返回了第二题才显示 —— 原则是
  *    「能不问就不问」，而服务端只会在答案会改变检索 / 世界 / 实验时才问。
+ *
+ * ## 外观（04_AGENT）
+ *
+ * 观测玻璃 + 发丝线 + 极细刻度；选项是「刻度上的一个可选项」，
+ * 不是街机按钮。这里只改外观，不碰提交逻辑。
  */
 
 export interface ClarificationStepProps {
@@ -61,8 +66,8 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
   }
 
   return (
-    <section className="mt-8">
-      <p className="text-[13px] leading-relaxed text-slate-400">
+    <section className="mt-4">
+      <p className="text-[13px] leading-relaxed text-[color:var(--obs-text-1)]">
         {questions.length > 1
           ? `我还差一点信息。一共 ${questions.length} 个问题，都可以跳过。`
           : '我还差一点信息。可以跳过。'}
@@ -71,15 +76,17 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
       <div
         key={question.id}
         className={[
-          'quiet-panel mt-4 transition-opacity duration-200',
+          'obs-glass mt-4 px-4 py-4 transition-opacity duration-200',
           leaving ? 'opacity-0' : 'fade-in opacity-100',
         ].join(' ')}
       >
-        <p className="text-[16px] font-semibold leading-relaxed text-slate-100">
+        <p className="text-[16px] font-semibold leading-relaxed text-[color:var(--obs-text-0)]">
           {question.question}
         </p>
         {question.hint ? (
-          <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500">{question.hint}</p>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+            {question.hint}
+          </p>
         ) : null}
 
         <div className="mt-3.5 flex flex-wrap gap-2">
@@ -98,10 +105,10 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
                   }))
                 }
                 className={[
-                  'rounded-xl border px-3 py-2 text-[13px] transition-colors duration-150',
+                  'min-h-11 border px-3.5 py-2 text-[13px] transition-[border-color,background-color,color] duration-200',
                   active
-                    ? 'border-zhihu-500/70 bg-zhihu-500/15 text-zhihu-100'
-                    : 'border-white/12 bg-white/[0.02] text-slate-400 hover:border-white/25 hover:text-slate-200',
+                    ? 'border-[color:rgb(var(--obs-rgb-path)/0.6)] bg-[color:rgb(var(--obs-rgb-path)/0.12)] text-[color:var(--obs-text-0)]'
+                    : 'border-[color:rgb(var(--obs-rgb-text-0)/0.14)] bg-[color:rgb(var(--obs-rgb-text-0)/0.02)] text-[color:var(--obs-text-1)] hover:border-[color:rgb(var(--obs-rgb-text-0)/0.3)]',
                 ].join(' ')}
               >
                 {option.label}
@@ -112,16 +119,18 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="font-mono text-[11px] text-slate-600">
+        <span className="obs-kicker">
           {questions.length > 1 ? `${index + 1} / ${questions.length}` : ''}
         </span>
         <button
           type="button"
           disabled={busy}
           onClick={goNext}
-          className="door-btn max-w-[220px] disabled:opacity-50"
+          className="session-choice max-w-[220px] justify-center disabled:opacity-50"
         >
-          {busy ? '正在整理…' : isLast ? '继续' : '下一题'}
+          <span className="session-choice__title">
+            {busy ? '正在整理…' : isLast ? '继续' : '下一题'}
+          </span>
         </button>
       </div>
     </section>

@@ -108,6 +108,27 @@ export default function JournalPage() {
   const [memory, setMemory] = React.useState<readonly MemoryEntry[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
+  /**
+   * 卡册（GAME-DESIGN §4.4）：借来过的世界。
+   *
+   * 跨局去重所有「真实走法」标签，走过的路一张卡；卡册尾部永远留两个
+   * 未显影空槽「还没走过的世界」—— 它不是进度条（没有 0/10），
+   * 是提醒：世界比你看过的大。没有走过任何世界时整个卡册不渲染
+   * （本页纪律：没有数据的步骤不渲染）。
+   */
+  const walkedWorlds = React.useMemo(() => {
+    const seen = new Set<string>();
+    for (const entry of entries ?? []) {
+      for (const label of entry.pathLabels ?? []) {
+        const trimmed = label.trim();
+        if (trimmed.length > 0) {
+          seen.add(trimmed);
+        }
+      }
+    }
+    return [...seen].slice(0, 6);
+  }, [entries]);
+
   React.useEffect(() => {
     const controller = new AbortController();
     void (async () => {
@@ -175,6 +196,35 @@ export default function JournalPage() {
 
       {entries === null && !error ? (
         <p className="mt-6 font-mono text-[11px] text-slate-500">正在读取…</p>
+      ) : null}
+
+      {/*
+        卡册（GAME-DESIGN §4.4）：借来过的世界 + 未显影空槽。
+        空槽不可点、永不补全 —— 「还没走过的世界」只有一个状态。
+      */}
+      {walkedWorlds.length > 0 ? (
+        <section className="mt-5 rounded-2xl border border-white/10 bg-ink-800/50 p-3.5">
+          <h2 className="text-[12px] font-semibold text-slate-200">借来过的世界</h2>
+          <div className="gd-album mt-3">
+            {walkedWorlds.map((label, index) => (
+              <div key={label} className="gd-album__slot">
+                <span className="gd-album__slot-kicker">
+                  World · {String(index + 1).padStart(3, '0')}
+                </span>
+                <span className="gd-album__slot-title">{label}</span>
+              </div>
+            ))}
+            {[0, 1].map((slot) => (
+              <div key={`undev-${slot}`} className="gd-album__slot gd-album__slot--undev" aria-label="还没走过的世界">
+                <span className="gd-album__slot-kicker">Undeveloped</span>
+                <span className="gd-album__slot-title">还没走过的世界</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+            每一张都是某个知乎答主真实走过的一段路。空着的不是待解锁，是世界本来就比你看过的大。
+          </p>
+        </section>
       ) : null}
 
       {entries !== null && entries.length === 0 ? (

@@ -12,7 +12,8 @@ import {
   secretOriginFor,
 } from '@/features/run/keyResolution';
 import { createTrace } from '@/core/observability';
-import { appSessionLlmBudget } from '@/core/usage/budget';
+import { allocateAppLlmCall, appDailyLlmBudget, appSessionLlmBudget } from '@/core/usage/budget';
+import { appIpLlmWindow, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
 import { createZhihuClient } from '@/core/zhihu/client';
 import { buildSearchQuery } from '@/core/zhihu/query';
 import { toDmSnippets } from '@/core/zhihu/snippets';
@@ -77,7 +78,26 @@ export async function POST(request: Request): Promise<Response> {
 
     // 用知乎搜索为这一回合补充真实站内语料：DM 据此生成，前端据此展示溯源角标
     const zhihuConfig = resolveZhihuConfigForRequest(request);
-    if (zhihuConfig && input.zhihuSnippets.length === 0) {
+    const origin = secretOriginFor(request);
+
+    /**
+     * IP 闸（防刷兜底，方案 §7 补充层）：本端点不以「开局」为入口，
+     * legacy 模式下攻击者可以换着 goal 逐次白嫖服务器的模型与知乎额度
+     * （每换一个 goal 就是一个新的每局预算桶）。身份 cookie 又能被重置，
+     * 所以花服务器钱之前先过 IP 窗口 —— 超限**不报错**，照常降级到
+     * 蓝图语料 / 离线叙事，这一局绝不中断。
+     */
+    const usesAppProvider = origin.model === 'app' || origin.zhihu === 'app';
+    let ipAllowed = true;
+    if (usesAppProvider) {
+      const ipDecision = appIpLlmWindow.consume(clientIpFromHeaders(request.headers));
+      ipAllowed = ipDecision.allowed;
+      if (!ipAllowed) {
+        trace.note('app-ip-window-exhausted');
+      }
+    }
+
+    if (zhihuConfig && ipAllowed && input.zhihuSnippets.length === 0) {
       const zhihu = createZhihuClient(zhihuConfig);
       // 按幕次派生差异化 query：四幕都用玩家原话会命中同一批语料，
       // 导致溯源角标反复指向同一答主（详见 core/zhihu/query.ts）
@@ -107,23 +127,34 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const resolvedConfig = resolveModelConfigForRequest(request);
-    const origin = secretOriginFor(request);
 
     /**
-     * App provider 的**每局调用预算**（方案 §7 / §8 / §45）。
+     * App provider 的**用量预算**（方案 §7 / §8 / §13 / §45）。
      *
-     * 只有花服务器 key 时才计数；用满就把这一回合降级成离线叙事 ——
-     * **绝不中断这一局**（用户看到的是叙事风格变化，不是报错）。
+     * 两道闸一起过：全局每日软上限 + 本局调用上限。任一道用满就把这一回合
+     * 降级成离线叙事 —— **绝不中断这一局**（用户看到的是叙事风格变化，不是报错），
+     * 也绝不把整个站点打成 5xx。
+     *
+     * IP 闸已在上面计过一次数：这里不再重复扣（一次请求 = 一次花钱调用）。
      */
     let config = resolvedConfig;
     let budgetReason: string | null = null;
     if (resolvedConfig && origin.model === 'app') {
-      const budgetKey = input.worldContext?.sessionId ?? `goal:${input.goal.slice(0, 60)}`;
-      const budget = appSessionLlmBudget.consume(budgetKey);
-      if (!budget.allowed) {
+      if (!ipAllowed) {
         config = null;
-        budgetReason = budget.reason;
-        trace.note('app-budget-exhausted');
+        budgetReason = '这个网络环境这一小时的使用次数已到上限，剩下的部分走离线叙事。';
+      } else {
+        const budgetKey = input.worldContext?.sessionId ?? `goal:${input.goal.slice(0, 60)}`;
+        const allocation = allocateAppLlmCall({
+          session: appSessionLlmBudget,
+          daily: appDailyLlmBudget,
+          key: budgetKey,
+        });
+        if (!allocation.allowed) {
+          config = null;
+          budgetReason = allocation.reason;
+          trace.note(`app-${allocation.scope}-budget-exhausted`);
+        }
       }
     }
 

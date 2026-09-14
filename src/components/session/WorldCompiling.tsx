@@ -2,19 +2,22 @@
 
 import * as React from 'react';
 
+import { WorldCompileScene } from '@/components/visual/WorldCompileScene';
+import {
+  COMPILE_SUBTITLE,
+  type ArchivePhase,
+  type FragmentTrack,
+} from '@/features/visual/archive';
+
 /**
- * 世界编译：把「等待」做成体验点，而不是缺陷（方案 §16 / §17 / §41 / §46）。
+ * World Compiling —— 把「等待」做成体验点，而不是缺陷（报告 §7 / §8 / §9 / §26.3）。
  *
  * ## 核心纪律：**只显示真的发生了的事**
  *
- * 旧版是「正在找……正在编译……」两行字。方案要求让用户感到系统真的在知乎里
- * 寻找不同的人生，但同时明确禁止假动画：
+ * 报告 §7 要求屏幕边缘逐渐出现真实 exactQuote 短片段，但同一份报告与
+ * 产品宪法都禁止假动画。所以这里的每一行/每个亮点都对应一个**真实信号**：
  *
- * > 只有真实完成后才能打 ✓。不能假动画。
- *
- * 所以这里的每一行都对应一个**真实信号**：
- *
- * | 行 | ✓ 的条件 |
+ * | 信号 | 真实来源 |
  * |---|---|
  * | 找到与你处境相近的经历 | 检索结果里真的存在 `purposes` 含 similar-person 的片段 |
  * | 找到另一种走法 | 真的存在 alternative 的片段 |
@@ -25,7 +28,7 @@ import * as React from 'react';
  *
  * ## 视觉
  *
- * 三条极淡的「人生轨迹」线；找到来源时线上亮点并缓慢亮起（§17）。
+ * 三条极淡的「人生轨道」在 `WorldCompileScene` 里汇聚成一个点；
  * 没有进度百分比、没有 terminal 日志、没有技术指标。
  */
 
@@ -45,6 +48,12 @@ export interface WorldCompilingProps {
   readonly className?: string;
 }
 
+const TRACK_OF: Readonly<Record<CompileIntentId, FragmentTrack>> = {
+  'similar-person': 'similar',
+  alternative: 'alternative',
+  counterexample: 'counter',
+};
+
 function StageRow({ stage }: { readonly stage: CompileStage }) {
   const searching = stage.found === null;
   const hit = (stage.found ?? 0) > 0;
@@ -56,10 +65,10 @@ function StageRow({ stage }: { readonly stage: CompileStage }) {
         className={[
           'mt-[3px] flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px]',
           searching
-            ? 'border-white/15 text-slate-600'
+            ? 'border-white/15 text-archive-600'
             : hit
-              ? 'border-relic-jade/60 bg-relic-jade/15 text-relic-jade'
-              : 'border-white/12 text-slate-600',
+              ? 'border-unlock/60 bg-unlock/15 text-unlock'
+              : 'border-white/12 text-archive-600',
         ].join(' ')}
       >
         {searching ? '·' : hit ? '✓' : '—'}
@@ -68,7 +77,7 @@ function StageRow({ stage }: { readonly stage: CompileStage }) {
         <span
           className={[
             'block text-[13px] leading-relaxed',
-            searching ? 'text-slate-500' : hit ? 'text-slate-200' : 'text-slate-500',
+            searching ? 'text-archive-600' : hit ? 'text-archive-200' : 'text-archive-600',
           ].join(' ')}
         >
           {stage.label}
@@ -81,7 +90,7 @@ function StageRow({ stage }: { readonly stage: CompileStage }) {
             />
           ) : null}
         </span>
-        <span className="mt-1 block font-mono text-[10px] text-slate-600">
+        <span className="mt-1 block font-mono text-[10px] text-archive-600">
           {searching
             ? '正在找…'
             : hit
@@ -94,33 +103,44 @@ function StageRow({ stage }: { readonly stage: CompileStage }) {
 }
 
 export function WorldCompiling({ stages, phase, className = '' }: WorldCompilingProps) {
-  const headline =
-    phase === 'searching'
-      ? '正在寻找走过这些路的人…'
-      : phase === 'compiling'
-        ? '正在把这些人生编译进你的世界…'
-        : '你的世界已经编译完成。';
+  const ready = phase === 'done';
+  const archivePhase: ArchivePhase = ready ? 'ready' : 'searching';
+  const title = ready ? 'WORLD READY' : 'WORLD COMPILING';
+  const subtitle = ready ? '这些真实人生已经归入这一局。' : COMPILE_SUBTITLE;
+
+  const tracks = stages.map((stage) => ({
+    id: TRACK_OF[stage.id],
+    label: stage.label,
+    count: stage.found,
+  }));
+
+  const foundTotal = stages.reduce((sum, stage) => sum + (stage.found ?? 0), 0);
 
   return (
-    <section className={['mt-10', className].filter(Boolean).join(' ')} aria-live="polite">
-      <div className="flex items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className={[
-            'h-1.5 w-1.5 rounded-full',
-            phase === 'done' ? 'bg-relic-jade' : 'bg-zhihu-400 animate-pulse',
-          ].join(' ')}
-        />
-        <p className="text-[14px] font-semibold text-slate-200">{headline}</p>
+    <section className={['mt-8', className].filter(Boolean).join(' ')} aria-live="polite">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2
+          className="text-[20px] font-black tracking-[0.06em] text-archive-100 sm:text-[24px]"
+          style={ready ? { animation: 'arc-fragment-arrive 620ms var(--arc-ease) both' } : undefined}
+        >
+          {title}
+        </h2>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-archive-600">
+          {ready ? `${foundTotal} 段真实经历` : 'SEARCHING'}
+        </span>
       </div>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-archive-400">{subtitle}</p>
 
-      <ul className="mt-4">
+      <WorldCompileScene tracks={tracks} phase={archivePhase} className="mt-4" />
+
+      {/* 每一条轨道此刻到底找到没有 —— 只写真实状态 */}
+      <ul className="mt-2">
         {stages.map((stage) => (
           <StageRow key={stage.id} stage={stage} />
         ))}
       </ul>
 
-      <p className="mt-4 text-[11px] leading-relaxed text-slate-600">
+      <p className="mt-3 text-[11px] leading-relaxed text-archive-600">
         每一条都来自知乎上的真实回答，且只能逐字引用 ——
         改一个字我们就会丢掉它，宁可少一条。
       </p>

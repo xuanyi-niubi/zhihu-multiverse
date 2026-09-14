@@ -2,7 +2,7 @@
   "name": "zhihu-multiverse",
   "version": "0.1.0",
   "private": true,
-  "description": "知乎平行宇宙 · 基于真实知乎语料的校园人生 Roguelike 推演机",
+  "description": "知乎平行宇宙 · 把知乎真实人生经验编译成互动世界：别人走过的路，会解锁你原本没想到的下一步。",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -26,6 +26,8 @@
     "@types/react": "18.3.5",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.15",
     "postcss": "8.4.45",
     "tailwindcss": "3.4.10",
     "typescript": "5.5.4",

@@ -3,6 +3,7 @@
 import * as React from 'react';
 
 import { UNKNOWN_CONTINUE_LABEL } from '@/components/game/session/viewModel';
+import { Undeveloped } from '@/components/visual/Undeveloped';
 import type { SessionUnknownView } from '@/components/game/session/types';
 
 /**
@@ -45,34 +46,37 @@ export function SessionUnknownStage({
       data-unknown={view.unknownLabel}
       aria-label="现实信息不足"
     >
-      <div className="obs-fog rounded-2xl px-4 py-4">
+      <div className="obs-fog px-4 py-4">
         <span aria-hidden="true" className="obs-fog__track" />
 
-        <p className="obs-fog__label relative">REALITY REQUIRED</p>
+        <p className="ds-kicker relative" style={{ color: 'var(--ds-undev-text)' }}>
+          Reality Required
+        </p>
 
         {/* 固定文案，不是模型生成的一句安慰（§十八）。 */}
         <p
-          className="relative mt-2 text-[15px] font-semibold leading-relaxed"
-          style={{ color: 'var(--obs-text-1)' }}
+          className="ds-body relative mt-2 font-semibold"
+          style={{ color: 'var(--ds-text-1)' }}
         >
           {view.explanation}
         </p>
 
+        {/* 未显影语法：这里没有内容，而且**永远不会被填满**（DS §4.3） */}
         {view.unknownLabel ? (
-          <p className="relative mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--obs-text-2)' }}>
-            还没有答案的是：{view.unknownLabel}
-          </p>
+          <div className="relative mt-3">
+            <Undeveloped label="Reality Required">{view.unknownLabel}</Undeveloped>
+          </div>
         ) : null}
 
         {view.blockedActions.length > 0 ? (
-          <div className="relative mt-3 border-t pt-2.5" style={{ borderColor: 'var(--obs-hairline)' }}>
-            <p className="obs-kicker">暂时做不了的行动</p>
+          <div className="relative mt-3 border-t pt-2.5" style={{ borderColor: 'var(--ds-hairline)' }}>
+            <p className="ds-kicker">暂时做不了的行动</p>
             <ul className="mt-1.5 flex flex-col gap-1">
               {view.blockedActions.map((action) => (
                 <li
                   key={action}
-                  className="text-[12px] leading-relaxed"
-                  style={{ color: 'var(--obs-text-1)' }}
+                  className="ds-caption"
+                  style={{ color: 'var(--ds-text-1)' }}
                 >
                   · {action}
                 </li>

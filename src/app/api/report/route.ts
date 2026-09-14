@@ -3,13 +3,19 @@ import { NextResponse } from 'next/server';
 import { generateReport, type RunReportInput } from '@/core/dm/report';
 import { createOpenAiCompatibleClient } from '@/core/dm/provider';
 import { clampTotalTurns, clampTurnIndex, MAX_TURNS } from '@/core/run/actRun';
-import { resolveModelConfigForRequest } from '@/features/run/keyResolution';
+import { resolveModelConfigForRequest, secretOriginFor } from '@/features/run/keyResolution';
+import { appDailyLlmBudget } from '@/core/usage/budget';
+import { appIpLlmWindow, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
 
 /**
  * 终局复盘接口。
  *
  * 与 `/api/dm` 同样的契约：**永远返回 HTTP 200 与一段可用文本**。
  * 模型不可用或超时就回落到确定性模板，前端不需要处理错误分支。
+ *
+ * 防刷纪律（方案 §7 补充层）：花服务器钱（`origin.model === 'app'`）之前
+ * 先过 IP 窗口 + 全站每日预算；超限静默回落确定性模板 —— 与「模型不可用」
+ * 同一条降级路径。自带 key 的访客不经过任何一道闸。
  */
 
 export const runtime = 'nodejs';
@@ -70,7 +76,16 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const config = resolveModelConfigForRequest(request);
+    let config = resolveModelConfigForRequest(request);
+
+    // 只对花服务器钱的请求计数；超限 = 静默走模板，不是错误
+    if (config && secretOriginFor(request).model === 'app') {
+      const ipDecision = appIpLlmWindow.consume(clientIpFromHeaders(request.headers));
+      if (!ipDecision.allowed || !appDailyLlmBudget.consume().allowed) {
+        config = null;
+      }
+    }
+
     const client = config ? createOpenAiCompatibleClient(config) : null;
 
     const result = await generateReport(input, { client });

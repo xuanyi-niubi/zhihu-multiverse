@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
+import { cardTitlesFrom } from '@/features/game-world/cardTitles';
 import { isUsableTitle, withUnlockTitles } from '@/features/game-world/unlockTitles';
 
 import type {
+  ExperienceCase,
   ExperienceFact,
   ExperiencePath,
   ProblemFrame,
   UnknownVariable,
 } from '@/features/experience/domain';
+import type { ExperienceChoiceUnlock } from '@/features/game-world/domain';
 
 /**
  * 世界蓝图编译（Phase 10 / P0-F）。
@@ -314,5 +317,61 @@ describe('解锁标题的护栏（§24）', () => {
     const result = await withUnlockTitles({ unlocks: [unlock], facts: [], router: null });
     expect(result).toBe(result);
     expect(result[0]!.label).toBe('原来的标签');
+  });
+});
+
+/**
+ * 经验卡抬头（§24）：复用解锁项已有的行动式标题，不额外生成一个字。
+ */
+describe('经验卡抬头复用解锁标题（§24）', () => {
+  function experienceCase(id: string, actions: readonly ExperienceFact[]): ExperienceCase {
+    return {
+      id,
+      sourceId: 'live:src-1',
+      sourceUrl: 'https://www.zhihu.com/q/1',
+      author: '某人',
+      conditions: [],
+      actions,
+      costs: [],
+      outcomes: [],
+      reflections: [],
+    };
+  }
+
+  it('把解锁标题映射到包含其来源片段的卡上', () => {
+    const unlock: ExperienceChoiceUnlock = {
+      id: 'unlock-path-1',
+      label: '先验证，再下注',
+      description: '先做一个小样再决定',
+      sourceFactIds: ['fact:1'],
+      choice: { text: '按「先验证，再下注」的路子先试一小步', hint: 'h' },
+      availableFromAct: 2,
+    };
+    const cases = [experienceCase('case:live:src-1', [fact('fact:1', 'action', '先做一个小样再决定')])];
+
+    expect(cardTitlesFrom([unlock], cases)).toEqual({ 'case:live:src-1': '先验证，再下注' });
+  });
+
+  it('没有对应解锁的卡不硬塞标题（宁可不给）', () => {
+    const cases = [experienceCase('case:live:src-1', [fact('fact:1', 'action', '先做一个小样再决定')])];
+    expect(cardTitlesFrom([], cases)).toEqual({});
+  });
+
+  it('映射是纯函数：不改动输入的解锁与卡片', () => {
+    const unlock: ExperienceChoiceUnlock = {
+      id: 'unlock-path-1',
+      label: '先找人，再开局',
+      description: '先找一个同伴',
+      sourceFactIds: ['fact:1'],
+      choice: { text: '按「先找人，再开局」的路子先试一小步', hint: 'h' },
+      availableFromAct: 2,
+    };
+    const cases = [experienceCase('case:live:src-1', [fact('fact:1', 'action', '先找一个同伴')])];
+    const before = JSON.stringify({ unlocks: [unlock], cases });
+
+    const titles = cardTitlesFrom([unlock], cases);
+
+    expect(titles['case:live:src-1']).toBe('先找人，再开局');
+    expect(JSON.stringify({ unlocks: [unlock], cases })).toBe(before);
   });
 });

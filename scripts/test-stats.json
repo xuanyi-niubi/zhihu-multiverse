@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-13T11:49:13.774Z",
+  "generatedAt": "2026-09-14T10:17:37.737Z",
   "generator": "npm run test:stats",
-  "files": 76,
-  "filesPassed": 76,
-  "tests": 1195,
-  "passed": 1195,
-  "failed": 0,
-  "success": true,
-  "wallClockMs": 6395
+  "files": 98,
+  "filesPassed": 96,
+  "tests": 1537,
+  "passed": 1532,
+  "failed": 5,
+  "success": false,
+  "wallClockMs": 10213
 }

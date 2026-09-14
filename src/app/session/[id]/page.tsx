@@ -5,30 +5,43 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 import { ClarificationStep } from '@/components/session/ClarificationStep';
-import { WorldCompiling, type CompileStage } from '@/components/session/WorldCompiling';
+import { AuroraBand } from '@/components/visual/AuroraBand';
+import { ArrivalFlash } from '@/components/visual/UniverseJump';
+import { WorldForge, type ForgePhase, type ForgeShard, type ForgeStage } from '@/components/visual/WorldForge';
+import { KanshanSprite } from '@/components/characters/KanshanSprite';
 
+import { archiveFragments, fragmentTrackOf, roleTrackOf, type FragmentTrack } from '@/features/visual/archive';
+import { consumeJumpArrival, peekJumpQuestion } from '@/features/visual/jump';
+import {
+  AI_UNAVAILABLE,
+  CONTENT_UNAVAILABLE,
+  NETWORK_UNAVAILABLE,
+  NO_RELIABLE_EXPERIENCE,
+  playerFacingError,
+  type PlayerFacingError,
+} from '@/features/run/errorCopy';
 import type { ClarifyQuestion } from '@/features/decision-session/clarify';
 import type { DecisionSession } from '@/features/decision-session/domain';
 
 /**
- * 会话页（产品化方案 §6 / §14 / §15 / §16 / §46）。
+ * Session 编译页（04_AGENT §16 / §17 / §18 / §20）。
  *
  * ## 它不是页面，是一段连续转场
  *
  * ```text
  * 必要时一题一屏的澄清
- * ↓  刘看山第一次出现（§35）
- * 「我去找找，有没有人活过你正在纠结的这几种人生。」
- * ↓  真实阶段（检索三类经历 → 编译世界），只有真的找到才打勾
- * ↓  自动进入游戏 —— 用户不需要理解 Session / prepare-world 这些词
+ * ↓  World Forge：中央是用户的问题，外围是三条人生轨道
+ * ↓  真实片段 materialize（只显示一行/两行 exactQuote，不展示完整卡）
+ * ↓  三轨向中央收束 → WORLD READY（<= 450ms）→ 自动进入 Play
  * ```
  *
  * ## 三条纪律
  *
- * 1. **一题一屏**：不在一个面板里堆所有问题（§15）。
- * 2. **状态必须真实**：✓ 只出现在真的找到来源的那一类上（§16）。
- * 3. **失败可退可重试**：没找到就如实说，给「换个说法」与「仍然进入」两条路，
- *    不把用户困在一个转圈页上（§40 的 fallback 链终点是「明确失败」）。
+ * 1. **API 调用一行没动**：这里只换了 presentation（§16）。
+ * 2. **状态必须真实**（§18）：只显示五个真实阶段，没有假百分比、
+ *    没有假的「找到 N 位用户」；✓ 只出现在真的拿到片段的那一类上。
+ * 3. **失败可退可重试**：没找到就如实说，给「修改问题」与「重新尝试」两条路
+ *    （05_AGENT §9：错误态只出人话，429 / provider exception 一律不出现在页面上）。
  */
 
 interface SessionView {
@@ -44,35 +57,74 @@ interface SessionView {
   readonly followUp: DecisionSession['followUp'];
   readonly questions: readonly ClarifyQuestion[];
   readonly experienceFacts?: DecisionSession['experienceFacts'];
+  /**
+   * 世界蓝图里每一幕引用了哪些片段、扮演什么角色。
+   *
+   * 离线兜底的片段常常没有 `purposes`，但蓝图一定标了 `evidenceRole` ——
+   * 所以三条轨道的归类优先用检索意图、其次用这个**已经编译出来的真实角色**。
+   */
+  readonly worldBlueprint?: {
+    readonly acts: readonly {
+      readonly evidenceRole?: 'support' | 'cost' | 'counterexample' | 'reflection';
+      readonly experienceFactIds?: readonly string[];
+    }[];
+  };
 }
 
-const INTENT_LABELS: readonly { readonly id: CompileStage['id']; readonly label: string }[] = [
-  { id: 'similar-person', label: '找到与你处境相近的经历' },
-  { id: 'alternative', label: '找到另一种走法' },
-  { id: 'counterexample', label: '找到一条结果相反的经历' },
-];
+/** §18 允许出现的三类检索意图（显示文案由 WorldForge 统一负责）。 */
+const INTENT_IDS = ['similar-person', 'alternative', 'counterexample'] as const;
 
-/** 从**真实检索结果**派生三类经历的命中数（没找到就是 0，不假装）。 */
-function stagesFrom(view: SessionView | null): readonly CompileStage[] {
+const INTENT_TRACK: Readonly<Record<(typeof INTENT_IDS)[number], FragmentTrack>> = {
+  'similar-person': 'similar',
+  alternative: 'alternative',
+  counterexample: 'counter',
+};
+
+/**
+ * 一条片段该进哪条轨道：**检索意图优先，蓝图证据角色兜底**。
+ *
+ * 两者都是真实标注 —— 意图来自检索规划，角色来自世界编译，
+ * 不是为了让三条轨道看起来满而补造的分类。
+ */
+function trackResolverFor(
+  view: SessionView | null,
+): (fact: NonNullable<SessionView['experienceFacts']>[number]) => FragmentTrack | null {
+  const roleByFact = new Map<string, FragmentTrack>();
+  for (const act of view?.worldBlueprint?.acts ?? []) {
+    const track = roleTrackOf(act.evidenceRole);
+    if (!track) {
+      continue;
+    }
+    for (const id of act.experienceFactIds ?? []) {
+      if (!roleByFact.has(id)) {
+        roleByFact.set(id, track);
+      }
+    }
+  }
+  return (fact) => fragmentTrackOf(fact.purposes) ?? roleByFact.get(fact.id) ?? null;
+}
+
+/**
+ * 从**真实检索结果**派生三类经历的命中数。
+ *
+ * `found === null` 表示还没拿到结果 —— 编译中不猜数字（§18 禁止假进度）。
+ */
+function stagesFrom(view: SessionView | null, settled: boolean): readonly ForgeStage[] {
   const facts = view?.experienceFacts ?? [];
-  return INTENT_LABELS.map((intent) => ({
-    id: intent.id,
-    label: intent.label,
-    found:
-      view === null
-        ? null
-        : facts.filter((fact) => {
-            if (intent.id === 'counterexample') {
-              // 反例这一类把失败经历也算上（与 compileWorld 的四轮优先级同一口径）
-              return fact.purposes.includes('counterexample') || fact.purposes.includes('failure');
-            }
-            return fact.purposes.includes(intent.id);
-          }).length,
+  const resolveTrack = trackResolverFor(view);
+  return INTENT_IDS.map((id) => ({
+    id,
+    found: view === null || !settled
+      ? null
+      : facts.filter((fact) => resolveTrack(fact) === INTENT_TRACK[id]).length,
   }));
 }
 
-/** 编译完成后，让用户看一眼真实结果再进入游戏 —— 不留白，也不拖延。 */
-const ENTER_DELAY_MS = 1400;
+/** §20 的时间预算：收束 700ms + WORLD READY 420ms。 */
+const ASSEMBLE_MS = 700;
+const READY_MS = 420;
+/** 每类轨道最多上墙 2 条：编译页只露碎片，不摊开整张卡（§19）。 */
+const SHARDS_PER_TRACK = 2;
 
 export default function SessionPage() {
   const params = useParams<{ id: string }>();
@@ -81,9 +133,45 @@ export default function SessionPage() {
 
   const [view, setView] = React.useState<SessionView | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<PlayerFacingError | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [compileFailed, setCompileFailed] = React.useState(false);
+  /** 三轨收束 → WORLD READY 的两拍。 */
+  const [forgeBeat, setForgeBeat] = React.useState<'assembling' | 'ready'>('assembling');
+  /** 刚才是「穿越」过来的：播一次落点环收（§15 升级版）。 */
+  const [arrived, setArrived] = React.useState(false);
+  /**
+   * 穿越带过来的问题原文。**只能在 effect 里读**：
+   * `peekJumpQuestion()` 在服务端渲染时永远是空串，渲染期直接读会造成
+   * 首帧文本不一致（hydration mismatch），那正是我们要消灭的闪烁来源。
+   */
+  const [jumpQuestion, setJumpQuestionState] = React.useState('');
+
+  React.useEffect(() => {
+    setJumpQuestionState(peekJumpQuestion());
+  }, []);
+
+  React.useEffect(() => {
+    if (!consumeJumpArrival()) {
+      return;
+    }
+    setArrived(true);
+  }, []);
+
+  /**
+   * 落点动画的收尾计时必须从 **loading 结束之后** 才开始。
+   *
+   * 原先它从挂载那一刻就启动 700ms，而数据请求通常要一秒左右 ——
+   * 计时在骨架阶段就耗光了，玩家从首页穿过来什么也看不到，
+   * 只会看到空屏「闪」一下然后整屏出现内容。
+   */
+  React.useEffect(() => {
+    if (loading || !arrived) {
+      return;
+    }
+    const timer = window.setTimeout(() => setArrived(false), 700);
+    return () => window.clearTimeout(timer);
+  }, [arrived, loading]);
 
   React.useEffect(() => {
     if (!id) {
@@ -96,7 +184,7 @@ export default function SessionPage() {
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: SessionView;
-          error?: { message?: string };
+          error?: { code?: string; message?: string };
         };
         if (controller.signal.aborted) {
           return;
@@ -104,11 +192,12 @@ export default function SessionPage() {
         if (payload.ok && payload.data) {
           setView(payload.data);
         } else {
-          setError(payload.error?.message ?? '没有找到这个会话。');
+          // §9：这里只出人话。服务端消息里的技术细节不会进页面。
+          setError(payload.error ? playerFacingError(payload.error) : CONTENT_UNAVAILABLE);
         }
       } catch {
         if (!controller.signal.aborted) {
-          setError('读取会话失败，请刷新重试。');
+          setError(NETWORK_UNAVAILABLE);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -137,19 +226,19 @@ export default function SessionPage() {
         const payload = (await response.json()) as {
           ok?: boolean;
           data?: SessionView;
-          error?: { message?: string };
+          error?: { code?: string; message?: string };
         };
         if (payload.ok && payload.data) {
           setView(payload.data);
           return;
         }
         // 编译失败要能被用户看见并重试，而不是静默停在转圈页上
-        setError(payload.error?.message ?? '这一步没有成功。');
+        setError(payload.error ? playerFacingError(payload.error) : AI_UNAVAILABLE);
         if (body.action === 'prepare-world') {
           setCompileFailed(true);
         }
       } catch {
-        setError('网络没有响应，请再试一次。');
+        setError(NETWORK_UNAVAILABLE);
         if (body.action === 'prepare-world') {
           setCompileFailed(true);
         }
@@ -161,6 +250,8 @@ export default function SessionPage() {
   );
 
   const status = view?.status ?? null;
+  const showClarify = status === 'clarifying';
+  const worldReady = status === 'ready_to_play';
 
   /** 澄清答完（或本来就不需要澄清）→ 自动编译。 */
   const autoPreparedRef = React.useRef(false);
@@ -174,36 +265,118 @@ export default function SessionPage() {
     }
   }, [act, busy, compileFailed, view]);
 
-  /** 世界就绪 → 让用户看清真实检索结果，再自动进入游戏。 */
-  const autoEnteredRef = React.useRef(false);
+  /** 世界就绪 → 三轨收束 → WORLD READY → 自动进入 Play（§20）。 */
   React.useEffect(() => {
-    if (!view || view.status !== 'ready_to_play' || autoEnteredRef.current) {
+    if (!worldReady || !view) {
+      setForgeBeat('assembling');
       return;
     }
-    autoEnteredRef.current = true;
-    const timer = window.setTimeout(() => {
+    setForgeBeat('assembling');
+    const toReady = window.setTimeout(() => setForgeBeat('ready'), ASSEMBLE_MS);
+
+    /**
+     * 一条可靠经历都没找到时**不自动带走**玩家（05_AGENT §9）。
+     *
+     * 原本这里无条件跳转，于是「这次没找到足够可靠的真实经历」只闪一下就被
+     * 世界接走了 —— 那句话根本读不完。现在这种情况停在编译页，把
+     * 「修改问题 / 重新尝试」交给玩家；想先进入也留着一条明确的出路。
+     */
+    if ((view.experienceFacts ?? []).length === 0) {
+      return () => {
+        window.clearTimeout(toReady);
+      };
+    }
+
+    const enter = window.setTimeout(() => {
       router.replace(`/play?session=${encodeURIComponent(view.id)}`);
-    }, ENTER_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [router, view]);
+    }, ASSEMBLE_MS + READY_MS);
+    return () => {
+      window.clearTimeout(toReady);
+      window.clearTimeout(enter);
+    };
+  }, [router, view, worldReady]);
 
   if (loading) {
+    /**
+     * 首屏骨架（§16「它不是页面，是一段连续转场」的延伸）。
+     *
+     * 这里原先只有一行 kicker，于是从首页穿过来看到的是：
+     * 内容收缩 → 跳转 → **几乎全黑的空屏一秒** → 整屏内容「啪」地出现。
+     * 观感上就是一次闪烁，也正是「点一下会闪、动画没了」的来源之一。
+     *
+     * 现在把编译期**真实的结构**先立起来：极光带 / 看山 computer 态 /
+     * 三条轨道。轨道用 `found: null`（= 还没拿到结果），
+     * 符合 §18「不猜数字」。数据到达后只是把数字和碎片填进去，
+     * 画面不重建，转场因此是连续的。
+     *
+     * 注意：这里只用 `KanshanSprite`（GIF 实体）。线稿剪影（`Kanshan`）已整体下架，
+     * 全项目不再有任何剪影引用。
+     */
     return (
-      <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-20">
-        <p className="font-mono text-[11px] text-slate-600">正在读取这次梳理…</p>
+      <main
+        id="main-content"
+        className="obs-shell mx-auto flex min-h-[100dvh] w-full max-w-[760px] flex-col justify-center px-5 py-14 sm:py-20"
+      >
+        <AuroraBand tone="seek" />
+
+        <header className="mb-6 flex items-center justify-between gap-3">
+          <p className="obs-kicker">The Observatory</p>
+          <Link
+            href="/"
+            className="text-[11px] text-[color:var(--obs-text-2)] transition-opacity duration-200 hover:opacity-80"
+          >
+            换个问题
+          </Link>
+        </header>
+
+        <div className="gd-guide mb-5">
+          <span className="gd-guide__base">
+            <KanshanSprite
+              characterId="kanshan"
+              action="computer"
+              className="gd-guide__sprite gd-guide__sprite--sm"
+              alt=""
+            />
+          </span>
+          <p className="gd-guide__line">
+            我去找找，有没有人活过你正在纠结的这几种人生。
+          </p>
+        </div>
+
+        <WorldForge
+          question={jumpQuestion || '正在理解你的处境'}
+          stages={stagesFrom(null, false)}
+          phase="searching"
+          fragments={[]}
+        />
+
+        {arrived ? <ArrivalFlash /> : null}
       </main>
     );
   }
 
   if (error && !view) {
     return (
-      <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-20">
-        <p role="alert" className="rounded-2xl border border-rose-400/30 bg-rose-400/[0.05] px-4 py-3 text-[13px] text-rose-200">
-          {error}
+      <main id="main-content" className="obs-shell mx-auto flex min-h-[100dvh] w-full max-w-[720px] flex-col justify-center px-5 py-20">
+        <p className="obs-kicker">Session</p>
+        <p role="alert" className="mt-4 text-[14px] leading-relaxed text-[color:var(--obs-text-1)]">
+          {error.title}
         </p>
-        <Link href="/" className="btn-ghost mt-5 inline-flex text-xs">
-          回到首页
-        </Link>
+        {error.hint ? (
+          <p className="mt-2 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">{error.hint}</p>
+        ) : null}
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="session-choice max-w-[220px] justify-center"
+          >
+            <span className="session-choice__title">重试</span>
+          </button>
+          <Link href="/" className="session-choice max-w-[220px] justify-center">
+            <span className="session-choice__title">修改问题</span>
+          </Link>
+        </div>
       </main>
     );
   }
@@ -212,103 +385,169 @@ export default function SessionPage() {
     return null;
   }
 
-  const showClarify = status === 'clarifying';
-  const worldReady = status === 'ready_to_play';
-  const stages = stagesFrom(worldReady ? view : null);
+  const stages = stagesFrom(view, worldReady);
   const foundTotal = stages.reduce((sum, stage) => sum + (stage.found ?? 0), 0);
   /**
-   * 只有两个真实状态：`searching`（等着）与 `done`（服务端已经给出结果）。
-   *
-   * 刻意不做「编译中」这一档 —— 没有流式接口之前，我们**看不见**它，
-   * 而编一个中间态就是假动画（§16 明确禁止）。
+   * 命中的真实片段（§19）：只有检索完成后才有内容可上墙。
+   * 没有片段时如实留空，不用假动画填满。
    */
-  const phase: 'searching' | 'done' = worldReady ? 'done' : 'searching';
+  const fragmentGroups = worldReady
+    ? archiveFragments(view.experienceFacts ?? [], SHARDS_PER_TRACK, trackResolverFor(view))
+    : [];
+  const shards: readonly ForgeShard[] = fragmentGroups.flatMap((group) =>
+    group.items.map((item) => ({
+      id: item.id,
+      quote: item.quote,
+      sourceLabel: `知乎 · ${item.author}`,
+      category: group.track,
+    })),
+  );
+
+  const phase: ForgePhase = showClarify || !worldReady ? (showClarify ? 'understanding' : 'searching') : forgeBeat;
 
   return (
-    <main id="main-content" className="mx-auto w-full max-w-[640px] flex-1 px-5 py-16">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="act-label">你问的是</p>
-          <h1 className="mt-1.5 text-[16px] font-semibold leading-relaxed text-slate-100">
-            {view.question}
-          </h1>
-        </div>
-        <Link href="/" className="shrink-0 font-mono text-[11px] text-slate-600 transition-colors duration-200 hover:text-slate-300">
+    <main
+      id="main-content"
+      className="obs-shell mx-auto flex min-h-[100dvh] w-full max-w-[760px] flex-col justify-center px-5 py-14 sm:py-20"
+    >
+      {/* 极光带：编译期是 seek（蓝 → 青） */}
+      <AuroraBand tone="seek" />
+
+      <header className="mb-6 flex items-center justify-between gap-3">
+        <p className="obs-kicker">The Observatory</p>
+        <Link
+          href="/"
+          className="text-[11px] text-[color:var(--obs-text-2)] transition-opacity duration-200 hover:opacity-80"
+        >
           换个问题
         </Link>
       </header>
 
-      {/* 刘看山第一次出现（§35：全局只出现三次） */}
-      <p className="mt-6 text-[14px] leading-relaxed text-slate-300">
-        我去找找，有没有人活过你正在纠结的这几种人生。
-      </p>
-
-      {error ? (
-        <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/[0.05] px-3 py-2 text-[12px] text-rose-200">
-          {error}
-        </p>
-      ) : null}
-
       {showClarify ? (
-        <ClarificationStep
-          questions={view.questions}
-          busy={busy}
-          onSubmit={(answers) => void act({ action: 'clarify', answers })}
-        />
+        <section className="obs-glass obs-brackets relative px-5 py-5 sm:px-7 sm:py-6">
+          {/*
+            看山状态机 · 动态澄清态 sway（GAME-DESIGN §4.1）：
+            它追问的不是客套，而是「会改变接下来去找谁」的事。
+          */}
+          <div className="gd-guide mb-4">
+            <span className="gd-guide__base">
+              <KanshanSprite
+                characterId="kanshan"
+                action="sway"
+                className="gd-guide__sprite gd-guide__sprite--sm"
+                alt="刘看山"
+              />
+            </span>
+            <p className="gd-guide__line">
+              只问会改变结论的事。你答的每一句，都会改变我接下来去找谁。
+            </p>
+          </div>
+          <p className="obs-kicker">正在理解你的处境</p>
+          <ClarificationStep
+            questions={view.questions}
+            busy={busy}
+            onSubmit={(answers) => void act({ action: 'clarify', answers })}
+          />
+        </section>
       ) : (
         <>
-          <WorldCompiling stages={stages} phase={phase} />
+          {/*
+            刘看山第一次出现。
+            只用官方 GIF 实体 —— 原先与它并排的线稿剪影（§33 投影形态）已下架：
+            一只手绘剪影挨着官方黏土立绘，会把两边的质感一起拉下来。
+
+            看山状态机 · 检索/编译态（GAME-DESIGN §4.1）：
+            检索与编译时它在 computer 态工作，WORLD READY 那一刻换成 wave 交接。
+          */}
+          <div className="mb-5 flex items-center gap-3">
+            <span className="gd-guide__base">
+              <KanshanSprite
+                characterId="kanshan"
+                action={worldReady ? 'wave' : 'computer'}
+                className="gd-guide__sprite gd-guide__sprite--sm"
+                alt=""
+              />
+            </span>
+            <p className="text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+              {worldReady
+                ? '找到了。走吧。'
+                : '我去找找，有没有人活过你正在纠结的这几种人生。'}
+            </p>
+          </div>
+
+          <WorldForge question={view.question} stages={stages} phase={phase} fragments={shards} />
+
+          {error ? (
+            <p role="alert" className="mt-4 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+              {error.title}
+              {error.hint ? ` ${error.hint}` : ''}
+            </p>
+          ) : null}
 
           {worldReady ? (
             <div className="mt-6">
               {foundTotal === 0 ? (
                 /**
-                 * 一条都没找到：§40 的 fallback 链终点是「明确失败」，
-                 * 所以这里如实说，并给两条出路 —— 不假装、也不困住用户。
+                 * 一条都没找到：如实说，并给两条出路 —— 不假装、也不困住用户。
+                 * 文案与按钮固定为 05_AGENT §9 的那一套。
                  */
-                <div className="quiet-panel">
-                  <p className="text-[13px] leading-relaxed text-slate-300">
-                    这一次没有找到可核对的真实经历 —— 我们不会用编造的内容把世界填满。
+                <div className="obs-glass px-5 py-4">
+                  <p className="text-[13px] leading-relaxed text-[color:var(--obs-text-1)]">
+                    {NO_RELIABLE_EXPERIENCE.title}
                   </p>
-                  <p className="mt-1.5 text-[12px] leading-relaxed text-slate-500">
-                    换一种说法再试（例如补上你的年级、专业、能投入的时间），通常就能找到人。
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+                    {NO_RELIABLE_EXPERIENCE.hint}
                   </p>
-                  <div className="mt-3.5 flex flex-wrap gap-3">
-                    <Link href="/" className="door-btn max-w-[240px]">
-                      换一种说法再试
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                    <Link href="/" className="session-choice justify-center sm:max-w-[240px]">
+                      <span className="session-choice__title">{NO_RELIABLE_EXPERIENCE.actions[0]}</span>
                     </Link>
+                    <button
+                      type="button"
+                      data-action="prepare-world"
+                      disabled={busy}
+                      onClick={() => void act({ action: 'prepare-world' })}
+                      className="session-choice justify-center disabled:opacity-50 sm:max-w-[240px]"
+                    >
+                      <span className="session-choice__title">
+                        {busy ? '正在重新检索…' : NO_RELIABLE_EXPERIENCE.actions[1]}
+                      </span>
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--obs-text-2)]">
+                    也可以先进入这一局：
                     <Link
                       href={`/play?session=${encodeURIComponent(id)}`}
                       data-destination="play-session"
-                      className="btn-ghost text-xs"
+                      className="ml-1 underline decoration-dotted transition-opacity duration-200 hover:opacity-80"
                     >
-                      仍然进入（这一局没有别人的经验）
+                      这一局没有别人的经验，世界仍然会走完
                     </Link>
-                  </div>
+                  </p>
                 </div>
               ) : (
                 <Link
                   href={`/play?session=${encodeURIComponent(id)}`}
                   data-destination="play-session"
-                  className="door-btn"
+                  className="session-choice session-choice--unlocked justify-center"
                 >
-                  进入我的平行宇宙
+                  <span className="session-choice__title">进入我的平行宇宙</span>
                 </Link>
               )}
             </div>
           ) : compileFailed ? (
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 data-action="prepare-world"
                 disabled={busy}
                 onClick={() => void act({ action: 'prepare-world' })}
-                className="door-btn max-w-[240px] disabled:opacity-50"
+                className="session-choice justify-center disabled:opacity-50 sm:max-w-[240px]"
               >
-                {busy ? '正在重试…' : '重试一次'}
+                <span className="session-choice__title">{busy ? '正在重试…' : '重试一次'}</span>
               </button>
-              <Link href="/" className="btn-ghost text-xs">
-                换个问题
+              <Link href="/" className="session-choice justify-center sm:max-w-[200px]">
+                <span className="session-choice__title">换个问题</span>
               </Link>
             </div>
           ) : (
@@ -319,14 +558,19 @@ export default function SessionPage() {
                 data-action="prepare-world"
                 disabled={busy}
                 onClick={() => void act({ action: 'prepare-world' })}
-                className="door-btn disabled:opacity-50"
+                className="session-choice justify-center disabled:opacity-50 sm:max-w-[280px]"
               >
-                {busy ? '正在找…' : '进入我的平行宇宙'}
+                <span className="session-choice__title">
+                  {busy ? '正在编译你的世界…' : '进入我的平行宇宙'}
+                </span>
               </button>
             </div>
           )}
         </>
       )}
+
+      {/* 落点：从首页「穿越」过来时的一次环收 + 闪白（§15 升级版） */}
+      {arrived ? <ArrivalFlash /> : null}
     </main>
   );
 }

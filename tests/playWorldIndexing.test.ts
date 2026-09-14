@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { worldContextForTurn, unlockForTurn } from '@/features/game-world/dmContext';
+import { NO_RELIABLE_EXPERIENCE } from '@/features/run/errorCopy';
 
 import type { WorldBlueprint } from '@/features/game-world/domain';
 
@@ -215,17 +216,40 @@ describe('Session 编译体验', () => {
     expect(source).toContain('hit ? \'✓\' : \'—\'');
   });
 
-  it('编译状态只有两个真实档，不编「编译中」中间态', () => {
+  it('编译阶段只有真实档：没有百分比，也没有假的中间检索态', () => {
     const source = page();
-    expect(source).toContain("const phase: 'searching' | 'done'");
+    // §18（04_AGENT）：阶段文案由 WorldForge 统一负责，页面自身不得编进度
+    expect(source).not.toMatch(/\d+\s*%/);
     expect(source).not.toContain("'compiling'");
+    // §20：收束 + WORLD READY 是两拍真实渲染，且有明确时间预算
+    expect(source).toContain('const ASSEMBLE_MS');
+    expect(source).toContain('const READY_MS');
+    // 「正在编译你的世界」只能在世界**真的**编译完成（ready_to_play）之后出现
+    expect(source).toContain("const worldReady = status === 'ready_to_play'");
+    const forge = readFileSync(
+      new URL('../src/components/visual/WorldForge.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(forge).toContain("assembling: '正在编译你的世界'");
+    // 编译页只露碎片，不摊开整张 Experience Card（§19）
+    expect(source).toContain('SHARDS_PER_TRACK');
   });
 
-  it('失败可重试、可换问题，不把用户困在转圈页', () => {
+  it('失败可重试、可换问题，不把用户困在转圈页（05_AGENT §9）', () => {
     const source = page();
+    // 编译失败：可以重试一次
     expect(source).toContain('重试一次');
-    expect(source).toContain('换一种说法再试');
-    expect(source).toContain('仍然进入');
+    // 一条都没找到：文案与按钮固定为 §9 那一套（文案在 errorCopy.ts 里是单一事实源）
+    expect(source).toContain('NO_RELIABLE_EXPERIENCE.title');
+    expect(source).toContain('NO_RELIABLE_EXPERIENCE.hint');
+    expect(source).toContain('NO_RELIABLE_EXPERIENCE.actions[0]');
+    expect(source).toContain('NO_RELIABLE_EXPERIENCE.actions[1]');
+    expect(NO_RELIABLE_EXPERIENCE.actions).toEqual(['修改问题', '重新尝试']);
+    // 仍然留着一条明确出路：先进入这一局（世界照常走完）
+    expect(source).toContain('这一局没有别人的经验，世界仍然会走完');
+    // 错误态只出人话：服务端消息先经 playerFacingError 翻译
+    expect(source).toContain('playerFacingError');
+    expect(source).not.toContain('这一步没有成功');
   });
 
   it('刘看山第一次出现仍在会话页（§35）', () => {

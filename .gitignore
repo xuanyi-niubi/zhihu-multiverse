@@ -61,3 +61,10 @@ AGENTS.md
 
 # 测试统计生成器的中间产物（只保留 docs/test-stats.json）
 .test-stats-raw.json
+
+# 本地代码图 / Understand Anything 索引（本地生成的体积产物，不入库）
+.codegraph/
+.ua/
+
+# Yan Agent 会话快照 / 本地运行时状态（可能含工具输出，不入库）
+.yanagent/

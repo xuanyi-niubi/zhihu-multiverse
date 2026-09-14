@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>显影厅 · The Development Room — 设计系统预览</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;900&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+:root{
+  --ds-void-950:#03040A; --ds-void-900:#06080F; --ds-void-800:#0A0E18; --ds-void-700:#101725;
+  --ds-blue-900:#04122E; --ds-blue-700:#0052D9; --ds-blue-600:#1C6BEA; --ds-blue-500:#0084FF;
+  --ds-blue-300:#4EA5FF; --ds-blue-100:#CFE8FF;
+  --ds-evidence:#0084FF; --ds-evidence-soft:#4EA5FF;
+  --ds-alternative:#66F2FF; --ds-alternative-soft:#8AF5D1;
+  --ds-counter:#D8A85D; --ds-counter-soft:#E4C28D;
+  --ds-ending:#C9C0FF; --ds-ending-deep:#8B7FD4;
+  --ds-paper-100:#F2EDE4; --ds-paper-300:#DCD3C4; --ds-paper-ink:#241F1A; --ds-paper-accent:#C9A87C;
+  --ds-undev-ink:#2A3242; --ds-undev-text:#5C6879; --ds-undev-line:#3A4455;
+  --ds-text-0:#F5F7FB; --ds-text-1:#C5D0DE; --ds-text-2:#8B9BB1; --ds-text-3:#5C6879;
+  --ds-hairline:rgba(245,247,251,.13); --ds-hairline-strong:rgba(245,247,251,.22);
+  --ds-aurora-seek:linear-gradient(115deg,#0052D9 0%,#0084FF 46%,#66F2FF 100%);
+  --ds-aurora-counter:linear-gradient(115deg,#8A5A1E 0%,#D8A85D 52%,#E4C28D 100%);
+  --ds-aurora-end:linear-gradient(115deg,#4B3F8F 0%,#8B7FD4 50%,#C9C0FF 100%);
+  --ds-ease:cubic-bezier(.22,1,.36,1);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --serif:"Noto Serif SC","Songti SC",Georgia,serif;
+  --sans:"Noto Sans SC",system-ui,"PingFang SC",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(56% 40% at 50% -8%, rgba(0,132,255,.10), transparent 68%),
+    radial-gradient(44% 32% at 84% 76%, rgba(216,168,93,.045), transparent 72%),
+    radial-gradient(40% 30% at 12% 64%, rgba(102,242,255,.045), transparent 74%),
+    linear-gradient(180deg,var(--ds-void-950) 0%,var(--ds-void-900) 46%,var(--ds-void-950) 100%);
+  color:var(--ds-text-1); font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.55;
+  background-image:
+    linear-gradient(to right,rgba(245,247,251,.04) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(245,247,251,.04) 1px,transparent 1px);
+  background-size:96px 96px;
+  -webkit-mask-image:radial-gradient(74% 66% at 50% 30%,#000 0%,transparent 88%);
+  mask-image:radial-gradient(74% 66% at 50% 30%,#000 0%,transparent 88%);
+}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 32px 96px}
+
+/* 极光带 */
+.aurora{height:2px;width:100%;background:var(--ds-aurora-seek);opacity:.55;animation:sweep 2.4s var(--ds-ease) infinite}
+.aurora.counter{background:var(--ds-aurora-counter)}
+.aurora.end{background:var(--ds-aurora-end)}
+@keyframes sweep{0%,100%{opacity:.32}50%{opacity:.72}}
+
+/* 头部 */
+header{padding:88px 0 56px}
+.kicker{font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--ds-text-2);margin:0 0 18px}
+h1{font-family:var(--serif);font-size:clamp(34px,4.2vw,56px);font-weight:700;line-height:1.08;letter-spacing:-.02em;color:var(--ds-text-0);margin:0 0 20px}
+.lede{font-size:18px;line-height:1.8;letter-spacing:.02em;color:var(--ds-text-1);max-width:640px;margin:0}
+
+section{margin-top:72px}
+h2{font-size:28px;font-weight:600;line-height:1.28;color:var(--ds-text-0);margin:0 0 8px}
+.sub{font-size:12px;line-height:1.6;color:var(--ds-text-2);margin:0 0 28px;letter-spacing:.03em}
+
+/* 玻璃面板 */
+.glass{
+  position:relative;border:1px solid var(--ds-hairline);border-radius:3px;
+  background:linear-gradient(180deg,rgba(245,247,251,.055),rgba(245,247,251,.014)),
+             linear-gradient(180deg,rgba(3,4,10,.72),rgba(3,4,10,.86));
+  box-shadow:inset 0 1px 0 rgba(245,247,251,.07),inset 0 -1px 0 rgba(3,4,10,.6),0 34px 80px -60px rgba(0,0,0,.96);
+  backdrop-filter:blur(6px);
+}
+.brackets::before,.brackets::after{content:'';position:absolute;width:15px;height:15px;pointer-events:none;
+  border-color:rgba(245,247,251,.34)}
+.brackets::before{top:-1px;left:-1px;border-top:1px solid;border-left:1px solid}
+.brackets::after{right:-1px;bottom:-1px;border-right:1px solid;border-bottom:1px solid}
+
+/* 色板 */
+.palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.swatch{border:1px solid var(--ds-hairline);border-radius:3px;overflow:hidden;background:rgba(3,4,10,.5)}
+.swatch .chip{height:64px}
+.swatch .meta{padding:10px 12px}
+.swatch .hex{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ds-text-0)}
+.swatch .name{font-size:11px;color:var(--ds-text-2);margin-top:4px;line-height:1.5}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+
+/* 排版 */
+.type-row{padding:20px 24px;border-bottom:1px solid rgba(245,247,251,.06)}
+.type-row:last-child{border-bottom:0}
+.type-meta{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--ds-text-3);margin-bottom:10px}
+
+/* 按钮 */
+.btn{
+  position:relative;display:inline-block;padding:14px 28px;border-radius:3px;
+  font-size:15px;font-weight:600;letter-spacing:.02em;cursor:pointer;
+  transition:transform 220ms var(--ds-ease),box-shadow 320ms var(--ds-ease),border-color 320ms var(--ds-ease);
+  overflow:hidden;
+}
+.btn-primary{border:1px solid rgba(0,132,255,.42);color:var(--ds-text-0);
+  background:linear-gradient(180deg,rgba(0,82,217,.55),rgba(0,82,217,.22));
+  box-shadow:inset 0 1px 0 rgba(245,247,251,.10),0 12px 30px -18px rgba(0,132,255,.55)}
+.btn-primary::after{content:'';position:absolute;inset:0;background:var(--ds-aurora-seek);opacity:0;
+  transition:opacity 320ms var(--ds-ease);mix-blend-mode:overlay}
+.btn-primary:hover{transform:translateY(-2px);border-color:rgba(0,132,255,.7)}
+.btn-primary:hover::after{opacity:.32}
+.btn-primary:active{transform:translateY(1px)}
+.btn-ghost{border:1px solid rgba(245,247,251,.12);color:var(--ds-text-1);background:transparent}
+.btn-ghost:hover{border-color:rgba(245,247,251,.24);color:var(--ds-text-0)}
+.btn-quiet{border:1px solid transparent;color:var(--ds-text-2);background:transparent;padding:14px 16px}
+.btn-quiet:hover{color:var(--ds-text-0)}
+.btn-danger{border:1px solid rgba(255,77,109,.4);color:#FF8FA3;background:transparent}
+.btn-danger:hover{border-color:rgba(255,77,109,.8);box-shadow:inset 0 0 22px -6px rgba(255,77,109,.35)}
+
+/* 徽标 */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:2px;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;border:1px solid}
+.b-similar{background:rgba(0,132,255,.12);color:#4EA5FF;border-color:rgba(0,132,255,.32)}
+.b-alt{background:rgba(102,242,255,.12);color:#8AF5D1;border-color:rgba(102,242,255,.32)}
+.b-counter{background:rgba(216,168,93,.12);color:#E4C28D;border-color:rgba(216,168,93,.32)}
+.b-unlock{background:rgba(245,247,251,.06);color:#F5F7FB;border-color:rgba(245,247,251,.3);border-left:2px solid;border-image:var(--ds-aurora-seek) 1}
+.b-unknown{background:transparent;color:var(--ds-undev-text);border:1px dashed var(--ds-undev-line)}
+
+/* 未显影 */
+.undev{
+  position:relative;padding:14px 12px;border:1px dashed var(--ds-undev-line);border-radius:2px;
+  color:var(--ds-undev-text);font-size:14px;
+  background-image:repeating-linear-gradient(45deg,var(--ds-undev-ink) 0 1px,transparent 1px 8px);
+  cursor:default;user-select:none;
+}
+.undev::after{content:attr(data-label);display:block;margin-top:8px;font-family:var(--mono);
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ds-undev-text)}
+
+/* 碎片卡 */
+.shard{padding:10px 12px;border:1px solid rgba(245,247,251,.10);border-radius:2px;
+  background:linear-gradient(150deg,rgba(245,247,251,.05),rgba(3,4,10,.5));
+  box-shadow:inset 0 1px 0 rgba(245,247,251,.05)}
+.shard.similar{border-left:1px solid rgba(0,132,255,.5)}
+.shard.alt{border-left:1px solid rgba(102,242,255,.5)}
+.shard.counter{border-left:1px solid rgba(216,168,93,.5)}
+.shard q{font-family:var(--serif);font-size:13px;line-height:1.72;color:var(--ds-text-1);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.shard .meta{margin-top:8px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--ds-text-2)}
+
+/* 输入框 */
+.ds-input{width:100%;min-height:132px;padding:20px 22px;border:1px solid var(--ds-hairline);border-radius:3px;
+  background:linear-gradient(180deg,rgba(245,247,251,.03),transparent);color:var(--ds-text-0);
+  font-family:var(--serif);font-size:18px;line-height:1.8;letter-spacing:.01em;resize:none;outline:none;
+  transition:border-color 320ms var(--ds-ease),box-shadow 320ms var(--ds-ease)}
+.ds-input::placeholder{color:var(--ds-text-3)}
+.ds-input:focus{border-color:rgba(0,132,255,.55);box-shadow:0 0 0 3px rgba(0,132,255,.10),0 24px 60px -40px rgba(0,132,255,.55)}
+
+/* 纸层 */
+.paper{border-radius:2px;padding:32px 34px;background:var(--ds-paper-100);color:var(--ds-paper-ink);
+  box-shadow:0 40px 90px -50px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.6);font-family:var(--serif)}
+.paper h3{margin:0 0 12px;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.paper p{margin:0;font-size:15px;line-height:1.85}
+.seal{margin-top:20px;border:1px dashed var(--ds-paper-300);border-left:2px solid var(--ds-paper-accent);
+  padding:12px 14px;font-size:14px;line-height:1.8}
+
+/* 显影演示 */
+.dev-stage{padding:28px 24px;display:grid;gap:14px}
+.dev-item{padding:14px 16px;border:1px solid var(--ds-hairline);border-radius:3px;font-size:14px;
+  background:rgba(245,247,251,.03)}
+.dev-item.play{animation:develop 620ms var(--ds-ease) both}
+@keyframes develop{
+  0%{opacity:.12;filter:saturate(.25) brightness(.6);transform:scale(.985) translateY(6px)}
+  100%{opacity:1;filter:none;transform:none}
+}
+.dev-item.play:nth-child(2){animation-delay:120ms}
+.dev-item.play:nth-child(3){animation-delay:240ms}
+.dev-item.play:nth-child(4){animation-delay:360ms}
+
+/* 轨道 */
+.rail{position:relative;padding:36px 24px;min-height:180px}
+.rail svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.unlock-card{position:relative;margin-top:26px;padding:16px 18px;border:1px solid rgba(102,242,255,.34);
+  border-radius:3px;background:linear-gradient(150deg,rgba(102,242,255,.07),rgba(3,4,10,.5));
+  animation:develop 620ms var(--ds-ease) both}
+.unlock-card .t{font-size:15px;font-weight:600;color:var(--ds-text-0);margin:10px 0 6px}
+.unlock-card .d{font-size:12px;line-height:1.7;color:var(--ds-text-2)}
+
+footer{margin-top:80px;padding-top:28px;border-top:1px solid rgba(245,247,251,.08);
+  font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ds-text-3)}
+
+@media (max-width:640px){
+  .wrap{padding:0 20px 72px}
+  header{padding:56px 0 40px}
+  .grid3{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="aurora"></div>
+
+<div class="wrap">
+  <header>
+    <p class="kicker">Design System v3 · The Development Room</p>
+    <h1>显影厅</h1>
+    <p class="lede">真实经历像底片一样被显影，未知永远停留在未显影状态。深空冷色是常态，暖白纸层只在终局出现一次——那是回到地面的那一刻。</p>
+  </header>
+
+  <section>
+    <h2>极光带 · Aurora</h2>
+    <p class="sub">全站唯一的情绪指示器，替代 HUD 数值条。检索=蓝 / 反例=琥珀 / 终局=紫银。</p>
+    <div style="display:grid;gap:18px">
+      <div><div class="aurora"></div><p class="type-meta" style="margin-top:8px">SEEK · 正在检索真实经历</p></div>
+      <div><div class="aurora counter"></div><p class="type-meta" style="margin-top:8px">COUNTER · 反例出现</p></div>
+      <div><div class="aurora end"></div><p class="type-meta" style="margin-top:8px">ENDING · 认知重写</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>色板 · Palette</h2>
+    <p class="sub">结构中蓝 #0052D9 与知乎来源蓝 #0084FF 严格分工，不可互换。</p>
+    <div class="palette">
+      <div class="swatch"><div class="chip" style="background:#03040A"></div><div class="meta"><div class="hex">#03040A</div><div class="name">void-950 页面底</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0A0E18"></div><div class="meta"><div class="hex">#0A0E18</div><div class="name">void-800 面板</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0052D9"></div><div class="meta"><div class="hex">#0052D9</div><div class="name">blue-700 结构主色</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0084FF"></div><div class="meta"><div class="hex">#0084FF</div><div class="name">evidence 知乎真实来源</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#66F2FF"></div><div class="meta"><div class="hex">#66F2FF</div><div class="name">alternative 另一种走法</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#D8A85D"></div><div class="meta"><div class="hex">#D8A85D</div><div class="name">counter 反例</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#C9C0FF"></div><div class="meta"><div class="hex">#C9C0FF</div><div class="name">ending 终局</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#F2EDE4"></div><div class="meta"><div class="hex">#F2EDE4</div><div class="name">paper-100 现实层</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#5C6879"></div><div class="meta"><div class="hex">#5C6879</div><div class="name">undev 未显影文字</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>排版层级 · Type Scale</h2>
+    <p class="sub">叙事用衬线，界面用无衬线，刻度用等宽。中文字族在前，英文作 fallback。</p>
+    <div class="glass brackets">
+      <div class="type-row"><div class="type-meta">DISPLAY · 56/34 · 700 · 1.08 · -0.02EM · SERIF</div>
+        <div style="font-family:var(--serif);font-size:40px;font-weight:700;line-height:1.1;letter-spacing:-.02em;color:var(--ds-text-0)">真实的人走过的路，是这个世界的规则</div></div>
+      <div class="type-row"><div class="type-meta">BODY LEAD · 18/16 · 400 · 1.8 · 0.02EM</div>
+        <div style="font-size:18px;line-height:1.8;letter-spacing:.02em">先有证据，再有想象。AI 可以自由叙事，但无证据内容不能进入关键裁决。</div></div>
+      <div class="type-row"><div class="type-meta">QUOTE · 13 · 400 · 1.72 · SERIF</div>
+        <div style="font-family:var(--serif);font-size:13px;line-height:1.72;color:var(--ds-text-1)">「我脱产准备了七个月，最后悔的是没给自己留退路。」</div></div>
+      <div class="type-row"><div class="type-meta">KICKER · 10 · 500 · 1.5 · 0.34EM · MONO</div>
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--ds-text-2)">The Observatory · Session 04</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>按钮 · Buttons</h2>
+    <p class="sub">主 CTA 不是色块，是一张被光扫过的票。</p>
+    <div class="glass" style="padding:28px;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+      <a class="btn btn-primary">生成我的世界</a>
+      <a class="btn btn-ghost">进入这个世界</a>
+      <a class="btn btn-quiet">跳过这个问题</a>
+      <a class="btn btn-danger">放弃这条路径</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>困惑输入 · Input</h2>
+    <p class="sub">首页唯一主角。用衬线 18px，是「你在说」，不是「你在填」。</p>
+    <div class="glass" style="padding:28px">
+      <textarea class="ds-input" placeholder="你现在最纠结的那个问题">大三法学，想转计算机，但怕脱产以后找不到工作。</textarea>
+    </div>
+  </section>
+
+  <section>
+    <h2>未显影 · Undeveloped</h2>
+    <p class="sub">未知是一等公民：45° 斜线 + 0.5px 虚线 + 不可点 + 永不补全。只有一个状态。</p>
+    <div class="grid3">
+      <div class="undev" data-label="还不知道">这条路上花了多久</div>
+      <div class="undev" data-label="还不知道">失败后能否回到原路径</div>
+      <div class="undev" data-label="还不知道">需要多少资金缓冲</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>记忆碎片 · Shards</h2>
+    <p class="sub">知乎逐字原文。左边框 1px 对应三种检索意图，一眼可分辨。</p>
+    <div class="grid3">
+      <div class="shard similar"><q>我是大二暑假开始准备的，先补了三个月基础才敢报名比赛。</q><div class="meta">知乎答主 · 2023 · 1.2k 赞同</div></div>
+      <div class="shard alt"><q>我直接参赛了，边做边学，课程成绩掉了但拿到了实习。</q><div class="meta">知乎答主 · 2024 · 876 赞同</div></div>
+      <div class="shard counter"><q>裸辞转行那半年是我最后悔的决定，退路很重要。</q><div class="meta">知乎答主 · 2022 · 3.4k 赞同</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>徽标 · Badges</h2>
+    <p class="sub">圆角 2px · 等宽 11px · 字距 0.08em。</p>
+    <div class="glass" style="padding:28px;display:flex;flex-wrap:wrap;gap:12px">
+      <span class="badge b-similar">SIMILAR · 相似经历</span>
+      <span class="badge b-alt">ALTERNATIVE · 另一种走法</span>
+      <span class="badge b-counter">COUNTER · 反例</span>
+      <span class="badge b-unlock">经验解锁</span>
+      <span class="badge b-unknown">还不知道</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>经验解锁轨道 · Unlock Rail</h2>
+    <p class="sub">一条真实经历从证据层沿轨道降落到你的选项里，成为此前不存在的行动。</p>
+    <div class="glass brackets rail">
+      <svg viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M 60 30 C 60 110, 300 40, 340 150" fill="none" stroke="rgba(102,242,255,.55)"
+              stroke-width="1" stroke-dasharray="4 5" stroke-linecap="round"/>
+        <circle cx="60" cy="30" r="3" fill="#66F2FF"/>
+        <circle cx="340" cy="150" r="4" fill="#66F2FF" opacity=".9"/>
+      </svg>
+      <div style="max-width:320px">
+        <div class="shard alt"><q>我直接参赛了，边做边学，课程成绩掉了但拿到了实习。</q><div class="meta">知乎答主 · 2024 · 876 赞同</div></div>
+      </div>
+      <div class="unlock-card" style="max-width:440px">
+        <span class="badge b-unlock">经验解锁</span>
+        <div class="t">先报名，把基础补在实战里</div>
+        <div class="d">这条选择因为一个真实的人走过，才进入了你的世界。可以拒绝，但它现在存在了。</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>显影动效 · Development</h2>
+    <p class="sub">内容不是弹出来的，是从暗房里浮出来的。点击重放。</p>
+    <div class="glass brackets dev-stage" id="devStage">
+      <div class="dev-item">问题框定完成 · 已确认 2 条事实</div>
+      <div class="dev-item">检索到 60 条真实来源</div>
+      <div class="dev-item">抽取 14 条逐字经验片段</div>
+      <div class="dev-item">编译三幕平行世界</div>
+    </div>
+    <div style="margin-top:16px"><a class="btn btn-ghost" id="replay">重放显影</a></div>
+  </section>
+
+  <section>
+    <h2>现实层 · Paper Plane</h2>
+    <p class="sub">全站冷色中唯一一次回温。只在终局、现实支线、回执出现。</p>
+    <div class="paper">
+      <h3>任何人的经验都替不了的那个问题</h3>
+      <p>你不知道的是：脱产之后，你能在没有收入的状态下撑多久。这个问题不在知乎上，也不在任何人的回答里——它只有你自己能用七天时间回答。</p>
+      <div class="seal">接下来七天：算出你真实的资金缓冲月数，然后回来。我们会把你的答案带进下一局。</div>
+    </div>
+  </section>
+
+  <footer>知乎平行宇宙 · DESIGN-SYSTEM.md · 显影厅 v3</footer>
+</div>
+
+<script>
+(function () {
+  var stage = document.getElementById('devStage');
+  var btn = document.getElementById('replay');
+  function play() {
+    var items = stage.querySelectorAll('.dev-item');
+    items.forEach(function (el) { el.classList.remove('play'); });
+    void stage.offsetWidth;
+    items.forEach(function (el) { el.classList.add('play'); });
+  }
+  if (btn) btn.addEventListener('click', play);
+  play();
+})();
+</script>
+</body>
+</html>

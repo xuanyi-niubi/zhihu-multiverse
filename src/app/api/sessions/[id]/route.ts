@@ -23,7 +23,10 @@ import { readOwnSettings } from '@/features/run/identity';
 import {
   resolveModelConfigForRequest,
   resolveZhihuConfigForRequest,
+  secretOriginFor,
 } from '@/features/run/keyResolution';
+import { allocateAppLlmCall, appDailyLlmBudget, appSessionLlmBudget } from '@/core/usage/budget';
+import { appIpLlmWindow, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
 
 import type { DecisionSession } from '@/features/decision-session/domain';
 import type { ExperimentResult } from '@/features/reality-memory/domain';
@@ -160,8 +163,43 @@ export async function PATCH(request: Request, context: { params: { id: string } 
 
       // 与 POST /api/sessions 同一模式：检索与模型能力由用户自己的凭证决定
       const { identity: own, stored } = readOwnSettings(request);
-      const zhihu = resolveZhihuConfigForRequest(request);
-      const modelConfig = resolveModelConfigForRequest(request);
+      let zhihu = resolveZhihuConfigForRequest(request);
+      let modelConfig = resolveModelConfigForRequest(request);
+
+      /**
+       * 防刷与预算（方案 §7 / §8 补充层）：世界编译是一局里**第二贵**的
+       * 调用（多意图检索 + 一次模型编译），此前却不计任何账 —— 等于每局
+       * 实际能花 7 次而不是设计的 5 次。这里补齐三道闸：
+       *
+       * 1. IP 窗口：身份 cookie 可被重置，IP 不能（`ipRateLimit.ts`）；
+       * 2. 本局预算：编译就是 §8 的「调用 2：编译」，与叙事共享同一池子；
+       * 3. 全站每日软上限。
+       *
+       * 任一超限**不报错**：检索与编译能力置空，`prepareExperienceSession`
+       * 自动退回黄金案例快照 + 确定性编译 —— 这一局照常打得完。
+       * 自带 key 的访客（`origin.* === 'account'`）不经过任何一道闸。
+       */
+      const origin = secretOriginFor(request);
+      if (origin.model === 'app' || origin.zhihu === 'app') {
+        const ipDecision = appIpLlmWindow.consume(clientIpFromHeaders(request.headers));
+        if (!ipDecision.allowed) {
+          zhihu = null;
+          modelConfig = null;
+          trace.note('app-ip-window-exhausted');
+        }
+      }
+      if (modelConfig && origin.model === 'app') {
+        const allocation = allocateAppLlmCall({
+          session: appSessionLlmBudget,
+          daily: appDailyLlmBudget,
+          key: session.id,
+        });
+        if (!allocation.allowed) {
+          modelConfig = null;
+          trace.note(`app-${allocation.scope}-budget-exhausted`);
+        }
+      }
+
       const router = modelConfig
         ? createProviderRouter({
             providers: tieredProvidersFromConfig({

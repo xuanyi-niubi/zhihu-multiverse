@@ -23,16 +23,18 @@ import {
  * **未登录用户按匿名 cookie 隔离**（见 `core/anonymousId.ts`）。
  * 于是「不登陆账号也能配置 AI，自己玩耍」成立。
  *
- * ### 2. **不再回退到服务端环境变量**
+ * ### 2. **旧的两把共享 env 不再兜底**
  *
- * 这是本次修订的真正原因，也是一个成本与安全问题：
+ * 旧版允许访客在没配 key 时回退到服务器 `DM_API_KEY` / `ZHIHU_ACCESS_SECRET`，
+ * 等于让任何访客花部署者的钱。现在这两把旧 env **运行时不再读取**，
+ * `envFallback` 一律报 false。
  *
- * > 若服务端 env 里留着一把共享 key，而访客没配时回退到它，
- * > 那**任何访问者都能白用那把 key** —— 花的是部署者的钱。
+ * 但默认能力改由**产品级的 App provider** 提供（`APP_LLM_*` /
+ * `APP_ZHIHU_ACCESS_SECRET`，见 `src/config/serverEnv.ts` 与
+ * `keyResolution.ts`）：它是「打开即用」的一部分，并配套用量预算
+ * （`src/core/usage/`）。所以本页的定位是**可选覆盖**，不是使用前提（§53）。
  *
- * 因此 `envFallback` 一律报 false（界面据此提示「需要你自己填」），
- * 运行时也绝不读 `process.env`。部署者不配 key 不会让站点打不开：
- * 没有 key 时自动走 DEMO MODE（离线剧本 + 已落盘的真实快照）。
+ * 没有 App key 也不会打不开：自动走 DEMO MODE（离线剧本 + 已落盘的真实快照）。
  *
  * ## 既有安全约束（未变）
  *
@@ -47,10 +49,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * 环境兜底一律为 false。
+ * 旧 env 兜底一律为 false。
  *
- * 保留这个函数而不是直接删掉，是为了让「我们从不为访客付账」这件事
- * 在代码里是一个**显式声明**，而不是一处被遗漏的分支。
+ * 保留这个函数而不是直接删掉，是为了让「我们不再用旧的两把共享 key
+ * 为访客付账」这件事在代码里是一个**显式声明**，而不是一处被遗漏的分支。
+ * 默认能力走 App provider（`APP_LLM_*` / `APP_ZHIHU_ACCESS_SECRET`）。
  */
 function envFallback(): { zhihu: boolean; model: boolean } {
   return { zhihu: false, model: false };
