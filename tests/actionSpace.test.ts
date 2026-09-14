@@ -1,130 +1,145 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  applyConditionShift,
-  buildInitialActionSpace,
-  findAction,
+  buildActionSpace,
+  getActionsByState,
+  getAuditActions,
+  getSelectableActions,
+  getVisibleActions,
   lockAction,
-  missingConditionKeys,
   removeAction,
+  restoreAction,
   unlockAction,
 } from '@/features/game-mechanics/actionSpace';
-import type { ActionOption } from '@/features/game-mechanics/domain';
+import type { PlayAction } from '@/features/game-mechanics/domain';
 
 /**
- * Action Space 纯函数（§62 / §75）。
+ * Action Space 纯函数（§六）。
  *
  * 核心承诺：玩家的选择真的改变「他能做什么」——
  * 新增 / 移除 / 锁定 / 解锁，全部确定性、无随机。
  */
 
-function action(id: string, overrides: Partial<ActionOption> = {}): ActionOption {
+function action(id: string, overrides: Partial<PlayAction> = {}): PlayAction {
   return {
     id,
     label: `行动 ${id}`,
-    source: 'user',
+    state: 'available',
+    origin: 'scenario',
     sourceFactIds: [],
-    requirements: [],
     ...overrides,
   };
 }
 
-describe('buildInitialActionSpace', () => {
-  it('无需求条件的行动直接可用', () => {
-    const space = buildInitialActionSpace([action('a'), action('b')]);
-    expect(space.available.map((item) => item.id)).toEqual(['a', 'b']);
-    expect(space.locked).toHaveLength(0);
-  });
-
-  it('缺条件 → 锁定，并给出人话解释（不做隐藏惩罚）', () => {
-    const space = buildInitialActionSpace([
-      action('a', { requirements: [{ key: 'team', description: '一个固定队友' }] }),
-    ]);
-    expect(space.available).toHaveLength(0);
-    expect(space.locked[0]!.reason).toBe('missing_condition');
-    expect(space.locked[0]!.conditionKey).toBe('team');
-    expect(space.locked[0]!.explanation).toContain('固定队友');
-  });
-
-  it('已满足条件 → 可用', () => {
-    const space = buildInitialActionSpace(
-      [action('a', { requirements: [{ key: 'team' }] })],
-      ['team'],
-    );
-    expect(space.available.map((item) => item.id)).toEqual(['a']);
-  });
-
-  it('稳定排序：同输入必得同输出', () => {
-    const build = () => buildInitialActionSpace([action('c'), action('a'), action('b')]);
+describe('buildActionSpace', () => {
+  it('按 id 稳定排序，同输入必得同输出', () => {
+    const build = () => buildActionSpace([action('c'), action('a'), action('b')]);
+    expect(build().actions.map((item) => item.id)).toEqual(['a', 'b', 'c']);
     expect(JSON.stringify(build())).toBe(JSON.stringify(build()));
-    expect(build().available.map((item) => item.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('duplicate id 不重复（保留第一个）', () => {
+    const space = buildActionSpace([action('a', { label: '第一条' }), action('a', { label: '第二条' })]);
+    expect(space.actions).toHaveLength(1);
+    expect(space.actions[0]!.label).toBe('第一条');
+  });
+
+  it('overrides 可以覆盖同 id 的初始状态', () => {
+    const space = buildActionSpace(
+      [action('a')],
+      [action('a', { state: 'locked', reason: '情境本身就不允许' })],
+    );
+    expect(space.actions).toHaveLength(1);
+    expect(space.actions[0]!.state).toBe('locked');
+  });
+
+  it('immutable：不改入参', () => {
+    const input = [action('a')];
+    buildActionSpace(input);
+    expect(input).toHaveLength(1);
+    expect(input[0]!.state).toBe('available');
   });
 });
 
-describe('unlockAction（PATH UNLOCK 的落地，§35）', () => {
-  it('新增行动进入 available + unlocked，并记录来源', () => {
-    const base = buildInitialActionSpace([action('a')]);
-    const unlocked = action('x', { source: 'experience', sourceFactIds: ['fact:1'] });
-    const next = unlockAction(base, unlocked, { sourceFactIds: ['fact:1'], encounterId: 'e1' });
-    expect(next.available.map((item) => item.id).sort()).toEqual(['a', 'x']);
-    expect(next.unlocked).toHaveLength(1);
-    expect(next.unlocked[0]!.sourceFactIds).toEqual(['fact:1']);
-    expect(next.unlocked[0]!.encounterId).toBe('e1');
+describe('unlockAction', () => {
+  it('解锁后进入 unlocked（可做，但来源是真实经验）', () => {
+    const space = unlockAction(
+      buildActionSpace([action('a')]),
+      action('b', { origin: 'experience', sourceFactIds: ['act-1'] }),
+    );
+    expect(space.actions.find((item) => item.id === 'b')!.state).toBe('unlocked');
+    expect(getSelectableActions(space).map((item) => item.id)).toEqual(['a', 'b']);
   });
 
-  it('重复解锁不会产生两条', () => {
-    const base = buildInitialActionSpace([]);
-    const unlocked = action('x', { source: 'experience' });
-    const once = unlockAction(base, unlocked, { sourceFactIds: ['f1'] });
-    const twice = unlockAction(once, unlocked, { sourceFactIds: ['f1'] });
-    expect(twice.unlocked).toHaveLength(1);
-    expect(twice.available).toHaveLength(1);
-  });
-});
-
-describe('lockAction / removeAction', () => {
-  it('锁定把行动移出可用并给出理由', () => {
-    const space = buildInitialActionSpace([action('a')]);
-    const next = lockAction(space, 'a', 'opportunity_cost', '你把时间用在了别处。');
-    expect(next.available).toHaveLength(0);
-    expect(next.locked[0]!.reason).toBe('opportunity_cost');
-    expect(next.locked[0]!.explanation).toBe('你把时间用在了别处。');
+  it('幂等：重复解锁同一条不产生重复项', () => {
+    const once = unlockAction(buildActionSpace([action('a')]), action('b'));
+    const twice = unlockAction(once, action('b'));
+    expect(twice.actions).toHaveLength(2);
+    expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
   });
 
-  it('移除把行动放进 removed，不扣任何数值', () => {
-    const space = buildInitialActionSpace([action('a')]);
-    const next = removeAction(space, 'a', '这周的时间已经花掉了。');
-    expect(next.available).toHaveLength(0);
-    expect(next.removed[0]!.action.id).toBe('a');
-    expect(next.removed[0]!.explanation).toContain('时间');
-  });
-
-  it('锁 / 移除不存在的行动是 no-op（不发明世界线）', () => {
-    const space = buildInitialActionSpace([action('a')]);
-    expect(lockAction(space, 'ghost', 'opportunity_cost', 'x')).toBe(space);
-    expect(removeAction(space, 'ghost', 'x')).toBe(space);
-    expect(findAction(space, 'ghost')).toBeNull();
+  it('scenario 来源的行动被经验解锁后标为 experience', () => {
+    const space = unlockAction(buildActionSpace([action('a')]), action('a'));
+    expect(space.actions[0]!.origin).toBe('experience');
   });
 });
 
-describe('applyConditionShift', () => {
-  it('借用条件只解锁 missing_condition，不影响代价锁定', () => {
-    let space = buildInitialActionSpace([
-      action('cond', { requirements: [{ key: 'team' }] }),
-      action('plain'),
-    ]);
-    space = lockAction(space, 'plain', 'opportunity_cost', '时间已经花掉');
-    const next = applyConditionShift(space, ['team']);
-    expect(next.available.map((item) => item.id)).toEqual(['cond']);
-    expect(next.locked.map((item) => item.action.id)).toEqual(['plain']);
+describe('lockAction', () => {
+  it('锁住后仍可展示 reason', () => {
+    const space = lockAction(buildActionSpace([action('a')]), 'a', '这条路暂时关闭：周末已经投进比赛项目。');
+    const locked = getActionsByState(space, 'locked')[0]!;
+    expect(locked.reason).toContain('这条路暂时关闭');
+    expect(getVisibleActions(space).map((item) => item.id)).toEqual(['a']);
+    expect(getSelectableActions(space)).toHaveLength(0);
   });
 
-  it('missingConditionKeys 去重且稳定', () => {
-    const space = buildInitialActionSpace([
-      action('a', { requirements: [{ key: 'team' }] }),
-      action('b', { requirements: [{ key: 'time' }] }),
-      action('c', { requirements: [{ key: 'team' }] }),
-    ]);
-    expect(missingConditionKeys(space)).toEqual(['team', 'time']);
+  it('找不到行动时原样返回（不锁一条不存在的世界线）', () => {
+    const before = buildActionSpace([action('a')]);
+    expect(lockAction(before, 'ghost', 'reason')).toBe(before);
+  });
+
+  it('幂等：已锁住时不被第二次 reason 覆盖', () => {
+    const once = lockAction(buildActionSpace([action('a')]), 'a', '第一次原因');
+    const twice = lockAction(once, 'a', '第二次原因');
+    expect(getActionsByState(twice, 'locked')[0]!.reason).toBe('第一次原因');
+  });
+});
+
+describe('removeAction', () => {
+  it('移除后默认不展示给普通用户，但 ViewModel 可保留审计', () => {
+    const space = removeAction(buildActionSpace([action('a'), action('b')]), 'b', '这条路真的关掉了。');
+    expect(getVisibleActions(space).map((item) => item.id)).toEqual(['a']);
+    expect(getAuditActions(space).map((item) => item.id)).toEqual(['a', 'b']);
+    expect(getActionsByState(space, 'removed')[0]!.reason).toBe('这条路真的关掉了。');
+  });
+
+  it('幂等', () => {
+    const once = removeAction(buildActionSpace([action('a')]), 'a', '原因');
+    expect(JSON.stringify(removeAction(once, 'a', '原因'))).toBe(JSON.stringify(once));
+  });
+});
+
+describe('restoreAction', () => {
+  it('还原到被锁之前的状态与原因', () => {
+    const locked = lockAction(buildActionSpace([action('a')]), 'a', '暂时关闭');
+    const restored = restoreAction(locked, 'a');
+    expect(restored.actions[0]!.state).toBe('available');
+    expect(restored.actions[0]!.reason).toBeUndefined();
+    expect(restored.restoreState).toBeUndefined();
+  });
+
+  it('本来就不在 locked / removed 时原样返回', () => {
+    const before = buildActionSpace([action('a')]);
+    expect(restoreAction(before, 'a')).toBe(before);
+  });
+
+  it('被移除的行动也能还原（现实回填）', () => {
+    const removed = removeAction(
+      unlockAction(buildActionSpace([action('a')]), action('b')),
+      'b',
+      '代价关闭',
+    );
+    const restored = restoreAction(removed, 'b');
+    expect(restored.actions.find((item) => item.id === 'b')!.state).toBe('unlocked');
   });
 });
