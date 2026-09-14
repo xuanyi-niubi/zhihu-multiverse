@@ -63,16 +63,28 @@ export const CONTENT_UNAVAILABLE: PlayerFacingError = {
  * 技术词表：命中就**不**把原话透给玩家。
  *
  * 关键词按「一定会出现在某种技术报错里、且对玩家毫无信息量」来取。
+ *
+ * ## 2026-09 补的一个真缺口
+ *
+ * 原来只认英文技术词与数字状态码，于是**本项目自己的错误码形态**
+ * （kebab-case，如 `invalid-response` / `missing-story`）能整句漏到页面上 ——
+ * `playerFacingError({ message: '提交失败：invalid-response' })` 原样透传。
+ *
+ * 这类「小写词 + 连字符 + 小写词」在中文文案里几乎不可能自然出现，
+ * 所以它是个安全的强信号。`looksLikeErrorCode` 单独导出，便于别处复用。
  */
 const TECHNICAL_PATTERN =
   /(429|quota|exceed|provider|exception|ECONN|ETIMEDOUT|timeout|stack|traceback|TypeError|SyntaxError|undefined|null|NaN|\{\s*"|<\w+>|\b[45]\d\d\b)/i;
 
-/** 这句话是不是技术报错（含英文错误码 / 堆栈 / JSON 残片）。 */
+/** 机器可读的错误码形态：`word-word`（本项目所有内部码都是这个样子）。 */
+const ERROR_CODE_PATTERN = /\b[a-z][a-z0-9]*(?:-[a-z0-9]+)+\b/;
+
+/** 这句话是不是技术报错（含英文错误码 / 堆栈 / JSON 残片 / kebab-case 内部码）。 */
 export function looksTechnical(message: string | null | undefined): boolean {
   if (typeof message !== 'string') {
     return false;
   }
-  return TECHNICAL_PATTERN.test(message);
+  return TECHNICAL_PATTERN.test(message) || ERROR_CODE_PATTERN.test(message);
 }
 
 /** 配额 / 额度类错误码：它们都归到同一句公共额度文案。 */

@@ -26,7 +26,7 @@ import type { SessionUnknownView } from '@/components/game/session/types';
  *
  * 唯一出口是「继续到终局」：把所有未知收束成玩家带回现实的那个问题。
  *
- * 视觉隐喻用 Agent 04 的 `.obs-fog`（一条轨道进入半透明雾区），
+ * 视觉隐喻用 silver 的 `.sil-undev`（一条轨道进入半透明雾区），
  * **不用挂锁图标**当主视觉（§三十）。
  */
 export interface SessionUnknownStageProps {
@@ -46,17 +46,17 @@ export function SessionUnknownStage({
       data-unknown={view.unknownLabel}
       aria-label="现实信息不足"
     >
-      <div className="obs-fog px-4 py-4">
-        <span aria-hidden="true" className="obs-fog__track" />
+      <div className="sil-undev px-4 py-4">
+        <span aria-hidden="true" className="sil-undev__track" />
 
-        <p className="ds-kicker relative" style={{ color: 'var(--ds-undev-text)' }}>
+        <p className="sil-label relative" style={{ color: 'var(--sil-undev-text)' }}>
           Reality Required
         </p>
 
         {/* 固定文案，不是模型生成的一句安慰（§十八）。 */}
         <p
-          className="ds-body relative mt-2 font-semibold"
-          style={{ color: 'var(--ds-text-1)' }}
+          className="sil-prose relative mt-2 font-semibold"
+          style={{ color: 'var(--sil-ink-200)' }}
         >
           {view.explanation}
         </p>
@@ -69,14 +69,14 @@ export function SessionUnknownStage({
         ) : null}
 
         {view.blockedActions.length > 0 ? (
-          <div className="relative mt-3 border-t pt-2.5" style={{ borderColor: 'var(--ds-hairline)' }}>
-            <p className="ds-kicker">暂时做不了的行动</p>
+          <div className="relative mt-3 border-t pt-2.5" style={{ borderColor: 'var(--sil-rule)' }}>
+            <p className="sil-label">暂时做不了的行动</p>
             <ul className="mt-1.5 flex flex-col gap-1">
               {view.blockedActions.map((action) => (
                 <li
                   key={action}
-                  className="ds-caption"
-                  style={{ color: 'var(--ds-text-1)' }}
+                  className="sil-label sil-label--sm"
+                  style={{ color: 'var(--sil-ink-200)' }}
                 >
                   · {action}
                 </li>

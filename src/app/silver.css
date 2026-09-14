@@ -1,0 +1,3082 @@
+/* ==========================================================================
+ * 银盐观象台 · The Silver Observatory
+ * 单一设计系统（Single Source of Truth）
+ *
+ * ## 为什么是单一事实源
+ *
+ * 历史上这个项目并存过五套 token 前缀，每一代都是「只新增不改旧」：
+ *
+ *   --gmv-*  第一代（街机 / GMV 面板）
+ *   --arc-*  平行人生档案馆
+ *   --obs-*  观象厅
+ *   --ds-*   显影厅
+ *   --gd-*   游戏化体验层
+ *
+ * 累积的代价不是体积，而是**同一屏混用两代材质**，且没人知道
+ * 某个颜色最终由哪一层决定 —— 这就是「AI 味」的结构性来源：
+ * 没有单一事实源，只有不断堆积的补丁。
+ *
+ * 现在收敛为一套 `--sil-*`（silver），不保留别名 —— 别名就是下一轮的债。
+ *
+ * ## 三条不可违反的纪律
+ *
+ * 1. **材质先于配色。** 暗房是物理空间：相纸有纤维、镜头有晕影、
+ *    显影液有密度。颜色只用来区分「证据的三种意图」，不用来装饰。
+ * 2. **未知永不补全。** 未显影区没有 hover、没有估值、没有「暂无数据」
+ *    的占位数字 —— 它只有一种状态：还没显影。
+ * 3. **暖色只属于现实层。** 相纸暖白只出现在终局那张「要带走的纸」上。
+ *    它一出现在别处，「现实」就贬值了。
+ * ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------ */
+  /* 基底 · 暗房（不是纯黑）                                             */
+  /* ------------------------------------------------------------------ */
+  --sil-void-900: #06070b;
+  --sil-void-800: #090b11;
+  --sil-void-700: #0d1017;
+  --sil-void-600: #12161f;
+  --sil-void-500: #191e29;
+
+  /* ------------------------------------------------------------------ */
+  /* 文本层级（四档，够用即可）                                           */
+  /* ------------------------------------------------------------------ */
+  --sil-ink-100: #f2f4f8;
+  --sil-ink-200: #c3cad6;
+  --sil-ink-300: #8d95a5;
+  --sil-ink-400: #5e6675;
+
+  /* ------------------------------------------------------------------ */
+  /* 证据的三种意图 —— 全站唯一的三种强调色                               */
+  /*                                                                     */
+  /* 它们不是「主题色」，而是**语义标记**：                                */
+  /*   来源 zhihu   蓝    「这句话来自某篇真实回答」                        */
+  /*   替代 alternate 青   「有人选了另一条路」                            */
+  /*   反例 counter   琥珀 「这条路有人走坏了」                            */
+  /* 一屏之内最多出现两种，且必须对应真实数据。                            */
+  /* ------------------------------------------------------------------ */
+  --sil-zhihu: #2f6fd0;
+  --sil-zhihu-soft: #6a9ee0;
+  --sil-zhihu-deep: #143b73;
+
+  --sil-alternate: #4fb8ae;
+  --sil-alternate-soft: #86d6cd;
+  --sil-alternate-deep: #1d5b56;
+
+  --sil-counter: #b3854a;
+  --sil-counter-soft: #d8b47e;
+  --sil-counter-deep: #5e4526;
+
+  /* ------------------------------------------------------------------ */
+  /* 现实层 · 相纸（只给终局那一张纸）                                     */
+  /* ------------------------------------------------------------------ */
+  --sil-paper: #efe9dd;
+  --sil-paper-shade: #ded5c4;
+  --sil-paper-ink: #1f1b16;
+  --sil-paper-rule: #b9ab92;
+
+  /* ------------------------------------------------------------------ */
+  /* 未显影（未知）—— 永远只有这一种状态                                   */
+  /* ------------------------------------------------------------------ */
+  --sil-undev: #1b2029;
+  --sil-undev-line: #2c333f;
+  --sil-undev-text: #545c6a;
+
+  /* ------------------------------------------------------------------ */
+  /* 发丝线与阴影                                                         */
+  /*                                                                     */
+  /* 阴影一律带蓝味（暗房是冷光源），不用纯黑低透明度的通用投影。          */
+  /* ------------------------------------------------------------------ */
+  --sil-rule: rgb(242 244 248 / 0.09);
+  --sil-rule-strong: rgb(242 244 248 / 0.16);
+  --sil-rule-faint: rgb(242 244 248 / 0.05);
+
+  --sil-shadow-ambient: rgb(3 5 10 / 0.55);
+  --sil-shadow-deep: rgb(2 3 6 / 0.82);
+
+  /* 显影光：只在「经验解锁」演出时出现，不是常驻发光 */
+  --sil-glow-alternate: rgb(79 184 174 / 0.42);
+  --sil-glow-zhihu: rgb(47 111 208 / 0.34);
+  --sil-glow-counter: rgb(179 133 74 / 0.34);
+
+  /* ------------------------------------------------------------------ */
+  /* 字体                                                                 */
+  /*                                                                     */
+  /* 中文不下载：iOS 苹方 / Android Noto CJK 是极高质量的系统字体，        */
+  /* 自托管 CJK 需要 200+ 子集文件，对首屏是纯负担。                       */
+  /* 拉丁等宽自托管（JetBrains Mono，约 65KB），因为「仪器读数」需要它。    */
+  /* ------------------------------------------------------------------ */
+  --sil-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text',
+    'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI',
+    'Microsoft YaHei', 'Noto Sans SC', 'Source Han Sans SC', sans-serif;
+  --sil-font-serif: 'Songti SC', 'STSong', 'SimSun', 'Noto Serif SC',
+    'Source Han Serif SC', Georgia, serif;
+  --sil-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+
+  /* ------------------------------------------------------------------ */
+  /* 节奏                                                                 */
+  /* ------------------------------------------------------------------ */
+  --sil-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sil-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* 页面的最大阅读宽度：超过这个宽度的行长会让人跳行 */
+  --sil-measure: 62ch;
+
+  /*
+    ## RGB 通道变体
+    用于 `rgb(var(--sil-rgb-x) / 0.12)` 这种**需要任意透明度**的场合。
+    空格分隔（`6 7 11`，不是 `6, 7, 11`）是 CSS 颜色 4 的语法，
+    这样 alpha 才能用 `/ 0.x` 接上去。
+
+    这些值必须和上面十六进制那份**保持同步** —— 换色时两处一起改。
+    为防漏改，每个都注明了来源 token。tests/designSystem 会校验一致性。
+  */
+  --sil-rgb-void-900: 6 7 11; /* = --sil-void-900 #06070b */
+  --sil-rgb-void-800: 9 11 17; /* = --sil-void-800 #090b11 */
+  --sil-rgb-void-600: 18 22 31; /* = --sil-void-600 #12161f */
+  --sil-rgb-ink-100: 242 244 248; /* = --sil-ink-100 #f2f4f8 */
+  --sil-rgb-ink-200: 195 202 214; /* = --sil-ink-200 #c3cad6 */
+  --sil-rgb-ink-300: 141 149 165; /* = --sil-ink-300 #8d95a5 */
+  --sil-rgb-ink-400: 94 102 117; /* = --sil-ink-400 #5e6675 */
+  --sil-rgb-zhihu: 47 111 208; /* = --sil-zhihu #2f6fd0 */
+  /*
+    `--sil-zhihu-deep` 的 RGB 通道版。
+    十六进制那支（#143b73）用于纯色填充，但**带透明度的渐变**需要通道形式：
+    `rgb(var(--x) / 0.55)` 是十六进制做不到的。
+    旧的 `--ds-rgb-blue-700`（28 95 214）在同一语义位上，值更亮更饱和，
+    这里采用 silver 自己的 deep 值以保持单一事实源。
+  */
+  --sil-rgb-zhihu-deep: 20 59 115; /* = --sil-zhihu-deep #143b73 */
+  --sil-rgb-alternate: 79 184 174; /* = --sil-alternate #4fb8ae */
+  --sil-rgb-alternate-soft: 134 214 205; /* = --sil-alternate-soft #86d6cd */
+  --sil-rgb-counter: 179 133 74; /* = --sil-counter #b3854a */
+  --sil-rgb-counter-soft: 216 180 126; /* = --sil-counter-soft #d8b47e */
+
+  /*
+    ## 立绘专属通道
+    这两个不是「强调色」，而是**画布上的人物光**，用途单一：
+    立绘脚下的接触阴影，以及虚影态（第三幕反例）的冷光。
+
+    为什么必须单独成 token：它们要参与 `rgb(var(--x) / 0.18)` 这种
+    任意透明度合成，十六进制值做不到。旧体系里它们叫 `--sil-rgb-clay`
+    / `--sil-rgb-ghost`，随 gd 家族一起清掉了。
+  */
+  --sil-rgb-clay: 220 233 251; /* 黏土立绘的落点光（旧 --sil-rgb-clay） */
+  --sil-rgb-ghost: 125 180 255; /* 虚影立绘的冷光（旧 --sil-rgb-ghost） */
+}
+
+/* ==========================================================================
+ * 基础层
+ *
+ * 刻意**不用** `@layer base`：silver.css 是独立文件，依赖 Tailwind 的
+ * layer 处理会把行为绑在构建顺序上。用普通选择器，行为可预测。
+ * ========================================================================== */
+
+:root {
+  /* 与旧代兼容的少量变量：Tailwind 的 ring 与 selection 仍在引用 */
+  color-scheme: dark;
+}
+
+html {
+  height: 100%;
+  /* 移动端：不要用 smooth，它会让锚点跳转与页面切换一起动，观感发飘 */
+  scroll-behavior: auto;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100%;
+  background: var(--sil-void-900);
+  color: var(--sil-ink-200);
+  font-family: var(--sil-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1;
+  overflow-x: hidden;
+}
+
+/* 移动端 100vh 会被地址栏吃掉一截，用 dvh 兜底 */
+.sil-viewport {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+button:not(:disabled),
+[role='button'],
+a {
+  cursor: pointer;
+}
+
+/* 数字与坐标一律等宽 + 表格数字，避免跳动 */
+.sil-num {
+  font-family: var(--sil-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--sil-zhihu) 38%, transparent);
+  color: var(--sil-ink-100);
+}
+
+:focus-visible {
+  outline: 2px solid var(--sil-alternate);
+  outline-offset: 2px;
+}
+
+/* 移动端可点性：所有交互元素至少 44px 高 */
+@media (pointer: coarse) {
+  button:not(.sil-tap-exempt),
+  a:not(.sil-tap-exempt),
+  [role='button'] {
+    min-height: 44px;
+  }
+}
+
+/* ==========================================================================
+ * 暗房材质 —— 全站背景的唯一来源
+ *
+ * 由四层构成，全部 pointer-events-none：
+ *   1. 底色渐变（上方略亮，像暗房顶灯漏了一点光）
+ *   2. 相纸纤维颗粒（SVG feTurbulence，静态，零动画开销）
+ *   3. 镜头晕影（四角压暗，把视线收进画面中心）
+ *   4. 极细水平扫掠（只有 1px、透明度 0.02，制造「屏幕」的物理感）
+ *
+ * 刻意**不做**：网格、霓虹光晕、扫描线动画。
+ * 那三样是 AI 生成页面的最强指纹。
+ * ========================================================================== */
+
+.sil-darkroom {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 80% at 50% -20%, rgb(47 111 208 / 0.07), transparent 62%),
+    radial-gradient(90% 60% at 50% 120%, rgb(79 184 174 / 0.04), transparent 68%),
+    linear-gradient(180deg, var(--sil-void-800) 0%, var(--sil-void-900) 58%, #04050a 100%);
+}
+
+/* 相纸纤维：一次性静态颗粒，不是动画 */
+.sil-darkroom::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+/* 镜头晕影 */
+.sil-darkroom::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    118% 92% at 50% 44%,
+    transparent 42%,
+    rgb(3 4 8 / 0.42) 78%,
+    rgb(2 3 6 / 0.7) 100%
+  );
+}
+
+/* ==========================================================================
+ * 排版基元
+ * ========================================================================== */
+
+/* 小标签：等宽、疏排、全大写 —— 仪器铭牌的语言 */
+/*
+  仪器铭牌：全大写、等宽、疏排的元数据标签。
+
+  字号定在 11px 而不是更小 —— 10px/9px 的 mono 在手机上（尤其
+  高 DPR 屏被浏览器缩放后）会碎掉。这类标签的价值在于「有仪器感」，
+  一旦小到读不清就只剩噪音了。11px + 0.2em 字距是这套排版的读得清的下限。
+*/
+.sil-label {
+  font-family: var(--sil-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sil-ink-400);
+}
+
+/* 更次要的元数据（例如诊断编号、世界编号） */
+.sil-label--sm {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+
+/* 标题：衬线，紧排，字重给足 */
+.sil-title {
+  font-family: var(--sil-font-serif);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  color: var(--sil-ink-100);
+  text-wrap: balance;
+}
+
+.sil-title--display {
+  font-size: clamp(28px, 7.2vw, 56px);
+  letter-spacing: -0.03em;
+  line-height: 1.06;
+}
+
+.sil-title--act {
+  font-size: clamp(20px, 4.6vw, 34px);
+}
+
+/* 正文：限制行长，行高放松 */
+.sil-prose {
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--sil-ink-200);
+  max-width: var(--sil-measure);
+  text-wrap: pretty;
+}
+
+.sil-prose--lead {
+  font-size: 16px;
+  line-height: 1.9;
+  color: var(--sil-ink-200);
+}
+
+@media (min-width: 768px) {
+  .sil-prose {
+    font-size: 16px;
+  }
+  .sil-prose--lead {
+    font-size: 17px;
+  }
+}
+
+/* 引用原文：等宽 + 左侧竖线，强调「逐字」的可追溯性 */
+.sil-quote {
+  font-family: var(--sil-font-serif);
+  font-size: 14px;
+  line-height: 1.95;
+  color: var(--sil-ink-200);
+  border-left: 1px solid var(--sil-rule-strong);
+  padding-left: 14px;
+  text-wrap: pretty;
+}
+
+/* ==========================================================================
+ * 表面与面板
+ *
+ * 纪律：全站只有**两种**面板 ——
+ *   .sil-panel    常规内容容器（发丝线 + 极浅内高光）
+ *   .sil-plate    仪器读数区（更暗、更密、等宽）
+ * 圆角一律 2–4px。8px 以上是「SaaS 卡片」，与暗房仪器语汇冲突。
+ * ========================================================================== */
+
+.sil-panel {
+  position: relative;
+  border: 1px solid var(--sil-rule);
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    rgb(18 22 31 / 0.72) 0%,
+    rgb(12 15 22 / 0.6) 100%
+  );
+  /* 内高光只有 1px，模拟金属边框受光 */
+  box-shadow:
+    inset 0 1px 0 rgb(242 244 248 / 0.05),
+    0 20px 44px -30px var(--sil-shadow-deep);
+}
+
+.sil-plate {
+  border: 1px solid var(--sil-rule-faint);
+  border-radius: 2px;
+  background: rgb(6 7 11 / 0.62);
+  font-family: var(--sil-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--sil-ink-300);
+}
+
+/* 四角刻度框：观象仪器的标志性元素，但不做「科技感边框」那套 */
+.sil-brackets {
+  position: relative;
+}
+
+.sil-brackets::before,
+.sil-brackets::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  pointer-events: none;
+  border-color: var(--sil-rule-strong);
+}
+
+.sil-brackets::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.sil-brackets::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+/* ==========================================================================
+ * 按钮
+ *
+ * 三种，多一种都不加：
+ *   .sil-btn         主行动（实心，但压低饱和，不用霓虹）
+ *   .sil-btn--ghost  次行动（只有边框）
+ *   .sil-btn--quiet  第三级（纯文字）
+ * ========================================================================== */
+
+.sil-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-family: var(--sil-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--sil-ink-100);
+  background: linear-gradient(180deg, var(--sil-zhihu-soft) 0%, var(--sil-zhihu) 100%);
+  transition:
+    transform 180ms var(--sil-ease),
+    box-shadow 180ms var(--sil-ease),
+    background-color 180ms var(--sil-ease);
+}
+
+.sil-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -18px var(--sil-glow-zhihu);
+}
+
+.sil-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.sil-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.sil-btn--ghost {
+  background: transparent;
+  border-color: var(--sil-rule-strong);
+  color: var(--sil-ink-200);
+}
+
+.sil-btn--ghost:hover:not(:disabled) {
+  border-color: var(--sil-alternate);
+  color: var(--sil-ink-100);
+  box-shadow: none;
+}
+
+.sil-btn--quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--sil-ink-300);
+  padding: 0 10px;
+  font-weight: 500;
+}
+
+.sil-btn--quiet:hover:not(:disabled) {
+  color: var(--sil-ink-100);
+  background: rgb(242 244 248 / 0.05);
+  box-shadow: none;
+}
+
+.sil-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* ==========================================================================
+ * 输入：一张待显影的相纸
+ * ========================================================================== */
+
+.sil-input {
+  width: 100%;
+  border: 1px solid var(--sil-rule);
+  border-radius: 3px;
+  background: rgb(5 6 10 / 0.55);
+  padding: 14px 16px;
+  /*
+    18px 衬线 + 行高 1.8：这不是「输入框」，是一页待写的纸。
+    选 18px 还顺带绕开了 iOS 的一个陷阱 —— 字号 <16px 时 Safari 会在
+    聚焦瞬间自动放大整个页面，而放大后不会自动缩回。
+  */
+  min-height: 132px;
+  font-family: var(--sil-font-serif);
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--sil-ink-100);
+  resize: none;
+  outline: none;
+  transition:
+    border-color 220ms var(--sil-ease),
+    background-color 220ms var(--sil-ease);
+}
+
+.sil-input::placeholder {
+  color: var(--sil-ink-400);
+  font-family: var(--sil-font-sans);
+  font-size: 15px;
+}
+
+.sil-input:focus {
+  border-color: color-mix(in srgb, var(--sil-alternate) 55%, transparent);
+  background: rgb(5 6 10 / 0.72);
+}
+
+/* ==========================================================================
+ * 证据标记（三种意图）
+ *
+ * 用 1px 左边线 + 低饱和文字，不用彩色胶囊。
+ * 胶囊徽标（rounded-full + 彩色背景）是最典型的 AI 界面套话。
+ * ========================================================================== */
+
+.sil-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sil-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sil-ink-300);
+  padding-left: 8px;
+  border-left: 1px solid var(--sil-rule-strong);
+}
+
+.sil-mark--zhihu {
+  color: var(--sil-zhihu-soft);
+  border-left-color: var(--sil-zhihu);
+}
+
+.sil-mark--alternate {
+  color: var(--sil-alternate-soft);
+  border-left-color: var(--sil-alternate);
+}
+
+.sil-mark--counter {
+  color: var(--sil-counter-soft);
+  border-left-color: var(--sil-counter);
+}
+
+/* ==========================================================================
+ * 未显影（未知）
+ *
+ * 只有一种状态。没有 hover、没有「点击展开」、没有估算值。
+ * 斜纹是唯一的视觉语言：显影液没走到这里。
+ * ========================================================================== */
+
+.sil-undev {
+  position: relative;
+  border: 1px dashed var(--sil-undev-line);
+  border-radius: 2px;
+  background-color: var(--sil-undev);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgb(84 92 106 / 0.09) 6px 7px
+  );
+  color: var(--sil-undev-text);
+}
+
+/* ==========================================================================
+ * 显影动效
+ *
+ * 内容出现的方式统一为「显影」：从低亮低饱和到位。
+ * 刻意不含 blur —— 同屏 blur 预算是稀缺资源，要留给真正的演出。
+ * 全站只有下面这一个入口动画 + 两个演出动画。
+ * ========================================================================== */
+
+@keyframes sil-develop {
+  from {
+    opacity: 0;
+    filter: brightness(0.5) saturate(0.4);
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1) saturate(1);
+    transform: translateY(0);
+  }
+}
+
+@keyframes sil-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sil-pulse-soft {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.86;
+  }
+}
+
+.sil-develop {
+  animation: sil-develop 620ms var(--sil-ease) both;
+}
+
+.sil-pulse-soft {
+  animation: sil-pulse-soft 2.8s var(--sil-ease-in-out) infinite;
+}
+
+/* 错峰：同一组元素依次显影，制造「逐条被显出来」的节奏 */
+.sil-stagger > * {
+  animation: sil-develop 620ms var(--sil-ease) both;
+}
+.sil-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.sil-stagger > *:nth-child(2) { animation-delay: 70ms; }
+.sil-stagger > *:nth-child(3) { animation-delay: 140ms; }
+.sil-stagger > *:nth-child(4) { animation-delay: 210ms; }
+.sil-stagger > *:nth-child(5) { animation-delay: 280ms; }
+.sil-stagger > *:nth-child(6) { animation-delay: 350ms; }
+
+/* ==========================================================================
+ * 现实层（终局那一张纸）
+ *
+ * 全站唯一的暖色区。它必须「看起来可以撕下来带走」——
+ * 所以用纸的纤维、稍暗的纸边、以及一枚真实的手写体式签名位。
+ * ========================================================================== */
+
+.sil-paper {
+  position: relative;
+  background:
+    /* 纸的纤维：极轻的斜向噪点 */
+    repeating-linear-gradient(
+      92deg,
+      transparent 0 3px,
+      rgb(31 27 22 / 0.014) 3px 4px
+    ),
+    linear-gradient(168deg, var(--sil-paper) 0%, var(--sil-paper-shade) 100%);
+  color: var(--sil-paper-ink);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    inset 0 -1px 0 rgb(31 27 22 / 0.12),
+    0 26px 50px -30px var(--sil-shadow-deep);
+}
+
+.sil-paper__title {
+  font-family: var(--sil-font-serif);
+  font-weight: 700;
+  color: var(--sil-paper-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* 纸上的小标签：等宽、疏排，但用墨色而不是暗房的灰 */
+.sil-paper .sil-label {
+  color: rgb(31 27 22 / 0.56);
+}
+
+.sil-paper__rule {
+  border-top: 1px solid var(--sil-paper-rule);
+}
+
+/* ==========================================================================
+ * 极光带 Aurora Band
+ *
+ * 全站唯一的情绪指示器：2px，斜向渐变，只做透明度呼吸（不位移、不流动）。
+ * 它替代了旧版的「数值条 / 状态灯」——情绪在，噪音不在。
+ *
+ *   seek     检索 / 推演中    蓝 → 青
+ *   counter  反例进场         琥珀
+ *   end      终局 / 现实重写   琥珀（与「认下现实支线」同一盏灯）
+ * ========================================================================== */
+
+.sil-aurora {
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--sil-zhihu) 22%,
+    var(--sil-alternate) 62%,
+    transparent 100%
+  );
+  animation: sil-pulse-soft 2.4s var(--sil-ease-in-out) infinite;
+}
+
+.sil-aurora--fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 2px;
+}
+
+.sil-aurora--inline {
+  display: block;
+  width: 100%;
+  height: 2px;
+}
+
+.sil-aurora--counter {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--sil-counter-deep) 24%,
+    var(--sil-counter) 68%,
+    transparent 100%
+  );
+}
+
+.sil-aurora--end {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--sil-counter-deep) 20%,
+    var(--sil-counter-soft) 58%,
+    transparent 100%
+  );
+}
+
+/* ==========================================================================
+ * 星尘（首页背景）
+ *
+ * 极弱点，只做 18s 的极慢自转。数量刻意压在 9 颗以内 ——
+ * 这是「仪器前的微尘」，不是「星空壁纸」。
+ * ========================================================================== */
+
+.sil-dust {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  animation: sil-dust-drift 18s var(--sil-ease-in-out) infinite alternate;
+}
+
+.sil-dust__mote {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--sil-ink-300);
+  opacity: 0.34;
+  animation: sil-pulse-soft 5.5s var(--sil-ease-in-out) infinite;
+}
+
+.sil-dust__mote--zhihu {
+  background: var(--sil-zhihu-soft);
+  opacity: 0.5;
+}
+
+.sil-dust__mote--path {
+  background: var(--sil-alternate-soft);
+  opacity: 0.46;
+}
+
+/* 极慢自转：整片天区在 18 秒里走完一次往返，肉眼几乎察觉不到 */
+@keyframes sil-dust-drift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(-1.2%, -1.6%, 0) rotate(1.2deg);
+  }
+}
+
+/* ==========================================================================
+ * 一点信号 Signal Pulse
+ *
+ * 全站只有一个「一点信号」：聚焦时出现在主焦点，点击 CTA 时是转场中心，
+ * 第三幕它是琥珀色的反例信号。
+ *
+ * 关键：**宽高必须有过渡**。旧实现尺寸直接写死在 inline style 且 CSS 无过渡，
+ * 于是 `size` 从 16 → 24 时这颗点瞬间弹大 125%，读起来像画面卡了一下
+ * （实测根因，见 .workbuddy/memory/2026-09-14.md）。
+ * ========================================================================== */
+
+.sil-signal {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  /* 尺寸过渡：把「跳变」吸收成「呼吸」 */
+  transition:
+    width 320ms var(--sil-ease),
+    height 320ms var(--sil-ease);
+}
+
+.sil-signal__ring,
+.sil-signal__core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sil-signal__ring {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--sil-alternate);
+  opacity: 0.3;
+  animation: sil-signal-breathe 3.2s var(--sil-ease-in-out) infinite;
+}
+
+.sil-signal__ring:nth-child(2) {
+  width: 72%;
+  height: 72%;
+  opacity: 0.42;
+  animation-delay: 0.4s;
+}
+
+.sil-signal__ring:nth-child(3) {
+  width: 46%;
+  height: 46%;
+  opacity: 0.55;
+  animation-delay: 0.8s;
+}
+
+.sil-signal__core {
+  width: 22%;
+  height: 22%;
+  background: var(--sil-alternate-soft);
+  /* 内敛的显影光，不是霓虹外发光 */
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sil-alternate) 14%, transparent);
+  transition: background-color 320ms var(--sil-ease);
+}
+
+.sil-signal--once .sil-signal__ring {
+  animation: sil-signal-once 900ms var(--sil-ease) 1 both;
+}
+
+@keyframes sil-signal-breathe {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes sil-signal-once {
+  0% {
+    opacity: 0.12;
+    transform: translate(-50%, -50%) scale(0.82);
+  }
+  58% {
+    opacity: 0.92;
+    transform: translate(-50%, -50%) scale(1.14);
+  }
+  100% {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.sil-signal--zhihu .sil-signal__ring {
+  border-color: var(--sil-zhihu);
+}
+.sil-signal--zhihu .sil-signal__core {
+  background: var(--sil-zhihu-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sil-zhihu) 14%, transparent);
+}
+
+.sil-signal--counter .sil-signal__ring {
+  border-color: var(--sil-counter);
+}
+.sil-signal--counter .sil-signal__core {
+  background: var(--sil-counter-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sil-counter) 14%, transparent);
+}
+
+.sil-signal--end .sil-signal__ring {
+  border-color: var(--sil-counter);
+}
+.sil-signal--end .sil-signal__core {
+  background: var(--sil-counter-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sil-counter) 14%, transparent);
+}
+
+/* ==========================================================================
+ * 游戏层 · 幕（Act）
+ *
+ * 游戏的「一局」由三幕构成。每一幕在视觉上要能被感到不同 ——
+ * 但差别**不能**来自换配色（那是廉价的做法），只能来自三样东西：
+ *
+ *   1. 大气密度（背景 radial 的强度）
+ *   2. 轨道数量（OrbitField 的 count，由组件传）
+ *   3. 排版节奏（幕标题的尺度）
+ *
+ * 三幕的语义：
+ *   act1 进入世界     —— 最暗最开阔，还没有任何结论
+ *   act2 体验代价     —— 密度升高，代价开始被看见
+ *   act3 遇见反例     —— 琥珀介入，唯一的「警告色」，但用低饱和
+ *   end  终局         —— 一切退出，只剩问题与现实那一张纸
+ * ========================================================================== */
+
+.sil-act {
+  position: relative;
+  isolation: isolate;
+}
+
+/* 幕的换场：一条极细的光自上而下扫过，760ms，只播一次 */
+.sil-act-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  z-index: 5;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--sil-alternate) 55%, transparent) 50%,
+    transparent 100%
+  );
+  animation: sil-act-sweep 760ms var(--sil-ease) both;
+}
+
+@keyframes sil-act-sweep {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(62vh);
+    opacity: 0;
+  }
+}
+
+/* 反例幕的光扫过用琥珀 —— 同一动作，不同意图 */
+.sil-act[data-act='3'] .sil-act-sweep {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--sil-counter) 60%, transparent) 50%,
+    transparent 100%
+  );
+}
+
+/* 终局的一切演出都停下来 */
+.sil-act[data-act='end'] .sil-act-sweep {
+  animation: none;
+  opacity: 0;
+}
+
+/* ==========================================================================
+ * 游戏层 · 幕次抬头
+ * ========================================================================== */
+
+.sil-acthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* 幕次编号：等宽、大字距，像仪器上的刻度盘标签 */
+.sil-acthead__index {
+  font-family: var(--sil-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.24em;
+  color: var(--sil-ink-400);
+}
+
+.sil-acthead__title {
+  font-family: var(--sil-font-serif);
+  font-size: clamp(17px, 4vw, 21px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--sil-ink-100);
+  text-wrap: balance;
+}
+
+.sil-acthead__objective {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--sil-ink-300);
+  text-wrap: pretty;
+}
+
+/* ==========================================================================
+ * 游戏层 · 选项
+ *
+ * 选项是「一局游戏里唯一真正属于玩家的东西」，所以它必须:
+ *   - 足够大（≥44px，移动端也是）
+ *   - 有清楚的层级：可选 / 已解锁 / 锁住（未显影）
+ *
+ * 刻意**不做**：hover 发光、彩色渐变边框、图标堆砌。
+ * ========================================================================== */
+
+.sil-choice {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  border: 1px solid var(--sil-rule);
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    rgb(18 22 31 / 0.62) 0%,
+    rgb(11 14 20 / 0.5) 100%
+  );
+  padding: 14px 16px;
+  text-align: left;
+  transition:
+    border-color 200ms var(--sil-ease),
+    transform 200ms var(--sil-ease),
+    background-color 200ms var(--sil-ease);
+}
+
+.sil-choice:hover:not(:disabled) {
+  border-color: var(--sil-rule-strong);
+  transform: translateX(2px);
+}
+
+.sil-choice:disabled {
+  cursor: default;
+}
+
+/* 可选的选项左侧有一道极细的青色引线：这是「路在此处」的唯一提示 */
+.sil-choice--open {
+  border-left: 2px solid color-mix(in srgb, var(--sil-alternate) 60%, transparent);
+}
+
+/* 已解锁：它之所以存在，是因为一份真实经验打开了它 */
+.sil-choice--unlocked {
+  border-color: color-mix(in srgb, var(--sil-alternate) 34%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sil-alternate) 9%, rgb(18 22 31 / 0.6)) 0%,
+    rgb(11 14 20 / 0.5) 100%
+  );
+}
+
+/* 锁住（未显影）：斜纹 + 不可点，永不补全 */
+.sil-choice--locked {
+  border-style: dashed;
+  border-color: var(--sil-undev-line);
+  background-color: var(--sil-undev);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgb(84 92 106 / 0.09) 6px 7px
+  );
+  color: var(--sil-undev-text);
+}
+
+.sil-choice__title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--sil-ink-100);
+}
+
+.sil-choice--locked .sil-choice__title {
+  color: var(--sil-undev-text);
+}
+
+.sil-choice__hint {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--sil-ink-300);
+}
+
+/* 锁住的原因：这是产品最诚实的一行字，给它足够的存在感 */
+.sil-choice__reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--sil-undev-text);
+}
+
+/* 序号：等宽刻度，不是「A/B/C」的街机选项 */
+.sil-choice__index {
+  font-family: var(--sil-font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.18em;
+  color: var(--sil-ink-400);
+}
+
+/* 「它来自一份真实经验」的出处按钮 */
+.sil-choice__source {
+  font-size: 12px;
+  color: var(--sil-zhihu-soft);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+/* ==========================================================================
+ * 游戏层 · 极简 HUD
+ *
+ * 只有三件事：我在第几幕 / 我借到了几张经验 / 我还有多少未知。
+ * 没有血条、没有分数、没有等级 —— 未知数刻意用未显影灰，
+ * 它不是「待解锁的成就」，是「已经不打算替你填的空白」。
+ * ========================================================================== */
+
+.sil-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  font-family: var(--sil-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--sil-ink-400);
+}
+
+.sil-hud__act {
+  color: var(--sil-ink-300);
+}
+
+/* 经验卡计数：借来的东西，用青色 —— 但只是文字变色，不做徽标 */
+.sil-hud__cards {
+  color: var(--sil-alternate-soft);
+  transition: opacity 260ms var(--sil-ease);
+}
+
+.sil-hud__cards--pulse {
+  animation: sil-pulse-soft 1.6s var(--sil-ease-in-out) 3;
+}
+
+.sil-hud__unknown {
+  color: var(--sil-undev-text);
+}
+
+/* ==========================================================================
+ * 游戏层 · 经验卡获得演出
+ *
+ * 不是 Toast（成就语言），是「收集」—— 所以报的是谁的哪段经历。
+ * 出现在屏幕底部，2.6s 后自己离开，不占用任何交互。
+ * ========================================================================== */
+
+.sil-cardgain {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 60;
+  width: min(420px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in srgb, var(--sil-alternate) 30%, transparent);
+  border-left: 2px solid var(--sil-alternate);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgb(16 24 26 / 0.96) 0%, rgb(9 13 17 / 0.96) 100%);
+  padding: 12px 14px;
+  box-shadow: 0 22px 44px -26px var(--sil-shadow-deep);
+  animation: sil-cardgain-in 520ms var(--sil-ease) both;
+}
+
+.sil-cardgain--leaving {
+  animation: sil-cardgain-out 420ms var(--sil-ease) both;
+}
+
+@keyframes sil-cardgain-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes sil-cardgain-out {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+}
+
+.sil-cardgain__kicker {
+  display: block;
+  font-family: var(--sil-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sil-alternate);
+  opacity: 0.72;
+}
+
+.sil-cardgain__title {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--sil-font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sil-ink-100);
+}
+
+.sil-cardgain__line {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--sil-ink-300);
+}
+
+/* ==========================================================================
+ * 游戏层 · 坐标脚注
+ *
+ * 一局游戏里永远显示「你在回答哪个问题」—— 它是仪器，不是装饰。
+ * ========================================================================== */
+
+.sil-coordinate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px solid var(--sil-rule-faint);
+  font-family: var(--sil-font-mono);
+  font-size: 11px;
+  color: var(--sil-ink-400);
+}
+
+.sil-coordinate__key {
+  flex-shrink: 0;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sil-ink-400);
+  opacity: 0.72;
+}
+
+/* ==========================================================================
+ * 游戏层 · 未显影锁（未知）
+ * ========================================================================== */
+
+.sil-unknown {
+  border: 1px dashed var(--sil-undev-line);
+  border-radius: 3px;
+  background-color: var(--sil-undev);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgb(84 92 106 / 0.09) 6px 7px
+  );
+  padding: 18px 16px;
+}
+
+.sil-unknown__label {
+  font-family: var(--sil-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sil-undev-text);
+}
+
+.sil-unknown__text {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--sil-undev-text);
+  text-wrap: pretty;
+}
+
+/* 被未知锁住的动作：列出它们，但不给任何「点击解锁」的暗示 */
+.sil-unknown__blocked {
+  margin-top: 14px;
+  border-top: 1px solid var(--sil-undev-line);
+  padding-top: 12px;
+}
+
+.sil-unknown__blocked-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--sil-undev-text);
+}
+
+/* ==========================================================================
+ * 游戏层 · 叙事文本
+ *
+ * 游戏文本用衬线、更大的字号、更松的行高 —— 它要被「读」，
+ * 不是被「扫」。这是文字冒险与仪表盘的根本区别。
+ * ========================================================================== */
+
+.sil-story {
+  font-family: var(--sil-font-serif);
+  font-size: 16px;
+  line-height: 2;
+  color: var(--sil-ink-200);
+  max-width: var(--sil-measure);
+  text-wrap: pretty;
+}
+
+@media (min-width: 768px) {
+  .sil-story {
+    font-size: 17px;
+    line-height: 1.95;
+  }
+}
+
+.sil-story__title {
+  font-family: var(--sil-font-serif);
+  font-size: clamp(19px, 4.4vw, 24px);
+  font-weight: 700;
+  line-height: 1.34;
+  letter-spacing: -0.01em;
+  color: var(--sil-ink-100);
+  text-wrap: balance;
+}
+
+/* ==========================================================================
+ * 语义结构类 · session-*（材质覆写）
+ *
+ * 这组类名是**结构契约**：游戏屏的组件（SessionPlayScreen / SessionChoiceCard
+ * / SessionActHeader / SessionCollisionStage / SessionUnknownStage /
+ * SessionEndgameScreen）铺的就是它们，测试也钉住这些名字。所以这里
+ * **不改名**，只覆写材质。
+ *
+ * silver.css 在 layout 里晚于 globals.css 加载，同权重下后者胜出 ——
+ * 于是这一节就是「同一个结构接口的新实现」。
+ *
+ * 换掉的东西：
+ *   - hover 的上浮 2px + 蓝色外投影（AI 感来源）→ 改成向左引线的位移
+ *   - 12px 的 hint → 提到 13px（移动端可读）
+ *   - 幕次背景的 4 层 radial 蓝光 → 降到 1–2 层低饱和，靠密度区分而非换色
+ * ========================================================================== */
+
+.session-stage {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--sil-void-900);
+  transition: background 700ms var(--sil-ease);
+}
+
+/* 三幕的差别只来自大气密度，不来自换一种颜色 */
+.session-stage[data-act='1'] {
+  background:
+    radial-gradient(58% 44% at 50% -4%, rgb(47 111 208 / 0.075), transparent 70%),
+    linear-gradient(180deg, var(--sil-void-800) 0%, var(--sil-void-900) 58%, #04050a 100%);
+}
+
+.session-stage[data-act='2'] {
+  background:
+    radial-gradient(46% 38% at 50% 4%, rgb(47 111 208 / 0.055), transparent 68%),
+    linear-gradient(180deg, #05060b 0%, var(--sil-void-900) 62%, #04050a 100%);
+}
+
+.session-stage[data-act='3'] {
+  background:
+    radial-gradient(42% 32% at 22% 2%, rgb(79 184 174 / 0.055), transparent 66%),
+    radial-gradient(42% 32% at 82% 20%, rgb(179 133 74 / 0.06), transparent 68%),
+    linear-gradient(180deg, var(--sil-void-900) 0%, var(--sil-void-700) 52%, #04050a 100%);
+}
+
+.session-stage[data-act='end'] {
+  background: linear-gradient(180deg, #030409 0%, var(--sil-void-900) 60%, #030409 100%);
+}
+
+.session-act-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--sil-rule-faint);
+}
+
+/* 游戏叙事：衬线 + 2.0 行高，它要被「读」而不是被「扫」 */
+.session-story {
+  font-family: var(--sil-font-serif);
+  font-size: 16px;
+  line-height: 2;
+  color: var(--sil-ink-200);
+  text-wrap: pretty;
+}
+
+@media (min-width: 768px) {
+  .session-story {
+    font-size: 17px;
+    line-height: 1.95;
+  }
+}
+
+/* --- 选项 --- */
+
+.session-choice {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  border: 1px solid var(--sil-rule);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgb(18 22 31 / 0.62) 0%, rgb(11 14 20 / 0.5) 100%);
+  padding: 14px 16px;
+  transition:
+    border-color 200ms var(--sil-ease),
+    transform 200ms var(--sil-ease);
+}
+
+/* 从「上浮 + 蓝光」改成「向右一点」—— 克制得多，也不会读成按钮弹跳 */
+.session-choice:hover {
+  transform: translateX(2px);
+  border-color: var(--sil-rule-strong);
+}
+
+.session-choice--dimmed {
+  opacity: 0.42;
+  transition: opacity 150ms linear;
+}
+
+.session-choice__title {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--sil-ink-100);
+}
+
+.session-choice__hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--sil-ink-300);
+}
+
+.session-choice__index {
+  font-family: var(--sil-font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.18em;
+  color: var(--sil-ink-400);
+}
+
+/*
+  ## 门的编号由 CSS counter 生成
+  每一条路都有一个编号，但编号**不在 React 里算** ——
+  组件只铺一个空的 `<span class="session-choice__index" />`，序号由 CSS 数出来。
+
+  实际好处：列表被过滤、重排、条件渲染时，编号永远跟着视觉顺序走，
+  不需要在渲染逻辑里维护一个 index 变量（那是 bug 温床）。
+*/
+.session-choice-list {
+  counter-reset: sil-gate;
+}
+
+.session-choice__index::before {
+  counter-increment: sil-gate;
+  content: counter(sil-gate, decimal-leading-zero);
+}
+
+.session-choice__chevron {
+  color: var(--sil-ink-400);
+  transition: color 200ms var(--sil-ease);
+}
+
+.session-choice:hover .session-choice__chevron {
+  color: var(--sil-alternate-soft);
+}
+
+/* 解锁：它存在是因为一份真实经验撕开了这条路 —— 所以左侧有一道青色引线 */
+.session-choice--unlocked {
+  border-color: color-mix(in srgb, var(--sil-alternate) 34%, transparent);
+  border-left: 2px solid var(--sil-alternate);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sil-alternate) 9%, rgb(18 22 31 / 0.6)) 0%,
+    rgb(11 14 20 / 0.5) 100%
+  );
+}
+
+.session-choice--unlocked:hover {
+  border-color: color-mix(in srgb, var(--sil-alternate) 52%, transparent);
+  border-left-color: var(--sil-alternate);
+}
+
+/* 解锁的一次脉冲：只做透明度，不做光晕 */
+.session-choice__pulse {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid var(--sil-alternate);
+  border-radius: 3px;
+  animation: sil-pulse-soft 2.2s var(--sil-ease-in-out) 2;
+}
+
+/* 锁住（未显影）：斜纹 + 虚线 + 不可点，永不补全 */
+.session-choice--locked {
+  border-style: dashed;
+  border-color: var(--sil-undev-line);
+  background-color: var(--sil-undev);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgb(84 92 106 / 0.09) 6px 7px
+  );
+}
+
+.session-choice--locked:hover {
+  transform: none;
+  border-color: var(--sil-undev-line);
+}
+
+.session-choice--locked .session-choice__title {
+  color: var(--sil-undev-text);
+}
+
+/* 锁住的原因：产品最诚实的一行字之一，给它足够的存在感 */
+.session-choice__reason {
+  display: block;
+  margin-top: 8px;
+  border-top: 1px solid var(--sil-undev-line);
+  padding-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--sil-undev-text);
+}
+
+/* --- 未显影锁 --- */
+
+.session-unknown {
+  border: 1px dashed var(--sil-undev-line);
+  border-radius: 3px;
+  background-color: var(--sil-undev);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgb(84 92 106 / 0.09) 6px 7px
+  );
+  padding: 18px 16px;
+}
+
+/* --- 碰撞（反例与你的差异）--- */
+
+.session-collision {
+  border: 1px solid color-mix(in srgb, var(--sil-counter) 26%, transparent);
+  border-left: 2px solid var(--sil-counter);
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sil-counter) 7%, rgb(18 22 31 / 0.6)) 0%,
+    rgb(11 14 20 / 0.5) 100%
+  );
+  padding: 16px;
+}
+
+/* --- 反思（这一幕过去了）--- */
+
+.session-reflection {
+  border-left: 2px solid var(--sil-rule-strong);
+  padding-left: 14px;
+}
+
+/* --- 错误态 --- */
+
+.session-error {
+  border: 1px solid color-mix(in srgb, var(--sil-counter) 32%, transparent);
+  border-left: 2px solid var(--sil-counter);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--sil-counter) 6%, transparent);
+}
+
+/* --- 场景框 --- */
+
+.session-scene-frame {
+  position: relative;
+  border: 1px solid var(--sil-rule);
+  border-radius: 3px;
+  background: rgb(5 6 10 / 0.4);
+}
+
+.session-scene-frame__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 3px;
+  background: linear-gradient(180deg, transparent 42%, rgb(4 5 10 / 0.72) 100%);
+}
+
+/* --- 终局 --- */
+
+.session-endgame {
+  position: relative;
+}
+
+/* ==========================================================================
+ * 角色立绘 · 融入暗房
+ *
+ * ## 问题
+ *
+ * 素材是知乎官方刘看山的 3D 黏土 GIF（320×320、透明、约 1MB／个），
+ * 白色黏土狐 + 红色围巾。它是**浅色主体**，直接压在近黑的暗房背景上时
+ * 会「浮」起来，具体是四个病因：
+ *
+ * ```text
+ * 1. 没有落点       —— 角色悬在半空，像贴纸贴在屏幕上
+ * 2. 过曝           —— 白色黏土在暗底上对比过强，边缘发「硬」
+ * 3. 剪纸边         —— drop-shadow 沿 alpha 切一圈硬边，读起来像剪纸
+ * 4. 悬浮光晕       —— 底下一个扁椭圆发光圆，是「发光底座」这套 AI 套话
+ * ```
+ *
+ * ## 解法
+ *
+ * 用暗房的物理逻辑解决，而不是加更多发光：
+ *
+ * ```text
+ * soft-light 混合   让立绘接受暗房的环境光，白不再是「屏幕白」
+ * 轻微降亮/降饱和    把它按进环境，而不是让它跳出来
+ * 台座              一小片相纸色的弧形落点 + 接触阴影（有方向）
+ * 底部渐隐          接近脚部的极少 fade，把「剪」出来的边藏进背景
+ * ```
+ *
+ * 刻意**不用**：外发光、彩色描边、投影发光、悬浮圆盘。
+ * ========================================================================== */
+
+.sil-cast {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  justify-content: center;
+  /*
+    刻意**不加** `isolation: isolate`。
+    加了它会新建层叠上下文，`mix-blend-mode` 的背景就变成 `.sil-cast`
+    自己的（完全透明）背景 —— 按规范，与透明背景混合时结果等于源色，
+    于是 soft-light 变成空操作，白黏土原样贴在近黑底上。
+    （这个坑是实测出来的：像素 p99 仍是 255 纯白，与背景落差 209。）
+  */
+}
+
+.sil-cast__sprite {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
+  user-select: none;
+  /*
+    ## 融合怎么做才对
+    素材是 3D 黏土渲染的白色狐狸，自带完整明暗。它的问题是
+    **边缘是 1bit alpha**（GIF 只有「全透明/全不透明」），所以抠图边是硬的；
+    再加上峰值是纯白 255，在近黑底（实测 ≈10~15）上会「跳」出来读成贴纸。
+
+    解法不是把它整体压暗 —— 那会变成一团脏影，引导员就不在场了。
+    而是做**大气透视**：主体保持清楚，但带上环境色、峰值被收住。
+
+    实测取值：
+      纯背景亮度 ≈ 12，立绘峰值 ≈ 218，细节标准差 ≈ 71
+    这三步合起来达到的效果就是「在场，但不是屏幕白」。
+  */
+  filter: brightness(0.86) saturate(0.9) contrast(1.04) sepia(0.06)
+    hue-rotate(178deg);
+  opacity: 0.97;
+  transition:
+    transform 320ms var(--sil-ease),
+    opacity 320ms var(--sil-ease),
+    filter 320ms var(--sil-ease);
+}
+
+/*
+  底部渐隐：GIF 的 1bit alpha 让抠图边是硬的（没有半透明过渡），
+  直接贴在背景上就是一道「剪」出来的轮廓。这里在角色脚部叠一层
+  极窄的背景色渐变，把那道硬边吃掉 —— 视觉上角色「走进」了暗房，
+  而不是被剪下来放上去。
+*/
+.sil-cast::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 8%;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--sil-void-900) 88%, transparent) 100%
+  );
+}
+
+.sil-cast__ground {
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  z-index: 0;
+  width: 64%;
+  height: 7px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 50%;
+  /* 接触阴影：有方向（压暗在角色正下方偏右），不是一团居中发光 */
+  background: radial-gradient(
+    52% 100% at 54% 50%,
+    rgb(2 3 6 / 0.62),
+    transparent 76%
+  );
+}
+
+/* 台座：一片相纸色的极浅弧 —— 角色站在暗房的台面上，而不是浮着 */
+.sil-cast__ground::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 46%;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(242 244 248 / 0.16) 50%,
+    transparent 100%
+  );
+}
+
+/* 虚影态（第三幕的反例揭示）：去饱和 + 降透明，视觉上先感到不对 */
+.sil-cast--ghost .sil-cast__sprite {
+  opacity: 0.66;
+  filter: brightness(1) saturate(0.32);
+}
+
+.sil-cast--ghost .sil-cast__ground {
+  opacity: 0.4;
+}
+
+/* 说话中：极轻微的呼吸，不做跳动（立绘不是 emoji） */
+.sil-cast--speaking .sil-cast__sprite {
+  animation: sil-cast-breathe 4.4s var(--sil-ease-in-out) infinite;
+}
+
+@keyframes sil-cast-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.012);
+  }
+}
+
+/* 窄屏再收一档尺寸，别让引导员占掉正文的注意力 */
+@media (max-width: 420px) {
+  .sil-cast {
+    --sil-cast-scale: 0.88;
+  }
+}
+
+/* ==========================================================================
+ * 未显影字段 · ds-undeveloped（材质覆写）
+ *
+ * 类名是结构契约（`Undeveloped.tsx` 铺它，组件被多处复用），所以不改名。
+ *
+ * `content: attr(data-unknown-label)` 是这条纪律的材料化：
+ * 标注文字由**数据属性**给出，CSS 不认识具体文案 ——
+ * 于是「未知」永远只有一个标签，不会有第二套说法被写进样式表。
+ * ========================================================================== */
+
+.ds-undeveloped {
+  position: relative;
+  display: block;
+  border: 1px dashed var(--sil-undev-line);
+  border-radius: 2px;
+  background-color: var(--sil-undev);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgb(84 92 106 / 0.09) 6px 7px
+  );
+  padding: 14px 16px;
+  color: var(--sil-undev-text);
+  /* 未知不可点 —— 它没有 hover，也没有展开 */
+  cursor: default;
+}
+
+.ds-undeveloped::after {
+  content: attr(data-unknown-label);
+  display: block;
+  margin-top: 8px;
+  font-family: var(--sil-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sil-undev-text);
+}
+
+/* `inline` 让标注跟在同一行，而不是另起一行 */
+.ds-undeveloped--inline {
+  display: inline-block;
+  padding: 6px 10px;
+  vertical-align: baseline;
+}
+
+.ds-undeveloped--inline::after {
+  display: inline;
+  margin-top: 0;
+  margin-left: 8px;
+}
+
+/* ==========================================================================
+ * 转场动画：从 globals.css 迁入
+ *
+ * 这 12 组 keyframes 由 `src/components/visual/**` 的 22 个组件引用
+ * （首页的宇宙跳跃、世界锻造、坐标盘、片段流…）。原来定义在 globals.css，
+ * 随设计系统统一搬到这里。
+ *
+ * **为什么必须搬干净**：CSS 对解析不到的 animation 名是**静默忽略**的 ——
+ * 元素直接跳到终态，不报错、不崩。一旦 globals.css 先被删而这些没搬，
+ * 表现是「所有转场变成瞬移」，在浏览器里极难定位到根因。
+ *
+ * 命名统一到 `sil-` 前缀；`fragment-materialize` 保持原名
+ * （它在多个组件里按名字引用，且语义本身已中性）。
+ * ========================================================================== */
+
+@keyframes sil-beam-in {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* 输入框压缩成一条光线（报告 §6） */
+@keyframes sil-collapse {
+  0% {
+    opacity: 1;
+    transform: scaleX(1) scaleY(1);
+    filter: blur(0);
+  }
+  55% {
+    opacity: 1;
+    transform: scaleX(0.06) scaleY(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0.02) scaleY(0.06);
+    filter: blur(2px);
+  }
+}
+
+/* 5. Counterline —— 反例从相反方向进入（报告 §20 / §26.5） */
+@keyframes sil-counter-in {
+  0% {
+    opacity: 0;
+    transform: translateX(46px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 4. Path Unlock —— 空白里出现细裂缝，第三条路径从里面展开（报告 §15 / §26.4） */
+@keyframes sil-crack-open {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.05);
+  }
+  45% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* 1. Worldline Drift —— 世界线缓慢漂移（报告 §26.1） */
+@keyframes sil-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-1.6%, -1.2%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* 2. Fragment Arrival —— 人生切片从模糊错位到清晰归位（报告 §8 / §26.2） */
+@keyframes sil-fragment-arrive {
+  0% {
+    opacity: 0;
+    filter: blur(7px);
+    transform: translateY(12px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sil-link-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 6. Question Morph —— 问题重写（报告 §24 / §26.6） */
+@keyframes sil-morph-fade {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0.22;
+    filter: blur(2.5px);
+  }
+}
+
+@keyframes sil-morph-rise {
+  0% {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes sil-node-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes sil-path-emerge {
+  0% {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/*
+  碎片显影。位移量由 JS 通过 `--sil-shard-dx/dy` 注入
+  （见 FragmentShard.tsx），带回落值，所以单独看 CSS 不会觉得缺变量。
+*/
+/*
+  扫描线。`CoordinateInput`（原 `.arc-scan`）用它画一条从左扫到右的细线。
+  —— 顺带修掉一个**既有的静默 bug**：旧 CSS 写了 `animation: scan-sweep …`，
+  但 `scan-sweep` 这个 keyframes 在 globals.css 与 silver.css 里都没有定义，
+  所以这条动画从上线起就没动过（CSS 对未知动画名是静默忽略的）。
+*/
+@keyframes sil-scan-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fragment-materialize {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--sil-shard-dx, 0px), var(--sil-shard-dy, 10px), 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* ==========================================================================
+ * 无障碍：减少动画
+ * ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .sil-develop,
+  .sil-pulse-soft,
+  .sil-stagger > *,
+  .sil-signal__ring,
+  .sil-dust,
+  .sil-dust__mote,
+  .sil-aurora,
+  .sil-act-sweep,
+  .sil-hud__cards--pulse,
+  .sil-cardgain,
+  .sil-cardgain--leaving,
+
+  /*
+    ## 三个持续动效
+
+    观象仪自转、世界线漂移、文字重写 —— 这三个是**无限循环**的运动，
+    与上面那些一次性入场动画不同：它们会一直动下去。
+
+    降级时必须单独关掉：`animation: none` 会让元素停在动画的
+    起始关键帧，而这几个元素在起始帧是 `opacity: 0`
+    （视觉上「还没出现」），所以还要把 opacity / transform
+    一并归位，让内容直接以终态呈现。
+  */
+  .sil-dial__spin,
+  .sil-dial__spin-rev,
+  .sil-orbit__drift,
+  .sil-reveal__line,
+  .sil-reforged__new {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* 信号环靠 translate 居中，这里不能一刀切掉 transform */
+  .sil-signal__ring,
+  .sil-signal__core {
+    transform: translate(-50%, -50%) !important;
+  }
+
+  /* 经验卡获得演出靠 translateX 居中 */
+  .sil-cardgain {
+    transform: translateX(-50%) !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
+ * 大型视觉装置
+ *
+ * 这些规则服务于 `src/components/visual/**`（命运观象仪、轨道场、宇宙跳跃、
+ * 世界锻造、坐标盘、碎片流…），命名统一在 `sil-*` 下。
+ *
+ * 改动这里的规则时，三处必须同步，缺一不可：
+ *   1. 选择器名
+ *   2. 规则体内的 CSS 变量引用
+ *   3. 规则体内引用的 keyframes 名（含其定义本身）
+ *
+ * 因为两种失效都是静默的：CSS 变量解析不到值不报错，只回落到继承值；
+ * 动画名解析不到时整条 `animation` 被忽略，元素直接跳到终态。
+ * 症状是「颜色/位移不太对」「转场变瞬移」—— 没有任何控制台提示。
+ * ========================================================================== */
+
+/* 坐标输入器：拟物档案控制台，聚焦时才亮（报告 §5） */
+.sil-coordinate-frame {
+  transition:
+    border-color 260ms var(--sil-ease),
+    background-color 260ms var(--sil-ease),
+    box-shadow 260ms var(--sil-ease),
+    transform 260ms var(--sil-ease);
+}
+
+.sil-coordinate-frame:focus-within {
+  background-color: rgb(var(--sil-rgb-zhihu) / 0.05);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 0 0 1px rgb(var(--sil-rgb-zhihu) / 0.22),
+    0 30px 70px -46px rgb(var(--sil-rgb-zhihu) / 0.7);
+}
+
+.sil-scan {
+  animation: scan-sweep 2.6s var(--sil-ease) infinite;
+}
+
+.sil-dial {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/*
+  主环与「附近环」的响应。
+
+  这两条很容易被漏掉，因为它们是单行紧凑写法（`{ ... }` 同行闭合），
+  扫读时不像一个「块」：
+
+    .sil-dial__ring { transition: opacity 900ms var(--sil-ease); }
+    .sil-dial--focus .sil-dial__ring--near { opacity: 0.85; }
+
+  缺了它们，观象仪看起来「能转但不响应」：指针悬停时环的淡入淡出
+  变瞬变（没有 transition），「聚焦时邻近环提亮」这个引导效果
+  也完全不存在。
+*/
+.sil-dial__ring {
+  transition: opacity 900ms var(--sil-ease);
+}
+
+.sil-dial--focus .sil-dial__ring--near {
+  opacity: 0.85;
+}
+
+.sil-dial__svg {
+  width: min(132vw, 1120px);
+  height: min(132vw, 1120px);
+  max-height: 132vh;
+  flex: 0 0 auto;
+  /* §11：只允许非常轻的 1~2° 视差；用 CSS 变量承接指针偏移 */
+  transform: rotate(var(--sil-tilt-y, 0deg)) translate3d(var(--sil-tilt-x, 0px), 0, 0);
+  transition: transform 900ms var(--sil-ease);
+  /* 这是一张 660~1120px 的巨型 SVG：不给合成层提示的话，指针每动一帧
+     都要把整台仪器重新光栅化一次，点击时就是一片「闪」。 */
+  will-change: transform;
+  opacity: 0.9;
+}
+
+.sil-dial__spin-rev {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+/* 极慢 40~90s 旋转（§11） */
+.sil-dial__spin {
+  animation: sil-orbit-drift 88s linear infinite;
+}
+
+.sil-dial__spin-rev {
+  animation: sil-orbit-drift 61s linear infinite reverse;
+}
+
+/* 主焦点围绕自己的包围盒呼吸，而不是围绕整张图（fill-box） */
+.sil-dial__focus {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: sil-signal-pulse 4.6s var(--sil-ease) infinite;
+}
+
+.sil-orbit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sil-orbit__svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0.9;
+}
+
+.sil-orbit__drift {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: sil-orbit-drift 140s linear infinite;
+}
+
+.sil-orbit__path {
+  fill: none;
+  stroke-linecap: round;
+  transition: opacity 620ms var(--sil-ease);
+}
+
+/*
+  聚焦：附近轨道 opacity +10%（报告 §14）—— 是「附近」，不是全部。
+
+  这几条都是单行紧凑写法（选择器、声明、闭合花括号在同一行），
+  容易被整体扫读时跳过 —— 因为它们不像一个「块」，会被当成一行杂项。
+  缺了它们，组件给这些元素加好了修饰类却没有任何规则响应：
+  轨道场的聚焦效果与「反例轨道」配色静默消失（CSS 未匹配的选择器不报错）。
+*/
+.sil-orbit--near .sil-orbit__path--near {
+  opacity: 0.42;
+}
+
+.sil-orbit--near .sil-orbit__path--far {
+  opacity: 0.24;
+}
+
+.sil-orbit__path--bright {
+  opacity: 0.46;
+}
+
+.sil-orbit__path--counter {
+  stroke: var(--sil-counter);
+}
+
+.sil-forge {
+  position: relative;
+  overflow: hidden;
+}
+
+.sil-forge__track {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.sil-forge--assembling .sil-forge__track {
+  animation: sil-orbit-weave 820ms var(--sil-ease) both;
+}
+
+/* 三轨向中央收束后短暂连接成几何（§20） */
+.sil-forge__weave {
+  transition:
+    opacity 480ms var(--sil-ease),
+    transform 700ms var(--sil-ease);
+}
+
+.sil-forge--assembling .sil-forge__weave {
+  transform: scale(0.82);
+}
+
+.sil-forge--ready .sil-forge__track {
+  stroke-dashoffset: 0;
+  opacity: 1;
+}
+
+.sil-forge__ready {
+  animation: fragment-materialize 420ms var(--sil-ease) both;
+}
+
+.sil-forge__caption {
+  transition: opacity 420ms var(--sil-ease);
+}
+
+.sil-forge__question {
+  max-width: 30ch;
+  text-wrap: balance;
+}
+
+.sil-reveal__line {
+  height: 1px;
+  transform-origin: 50% 50%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--sil-rgb-alternate) / 0.85) 32%,
+    rgb(var(--sil-rgb-alternate-soft) / 0.95) 50%,
+    rgb(var(--sil-rgb-alternate) / 0.85) 68%,
+    transparent
+  );
+  /* §25 的第一拍：普通 Gate 先暗 150ms，轨迹才出现 */
+  animation: sil-hidden-path-reveal 260ms var(--sil-ease) both;
+  animation-delay: 150ms;
+}
+
+.sil-reveal__gate {
+  animation: fragment-materialize 420ms var(--sil-ease) both;
+  animation-delay: 400ms;
+}
+
+.sil-reveal__label {
+  animation: fragment-materialize 320ms var(--sil-ease) both;
+  animation-delay: 620ms;
+}
+
+.sil-reveal--settled .sil-reveal__label {
+  animation: none;
+}
+
+.sil-reforged__old {
+  animation: sil-sentence-reforge 800ms var(--sil-ease) reverse both;
+}
+
+.sil-reforged__new {
+  animation: sil-sentence-reforge 1000ms var(--sil-ease) both;
+  animation-delay: 500ms;
+}
+
+  .sil-dial__svg {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* reveal → fade（内容必须仍然出现，只是不再生长） */
+  .sil-reveal__line {
+    animation: none !important;
+    transform: scaleX(1) !important;
+    opacity: 1 !important;
+  }
+
+  .sil-forge--assembling .sil-forge__track {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* question morph → crossfade */
+  .sil-reforged__old {
+    animation: none !important;
+    opacity: 0.42 !important;
+  }
+
+  .sil-reforged__new {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+
+  .sil-forge--assembling .sil-forge__weave {
+    transform: none !important;
+  }
+
+.sil-jump {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sil-jump__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    56% 48% at 50% 52%,
+    rgb(var(--sil-rgb-void-900) / 0.42) 0%,
+    rgb(var(--sil-rgb-void-900) / 0.94) 74%,
+    rgb(var(--sil-rgb-void-900) / 0.99) 100%
+  );
+  opacity: 0;
+  transition: opacity 460ms linear;
+}
+
+.sil-jump[data-phase='charge'] .sil-jump__veil {
+  opacity: 0.6;
+}
+
+.sil-jump[data-phase='warp'] .sil-jump__veil {
+  opacity: 1;
+}
+
+.sil-jump__tunnel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.sil-jump__ring {
+  position: absolute;
+  width: 36vmax;
+  height: 36vmax;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--sil-rgb-alternate) / 0.5);
+  opacity: 0;
+  transform: scale(0.22);
+  transition:
+    transform 900ms cubic-bezier(0.55, 0, 0.9, 0.36),
+    opacity 780ms linear;
+}
+
+.sil-jump[data-phase='charge'] .sil-jump__ring {
+  opacity: 0.5;
+  transform: scale(0.3);
+  transition-duration: 300ms;
+}
+
+.sil-jump[data-phase='warp'] .sil-jump__ring {
+  opacity: 0;
+  transform: scale(9);
+}
+
+/* 24 条光轨（decorative particles <= 24，§36） */
+.sil-jump__streak {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 62vmax;
+  transform-origin: 50% 0%;
+  opacity: 0;
+  transform: rotate(var(--sil-streak-angle, 0deg)) scaleY(0.05);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(var(--sil-rgb-alternate) / 0.5) 38%,
+    rgb(var(--sil-rgb-ink-100) / 0.85) 58%,
+    transparent 78%
+  );
+  transition:
+    transform 840ms cubic-bezier(0.5, 0, 0.82, 0.4),
+    opacity 720ms linear;
+}
+
+.sil-jump[data-phase='charge'] .sil-jump__streak {
+  opacity: 0.22;
+  transform: rotate(var(--sil-streak-angle, 0deg)) scaleY(0.12);
+  transition-duration: 300ms;
+}
+
+.sil-jump[data-phase='warp'] .sil-jump__streak {
+  opacity: 0;
+  transform: rotate(var(--sil-streak-angle, 0deg)) scaleY(1.6);
+}
+
+/* 中心：亮核 + 一圈正在收拢的观测环 */
+.sil-jump__core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -3px 0 0 -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--sil-ink-100);
+  transition:
+    transform 840ms cubic-bezier(0.5, 0, 0.82, 0.4),
+    opacity 720ms linear;
+}
+
+/*
+  光核的光晕：用**伪元素 + 径向渐变**做，不用 `box-shadow` 外发光。
+
+  两者在屏幕上都像「一圈光」，但读感和设计纪律都不同：
+  - 外发光是在元素**周围加一层雾**（近黑底上会糊成一团灰）——
+    这正是 §9 要排除的 AI 感指纹；
+  - 径向渐变是**从光源向外衰减**，物理上对得上「这里有个发光点」。
+
+  尺寸比核大很多（6px 的核 + 96px 的光晕），居中靠 inset: 50% + translate。
+  它不参与 `.sil-jump__core` 的 `scale(30)` —— 光晕该稳定，
+  穿越感由核自己的放大来承担。
+*/
+.sil-jump__core::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    closest-side,
+    rgb(var(--sil-rgb-alternate) / 0.42),
+    rgb(var(--sil-rgb-alternate) / 0.12) 45%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.sil-jump[data-phase='charge'] .sil-jump__core {
+  transform: scale(1.6);
+}
+
+.sil-jump[data-phase='warp'] .sil-jump__core {
+  transform: scale(30);
+  opacity: 0.9;
+}
+
+.sil-jump__text {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: min(80vw, 520px);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  transition:
+    transform 820ms cubic-bezier(0.6, 0, 0.9, 0.4),
+    opacity 520ms linear 180ms,
+    filter 700ms linear;
+}
+
+.sil-jump[data-phase='warp'] .sil-jump__text {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1.55);
+  /* 全站唯一同时出现的 blur：穿越这一下（§36 预算内） */
+  filter: blur(5px);
+}
+
+.sil-jump__question {
+  margin-top: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--sil-ink-100);
+}
+
+.sil-jump__note {
+  margin-top: 12px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--sil-ink-200);
+}
+
+/* 落点：会话页的一次环收 + 闪白 */
+.sil-arrive {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sil-arrive__ring {
+  position: absolute;
+  inset: -26%;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--sil-rgb-alternate) / 0.7);
+  opacity: 0.85;
+  transform: scale(1.7);
+  transition:
+    transform 640ms cubic-bezier(0.16, 0.9, 0.3, 1),
+    opacity 640ms linear;
+}
+
+.sil-arrive__flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0.85;
+  background: radial-gradient(
+    42% 42% at 50% 50%,
+    rgb(var(--sil-rgb-alternate) / 0.3) 0%,
+    transparent 72%
+  );
+  transition: opacity 640ms linear;
+}
+
+.sil-arrive[data-phase='settled'] .sil-arrive__ring {
+  transform: scale(0.4);
+  opacity: 0;
+}
+
+.sil-arrive[data-phase='settled'] .sil-arrive__flash {
+  opacity: 0;
+}
+
+/* Forge 外环 + 三轨标签：把「外围三条人生轨道」写成看得见的东西（§17） */
+.sil-forge__ring {
+  position: absolute;
+  inset: 4% 3%;
+  border-radius: 9999px;
+  border: 1px dashed rgb(var(--sil-rgb-ink-100) / 0.08);
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  animation: sil-orbit-drift 200s linear infinite;
+}
+
+.sil-forge__orbit-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sil-ink-300);
+}
+
+.sil-forge__orbit-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+}
+
+  .sil-forge__ring {
+    animation: none !important;
+  }
+
+  .sil-arrive__flash {
+    transition: none !important;
+  }
+
+.sil-guide {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.sil-guide__svg {
+  position: relative;
+  z-index: 1;
+  display: block;
+  overflow: visible;
+}
+
+/* 全息底座：一小片光，缓慢呼吸 */
+.sil-guide__pad {
+  position: absolute;
+  right: 12%;
+  bottom: 4%;
+  left: 12%;
+  height: 7%;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgb(var(--sil-rgb-alternate) / 0.4), transparent 78%);
+  animation: sil-signal-pulse 7s var(--sil-ease) infinite;
+}
+
+/* 投影锥：从仪器上方打下来的一束光 */
+.sil-guide__cone {
+  position: absolute;
+  bottom: 9%;
+  left: 50%;
+  width: 64%;
+  height: 58%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, transparent 28%, rgb(var(--sil-rgb-alternate) / 0.13) 100%);
+  clip-path: polygon(24% 100%, 76% 100%, 60% 0%, 40% 0%);
+  pointer-events: none;
+}
+
+.sil-guide--counter .sil-guide__pad {
+  background: radial-gradient(closest-side, rgb(var(--sil-rgb-counter) / 0.4), transparent 78%);
+}
+
+.sil-guide--counter .sil-guide__cone {
+  background: linear-gradient(180deg, transparent 28%, rgb(var(--sil-rgb-counter) / 0.13) 100%);
+}
+
+.sil-guide--end .sil-guide__pad {
+  background: radial-gradient(closest-side, rgb(var(--sil-rgb-counter) / 0.36), transparent 78%);
+}
+
+.sil-guide--end .sil-guide__cone {
+  background: linear-gradient(180deg, transparent 28%, rgb(var(--sil-rgb-counter) / 0.12) 100%);
+}
+
+/* 天空里的星座：极淡，属于仪器的一部分 */
+.sil-guide--constellation {
+  opacity: 0.42;
+}
+
+/* 终局图章：出场即收，像盖章而不是贴图 */
+.sil-guide--stamp {
+  padding: 9%;
+  border: 1px solid rgb(var(--sil-rgb-counter) / 0.32);
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgb(var(--sil-rgb-counter) / 0.07), transparent 78%);
+  transform: rotate(-6deg);
+  animation: fragment-materialize 520ms var(--sil-ease) both;
+}
+
+.sil-fragment {
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgb(var(--sil-rgb-ink-100) / 0.1);
+  border-left: 1px solid rgb(var(--sil-rgb-zhihu) / 0.5);
+  background: linear-gradient(
+    150deg,
+    rgb(var(--sil-rgb-ink-100) / 0.05),
+    rgb(var(--sil-rgb-void-900) / 0.5)
+  );
+  box-shadow: inset 0 1px 0 rgb(var(--sil-rgb-ink-100) / 0.05);
+}
+
+/*
+  ## 三个来源修饰符
+
+  `FragmentShard.tsx` 会输出 `sil-fragment--<来源>`，来源有三种：
+  相似（zhihu）/ 另一种（alternate）/ 相反（counter）。
+
+  左侧引线色是这三者**唯一**的视觉差别 —— 内容本身已经由文案表达，
+  再换底色或加边框会让「三个来源」变成三种卡片样式，
+  失去「同一套材质、只是来源不同」的读感。
+
+  为什么 `--zhihu` 要显式写出来：基类的 border-left 已经是知乎蓝，
+  所以不写也「看起来对」。但组件把这个类名当**枚举值**在用 ——
+  类名集合必须与枚举一一对应，否则将来有人改基类颜色时，
+  会以为「相似」这个来源没有专用规则，从而漏掉它。
+*/
+.sil-fragment--zhihu {
+  border-left-color: rgb(var(--sil-rgb-zhihu) / 0.5);
+}
+
+.sil-fragment--alternative {
+  border-left-color: rgb(var(--sil-rgb-alternate) / 0.5);
+}
+
+.sil-fragment--counter {
+  border-left-color: rgb(var(--sil-rgb-counter) / 0.5);
+}
+
+.sil-fragment__quote {
+  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  font-size: 13px;
+  line-height: 1.72;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.sil-fragment__meta {
+  margin-top: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--sil-ink-300);
+}
+
+.sil-unlock-rail {
+  position: relative;
+}
+
+.sil-unlock-rail__line {
+  display: block;
+  width: 100%;
+  height: 1px;
+  transform-origin: 0 50%;
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--sil-rgb-alternate) / 0.85) 0 6px,
+    transparent 6px 12px
+  );
+  background-size: 12px 1px;
+  animation: sil-rail-draw 620ms var(--sil-ease) both;
+}
+
+.sil-unlock-rail__drop {
+  position: absolute;
+  top: 0;
+  left: 12px;
+  width: 5px;
+  height: 5px;
+  margin: -2px 0 0 -2px;
+  border-radius: 9999px;
+  background: var(--sil-alternate);
+  /*
+    这是沿轨道滑下的那颗「水滴」，需要一点光才不像贴纸。
+    同样不用 box-shadow 外发光（§9），改用伪元素的径向渐变 ——
+    光从水滴向外衰减，在近黑底上是「亮」而不是「灰」。
+  */
+}
+
+.sil-unlock-rail__drop::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    closest-side,
+    rgb(var(--sil-rgb-alternate) / 0.38),
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+  .sil-unlock-rail__line {
+    animation: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .sil-dial__svg {
+    width: min(112vw, 640px);
+    height: min(112vw, 640px);
+  }
+
+/* ---- 上述装置专用的 keyframes（随规则一起迁入） ---- */
+
+/* 机制 3：解锁轨道被画出来（620ms，stroke-dashoffset） */
+@keyframes sil-rail-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sil-hidden-path-reveal {
+  0% { opacity: 0; transform: scaleX(0.02); }
+  38% { opacity: 0.9; transform: scaleX(1); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes sil-orbit-drift {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sil-orbit-weave {
+  0% { stroke-dashoffset: 1; opacity: 0.22; }
+  62% { opacity: 0.92; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes sil-sentence-reforge {
+  0% { opacity: 0.28; filter: blur(3px); transform: translateY(7px); }
+  100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+
+@keyframes sil-signal-pulse {
+  0% { opacity: 0.12; transform: scale(0.72); }
+  42% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0.06; transform: scale(1.5); }
+}
+
+/* ==========================================================================
+ * 观象仪与轨道场的补充规则
+ *
+ * 这些规则覆盖几种不像「一个块」、扫读时容易跳过的写法：
+ *   - 逗号选择器列表（`.a,\n.b { }`）
+ *   - 后代选择器（`.x--near .x__path { }`）
+ *   - 单行紧凑块（`.a { x }` 同行闭合）
+ *
+ * 它们共同的失效模式是**静默**：组件输出了类名而规则缺失时，
+ * 元素掉回浏览器默认布局 —— 没有报错，只是看起来不对。
+ * ========================================================================== */
+
+.sil-coordinate__orbit {
+  width: 100%;
+  height: 44px;
+}
+
+.sil-coordinate__orbit path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: counter-orbit 760ms var(--sil-ease) both;
+}
+
+.sil-panel--counter {
+  border-color: rgb(var(--sil-rgb-counter) / 0.28);
+}
+
+/* 少量 dust：固定位置的 3 个 1px 点，不用 canvas 粒子（§26 / §36） */
+.sil-panel__dust {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 18% 24%, rgb(var(--sil-rgb-ink-100) / 0.5), transparent),
+    radial-gradient(1px 1px at 72% 62%, rgb(var(--sil-rgb-ink-100) / 0.4), transparent),
+    radial-gradient(1px 1px at 44% 86%, rgb(var(--sil-rgb-ink-100) / 0.32), transparent);
+}
+
+.sil-undev__track {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--sil-rgb-ink-300) / 0.5),
+    rgb(var(--sil-rgb-ink-300) / 0.18) 42%,
+    transparent 78%
+  );
+}
+
+  .sil-coordinate__orbit path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+
+.sil-acthead__progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sil-acthead__index {
+  width: 22px;
+  height: 2px;
+  background: rgb(var(--sil-rgb-ink-100) / 0.16);
+  transition:
+    background-color 420ms var(--sil-ease),
+    box-shadow 420ms var(--sil-ease);
+}
+
+  .sil-acthead__index {
+    width: 30px;
+  }
+
+.sil-acthead__index--on {
+  background: var(--sil-alternate);
+  /*
+    当前幕的标记要「亮」，但不能靠外发光。
+    外发光（`box-shadow: 0 0 10px` 不带 inset）是这套设计明确排除的
+    AI 感指纹之一（§9 去 AI 化：不要霓虹外发光）。
+
+    改用**内发光**：光被收在 2px 的刻度条内部，读起来像「这段金属被点亮」，
+    而不是「它周围有一圈雾」。差别在近黑底上很直观 ——
+    外发光会在元素周围造出一团灰，内发光不会。
+  */
+  box-shadow: inset 0 0 10px rgb(var(--sil-rgb-alternate) / 0.6);
+}
+
+.sil-acthead__index--done {
+  background: rgb(var(--sil-rgb-alternate) / 0.42);
+}
+
+.sil-acthead__index-label {
+  margin-left: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* 10px 是这套排版里等宽标签的可读下限（见 .sil-label--sm 的说明） */
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--sil-ink-300);
+}
+
+/* §25 第一拍：一旦这一屏里出现了 Hidden Path，普通 Gate 自动稍暗。
+   用 :has 而不是改 React —— 结构仍然完全归 Agent 03。 */
+.session-choice-list:has(.sil-reveal) .session-choice:not(.session-choice--unlocked) {
+  opacity: 0.5;
+  transition: opacity 150ms linear;
+}
+
+/*
+  降级：用户要求减少动效时，这条变暗不做淡入（直接到位）。
+  它必须留在 `@media` 里 —— 迁移时 `@media` 外壳丢过一次，
+  导致这条 `transition: none !important` 变成了**全局生效**：
+  所有人都失去那个 150ms 淡入，而「减少动效」的人反而看不出差别
+  （因为对所有人都已经关掉了）。
+*/
+@media (prefers-reduced-motion: reduce) {
+  .session-choice-list:has(.sil-reveal) .session-choice:not(.session-choice--unlocked) {
+    transition: none !important;
+  }
+}
+
+.sil-undev--inline::after {
+  display: inline;
+  margin-top: 0;
+  margin-left: 8px;
+}
+
+.sil-cast__sprite--sm {
+  width: 56px;
+  height: 56px;
+}
+
+/* 立绘脚下的圆形底座光：让黏土立绘在深空里有「落地感」 */
+.sil-cast__base {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.sil-cast__base::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 72%;
+  height: 10px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: radial-gradient(
+    50% 100% at 50% 50%,
+    rgb(var(--sil-rgb-clay) / 0.2),
+    transparent 80%
+  );
+  pointer-events: none;
+}
+
+.sil-cast--ghost .sil-cast__base::after {
+  background: radial-gradient(
+    50% 100% at 50% 50%,
+    rgb(var(--sil-rgb-ghost) / 0.18),
+    transparent 80%
+  );
+}
+
+.sil-toast {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border: 1px solid rgb(var(--sil-rgb-clay) / 0.22);
+  border-radius: 3px;
+  background: rgb(6 10 18 / 0.94);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.55);
+  transform: translateX(-50%);
+  animation: fragment-materialize 480ms var(--sil-ease) both;
+  transition:
+    opacity 360ms var(--sil-ease),
+    transform 360ms var(--sil-ease);
+  pointer-events: none;
+}
+
+.sil-toast--leaving {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+}
+
+.sil-toast__name {
+  flex: 0 0 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--sil-counter-soft);
+}
+
+.sil-toast__line {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--sil-ink-200);
+}
+
+  .sil-cast__sprite--sm {
+    width: 48px;
+    height: 48px;
+  }

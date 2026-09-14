@@ -56,7 +56,27 @@ describe('文档引用的数字与统计源一致', () => {
 
   it('产品说明计划书引用同一组数字', () => {
     expect(plan).toContain(`${stats.files} 个文件 ${stats.tests} 个用例`);
-    expect(plan).toContain(`${stats.tests} 个自动化测试全部通过`);
+    /*
+      这一条原来写死「${stats.tests} 个自动化测试全部通过」。
+
+      那是**只有全绿时才成立**的断言：一旦有用例失败（迁移期是常态），
+      它就要求文档撒一句「全部通过」的谎 —— 而这份守卫存在的意义
+      恰恰是「文档不许漂」。
+
+      改成断言「文档如实写出通过数」：全绿时通过数就是总数，
+      有失败时文档必须写出较小的那个数。
+    */
+    expect(plan).toContain(`${stats.passed} 个自动化测试`);
+  });
+
+  it('文档不许把通过数说成总数（除非真的全绿）', () => {
+    if (stats.failed === 0) {
+      expect(plan).toContain(`${stats.tests} 个自动化测试`);
+    } else {
+      // 有失败时，文档不得出现「总数个…全部通过」这种话
+      expect(plan).not.toContain(`${stats.tests} 个自动化测试全部通过`);
+      expect(readme).not.toContain(`通过 ${stats.tests} · 失败 0`);
+    }
   });
 
   it('两份文档都不再出现写死的旧口径', () => {

@@ -103,8 +103,8 @@ export function AstralDial({ focus = false, parallax = true, className = '' }: A
       return;
     }
     const reset = () => {
-      svg.style.setProperty('--obs-tilt-y', '0deg');
-      svg.style.setProperty('--obs-tilt-x', '0px');
+      svg.style.setProperty('--sil-tilt-y', '0deg');
+      svg.style.setProperty('--sil-tilt-x', '0px');
     };
     if (!parallax || reduced || typeof window === 'undefined') {
       reset();
@@ -114,7 +114,7 @@ export function AstralDial({ focus = false, parallax = true, className = '' }: A
     if (!root) {
       return;
     }
-    // 首帧就把变量落在 0 上：与 CSS 的 var(--obs-tilt-y, 0deg) 回落值一致，
+    // 首帧就把变量落在 0 上：与 CSS 的 var(--sil-tilt-y, 0deg) 回落值一致，
     // 因此挂载瞬间不产生任何视觉跳变。
     reset();
     let frame = 0;
@@ -129,8 +129,8 @@ export function AstralDial({ focus = false, parallax = true, className = '' }: A
       const nx = Math.max(-1, Math.min(1, (pointerX - (rect.left + rect.width / 2)) / (rect.width / 2)));
       const ny = Math.max(-1, Math.min(1, (pointerY - (rect.top + rect.height / 2)) / (rect.height / 2)));
       // §11：最多 2°，且**不追踪** —— 只是仪器被轻轻碰了一下
-      svg.style.setProperty('--obs-tilt-y', `${Number((nx * 2).toFixed(2))}deg`);
-      svg.style.setProperty('--obs-tilt-x', `${Number((ny * -4).toFixed(2))}px`);
+      svg.style.setProperty('--sil-tilt-y', `${Number((nx * 2).toFixed(2))}deg`);
+      svg.style.setProperty('--sil-tilt-x', `${Number((ny * -4).toFixed(2))}px`);
     };
     const onMove = (event: PointerEvent) => {
       pointerX = event.clientX;
@@ -159,24 +159,24 @@ export function AstralDial({ focus = false, parallax = true, className = '' }: A
   }, [parallax, reduced]);
 
   const focusPoint = polar(FOCUS.angle, FOCUS.radius);
-  const hair = 'rgb(var(--obs-rgb-text-0) / 0.16)';
-  const hairSoft = 'rgb(var(--obs-rgb-text-0) / 0.09)';
-  const tickStroke = 'rgb(var(--obs-rgb-text-0) / 0.22)';
+  const hair = 'rgb(var(--sil-rgb-ink-100) / 0.16)';
+  const hairSoft = 'rgb(var(--sil-rgb-ink-100) / 0.09)';
+  const tickStroke = 'rgb(var(--sil-rgb-ink-100) / 0.22)';
 
   return (
     <div
       ref={rootRef}
       aria-hidden="true"
       data-dial-focus={focus ? 'on' : 'off'}
-      className={['obs-dial', focus ? 'obs-dial--focus' : '', className].filter(Boolean).join(' ')}
+      className={['sil-dial', focus ? 'sil-dial--focus' : '', className].filter(Boolean).join(' ')}
     >
       {/*
         视差变量由上面的 effect 直接 setProperty 写入，不参与 React 渲染，
         因此这里没有受控的 style —— SSR 与首帧水合的输出逐字节一致。
       */}
-      <svg ref={svgRef} viewBox="0 0 760 760" className="obs-dial__svg">
+      <svg ref={svgRef} viewBox="0 0 760 760" className="sil-dial__svg">
         {/* 慢环：外环刻度 + 内环 */}
-        <g className="obs-dial__spin">
+        <g className="sil-dial__spin">
           <circle
             cx={CENTER}
             cy={CENTER}
@@ -193,7 +193,7 @@ export function AstralDial({ focus = false, parallax = true, className = '' }: A
             r={RING_RADII[2]}
             fill="none"
             vectorEffect="non-scaling-stroke"
-            className="obs-dial__ring obs-dial__ring--near"
+            className="sil-dial__ring sil-dial__ring--near"
             style={{ stroke: hair }}
             strokeWidth={1.1}
           />
@@ -205,14 +205,14 @@ export function AstralDial({ focus = false, parallax = true, className = '' }: A
                 cx={point.x}
                 cy={point.y}
                 r={node.size}
-                style={{ fill: 'rgb(var(--obs-rgb-text-0) / 0.32)' }}
+                style={{ fill: 'rgb(var(--sil-rgb-ink-100) / 0.32)' }}
               />
             );
           })}
         </g>
 
         {/* 反向环：12 条刻度 + 最内环 */}
-        <g className="obs-dial__spin-rev">
+        <g className="sil-dial__spin-rev">
           <circle
             cx={CENTER}
             cy={CENTER}
@@ -273,21 +273,21 @@ export function AstralDial({ focus = false, parallax = true, className = '' }: A
         />
 
         {/* 唯一的 1 个主焦点 */}
-        <g className="obs-dial__focus">
+        <g className="sil-dial__focus">
           <circle
             cx={focusPoint.x}
             cy={focusPoint.y}
             r={9}
             fill="none"
             vectorEffect="non-scaling-stroke"
-            style={{ stroke: 'rgb(var(--obs-rgb-path) / 0.55)' }}
+            style={{ stroke: 'rgb(var(--sil-rgb-alternate) / 0.55)' }}
             strokeWidth={1}
           />
           <circle
             cx={focusPoint.x}
             cy={focusPoint.y}
             r={2.4}
-            style={{ fill: 'var(--obs-path)' }}
+            style={{ fill: 'var(--sil-alternate)' }}
           />
         </g>
       </svg>

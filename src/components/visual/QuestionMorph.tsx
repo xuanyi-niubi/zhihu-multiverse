@@ -42,7 +42,7 @@ export function QuestionMorph({
         className="mt-1.5 text-[15px] leading-relaxed text-archive-400"
         style={
           changed && active
-            ? { animation: 'arc-morph-fade 900ms var(--arc-ease) both', animationDelay: '320ms' }
+            ? { animation: 'sil-morph-fade 900ms var(--sil-ease) both', animationDelay: '320ms' }
             : undefined
         }
       >
@@ -53,7 +53,7 @@ export function QuestionMorph({
         <div
           style={
             active
-              ? { animation: 'arc-morph-rise 1000ms var(--arc-ease) both', animationDelay: '1100ms' }
+              ? { animation: 'sil-morph-rise 1000ms var(--sil-ease) both', animationDelay: '1100ms' }
               : undefined
           }
         >

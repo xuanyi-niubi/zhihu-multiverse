@@ -42,11 +42,11 @@ export interface RealityPassProps {
   readonly className?: string;
 }
 
-/** 纸上的墨色阶梯：纸层不走 obs/ds 的冷色文本，只有墨。 */
-const INK = 'var(--ds-paper-ink)';
-const INK_SOFT = 'rgb(36 31 26 / 0.72)';
-const INK_FAINT = 'rgb(36 31 26 / 0.55)';
-const INK_RULE = 'rgb(36 31 26 / 0.16)';
+/** 纸上的墨色阶梯：纸层不走冷色文本，只有墨。 */
+const INK = 'var(--sil-paper-ink)';
+const INK_SOFT = 'rgb(31 27 22 / 0.74)';
+const INK_FAINT = 'rgb(31 27 22 / 0.56)';
+const INK_RULE = 'rgb(31 27 22 / 0.18)';
 
 export function RealityPass({
   timebox,
@@ -60,41 +60,54 @@ export function RealityPass({
 }: RealityPassProps) {
   return (
     <section
-      className={['ds-paper ds-develop relative', className].filter(Boolean).join(' ')}
+      className={['sil-paper sil-develop relative px-5 py-5 sm:px-6', className]
+        .filter(Boolean)
+        .join(' ')}
       aria-label="带回现实的一张票据"
     >
-      <div className="ds-paper__seal">
-        <p className="ds-paper__kicker">Reality Pass</p>
+      <div>
+        <p className="sil-label" style={{ color: INK_FAINT }}>
+          Reality Pass
+        </p>
 
-        <p className="mt-4 text-[12px] leading-relaxed" style={{ color: INK_FAINT }}>
+        <p className="mt-4 text-[13px] leading-relaxed" style={{ color: INK_FAINT }}>
           未来 <span style={{ color: INK }}>{timebox}</span>
         </p>
 
-        <p className="mt-2 text-[19px] font-semibold leading-relaxed" style={{ color: INK }}>
+        <p
+          className="sil-paper__title mt-2 text-[19px] leading-relaxed sm:text-[21px]"
+          style={{ color: INK }}
+        >
           {action}
         </p>
       </div>
 
-      <div className="mt-5 border-t pt-3" style={{ borderColor: INK_RULE }}>
-        <p className="ds-paper__kicker">观察点</p>
-        <p className="mt-1.5 text-[13px] leading-relaxed" style={{ color: INK_SOFT }}>
+      <div className="mt-5 border-t pt-4" style={{ borderColor: INK_RULE }}>
+        <p className="sil-label" style={{ color: INK_FAINT }}>
+          观察点
+        </p>
+        <p className="mt-2 text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>
           {observation}
         </p>
 
         {artifact || stopSignal ? (
-          <dl className="mt-3 flex flex-col gap-2">
+          <dl className="mt-4 flex flex-col gap-3">
             {artifact ? (
               <div>
-                <dt className="ds-paper__kicker">会留下什么</dt>
-                <dd className="mt-0.5 text-[12px] leading-relaxed" style={{ color: INK_SOFT }}>
+                <dt className="sil-label" style={{ color: INK_FAINT }}>
+                  会留下什么
+                </dt>
+                <dd className="mt-1 text-[13px] leading-relaxed" style={{ color: INK_SOFT }}>
                   {artifact}
                 </dd>
               </div>
             ) : null}
             {stopSignal ? (
               <div>
-                <dt className="ds-paper__kicker">什么时候停</dt>
-                <dd className="mt-0.5 text-[12px] leading-relaxed" style={{ color: INK_SOFT }}>
+                <dt className="sil-label" style={{ color: INK_FAINT }}>
+                  什么时候停
+                </dt>
+                <dd className="mt-1 text-[13px] leading-relaxed" style={{ color: INK_SOFT }}>
                   {stopSignal}
                 </dd>
               </div>
@@ -108,16 +121,16 @@ export function RealityPass({
           <button
             type="button"
             onClick={onBringBack}
-            className="inline-flex min-h-11 w-full items-center justify-center border px-5 text-[14px] font-semibold transition-transform duration-200 active:translate-y-px"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[2px] border px-5 text-[14px] font-semibold transition-transform duration-200 active:translate-y-px"
             style={{
-              borderColor: 'rgb(36 31 26 / 0.52)',
-              background: 'rgb(36 31 26 / 0.05)',
+              borderColor: 'rgb(31 27 22 / 0.52)',
+              background: 'rgb(31 27 22 / 0.06)',
               color: INK,
             }}
           >
             {broughtBack ? '已带回现实' : '带回现实'}
           </button>
-          <p className="mt-2 text-[10px] leading-relaxed" style={{ color: INK_FAINT }}>
+          <p className="mt-2 text-[11px] leading-relaxed" style={{ color: INK_FAINT }}>
             不需要注册、也不需要在站内打卡：复制、保存、截图都行。
           </p>
         </div>

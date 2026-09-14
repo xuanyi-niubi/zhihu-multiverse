@@ -76,7 +76,7 @@ export function FragmentStream({ groups, active = true, className = '' }: Fragme
                     style={
                       active
                         ? {
-                            animation: `arc-fragment-arrive 620ms var(--arc-ease) both`,
+                            animation: `sil-fragment-arrive 620ms var(--sil-ease) both`,
                             animationDelay: `${index * 110}ms`,
                           }
                         : { opacity: 0.001 }

@@ -43,13 +43,13 @@ export function PathUnlockReveal({
     >
       <p
         className="font-mono text-[10px] tracking-[0.34em] text-unlock"
-        style={{ animation: 'arc-fragment-arrive 520ms var(--arc-ease) both' }}
+        style={{ animation: 'sil-fragment-arrive 520ms var(--sil-ease) both' }}
       >
         NEW PATH FOUND
       </p>
       <p
         className="mt-1.5 text-[13px] font-semibold leading-relaxed text-unlock-soft"
-        style={{ animation: 'arc-fragment-arrive 560ms var(--arc-ease) both', animationDelay: '160ms' }}
+        style={{ animation: 'sil-fragment-arrive 560ms var(--sil-ease) both', animationDelay: '160ms' }}
       >
         {headline}
       </p>
@@ -64,7 +64,7 @@ export function PathUnlockReveal({
             height: '36px',
             transformOrigin: '50% 50%',
             boxShadow: '0 0 12px 2px rgba(0,132,255,0.55)',
-            animation: 'arc-crack-open 720ms var(--arc-ease) both',
+            animation: 'sil-crack-open 720ms var(--sil-ease) both',
             animationDelay: '260ms',
           }}
         />
@@ -72,7 +72,7 @@ export function PathUnlockReveal({
 
       <div
         style={{
-          animation: 'arc-path-emerge 640ms var(--arc-ease) both',
+          animation: 'sil-path-emerge 640ms var(--sil-ease) both',
           animationDelay: '560ms',
         }}
       >

@@ -42,7 +42,7 @@ export interface SessionChoiceCardProps {
 
 /** 选项左侧的世界线：hover 时向该选项偏移（报告 §13）。 */
 function ChoiceWorldline({ accent }: { readonly accent: 'unlock' | 'normal' }) {
-  const stroke = accent === 'unlock' ? 'var(--obs-path-soft)' : 'var(--obs-zhihu-soft)';
+  const stroke = accent === 'unlock' ? 'var(--sil-alternate-soft)' : 'var(--sil-zhihu-soft)';
   return (
     <svg
       aria-hidden="true"
@@ -73,7 +73,7 @@ export function SessionChoiceCard({
         aria-label={`暂时关闭的选择：${choice.title}`}
       >
         <span className="min-w-0 flex-1">
-          <span className="ds-badge ds-badge--unknown">这条路暂时关闭</span>
+          <span className="sil-mark sil-mark--counter">这条路暂时关闭</span>
           <span className="session-choice__title mt-2">{choice.title}</span>
           {choice.description ? (
             <span className="session-choice__hint">{choice.description}</span>
@@ -111,7 +111,7 @@ export function SessionChoiceCard({
         <span aria-hidden="true" className="session-choice__index" />
         <ChoiceWorldline accent={isUnlock ? 'unlock' : 'normal'} />
         <span className="min-w-0 flex-1">
-          {isUnlock ? <span className="ds-badge ds-badge--unlock">经验解锁</span> : null}
+          {isUnlock ? <span className="sil-mark sil-mark--alternate">经验解锁</span> : null}
           <span className="session-choice__title">{choice.title}</span>
           {choice.description ? (
             <span className="session-choice__hint">{choice.description}</span>

@@ -44,7 +44,7 @@ function PhraseText({ phrases }: { readonly phrases: readonly string[] }) {
       {phrases.map((phrase, index) => (
         <span
           key={`${index}-${phrase.slice(0, 6)}`}
-          className="arc-phrase block"
+          className="sil-quote block"
           style={{ animationDelay: `${Math.min(index, 12) * 150}ms` }}
         >
           {phrase}
@@ -62,11 +62,11 @@ export function SessionStoryStage({ story, loading, className = '' }: SessionSto
     >
       {/* 场景 + 立绘：它们是氛围，不是数值。
           用观测窗把它压成「舱外的一格视野」，而不是一张浮起来的截图。 */}
-      <div className="session-scene-frame relative h-[220px] overflow-hidden border border-[color:rgb(var(--obs-rgb-text-0)/0.1)] bg-[color:rgb(var(--obs-rgb-bg-0)/0.6)]">
+      <div className="session-scene-frame relative h-[220px] overflow-hidden border border-[color:rgb(var(--sil-rgb-ink-100)/0.1)] bg-[color:rgb(var(--sil-rgb-void-900)/0.6)]">
         <SceneStage sceneId={story.scene.sceneId} />
         <PortraitLayer stage={story.stage} speaker={story.speaker} />
         <span aria-hidden="true" className="session-scene-frame__veil" />
-        <div className="absolute bottom-2.5 left-3.5 z-10 obs-kicker">{story.scene.timeLabel}</div>
+        <div className="absolute bottom-2.5 left-3.5 z-10 sil-label">{story.scene.timeLabel}</div>
       </div>
 
       {story.tension ? (
@@ -84,7 +84,7 @@ export function SessionStoryStage({ story, loading, className = '' }: SessionSto
           {story.title ? (
             <p className="mt-5 text-[13px] font-semibold text-archive-400">{story.title}</p>
           ) : null}
-          <p className="session-story mt-2 block">
+          <p className="sil-story mt-2 block">
             <PhraseText key={story.text} phrases={story.phrases} />
           </p>
         </>

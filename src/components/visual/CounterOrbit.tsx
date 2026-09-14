@@ -42,9 +42,9 @@ export interface CounterOrbitProps {
 }
 
 const RELATION_META: Readonly<Record<CounterRelation, { readonly label: string; readonly className: string }>> = {
-  same: { label: '相同', className: 'text-[color:var(--obs-zhihu-soft)] border-[color:rgb(var(--obs-rgb-zhihu)/0.4)]' },
-  different: { label: '不同', className: 'text-[color:var(--obs-counter-soft)] border-[color:rgb(var(--obs-rgb-counter)/0.42)]' },
-  unknown: { label: '未知', className: 'text-[color:var(--obs-text-2)] border-[color:rgb(var(--obs-rgb-text-0)/0.14)]' },
+  same: { label: '相同', className: 'text-[color:var(--sil-zhihu-soft)] border-[color:rgb(var(--sil-rgb-zhihu)/0.4)]' },
+  different: { label: '不同', className: 'text-[color:var(--sil-counter-soft)] border-[color:rgb(var(--sil-rgb-counter)/0.42)]' },
+  unknown: { label: '未知', className: 'text-[color:var(--sil-ink-300)] border-[color:rgb(var(--sil-rgb-ink-100)/0.14)]' },
 };
 
 export function CounterOrbit({
@@ -64,30 +64,30 @@ export function CounterOrbit({
       aria-label="一条结果相反的经历进入了这一局"
     >
       {/* §28：琥珀轨道从另一侧进入 */}
-      <svg aria-hidden="true" viewBox="0 0 100 10" preserveAspectRatio="none" className="obs-collision__orbit">
+      <svg aria-hidden="true" viewBox="0 0 100 10" preserveAspectRatio="none" className="sil-coordinate__orbit">
         <path
           d="M 100 5 C 74 5, 62 1, 50 1 C 38 1, 26 9, 0 9"
           vectorEffect="non-scaling-stroke"
-          style={{ stroke: 'var(--obs-counter)', strokeWidth: 0.8 }}
+          style={{ stroke: 'var(--sil-counter)', strokeWidth: 0.8 }}
           pathLength={1}
         />
       </svg>
 
       {/* §29：左遗物 / 中央轴 / 右遗物（移动端自动变成上下） */}
-      <div className="obs-collision__grid mt-4">
-        <article className="obs-reliquary px-4 py-3.5">
-          <p className="obs-kicker">前一条经验</p>
-          <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[color:var(--obs-text-1)]">
+      <div className="sil-coordinate mt-4">
+        <article className="sil-panel px-4 py-3.5">
+          <p className="sil-label">前一条经验</p>
+          <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[color:var(--sil-ink-200)]">
             {previousLabel}
           </p>
         </article>
 
-        <span aria-hidden="true" className="obs-axis" />
+        <span aria-hidden="true" className="sil-coordinate__key" />
 
-        <article className="obs-reliquary obs-reliquary--counter relative overflow-hidden px-4 py-3.5">
-          <span aria-hidden="true" className="obs-reliquary__dust" />
-          <p className="obs-kicker text-[color:var(--obs-counter)]">结果完全相反的人</p>
-          <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[color:var(--obs-counter-soft)]">
+        <article className="sil-panel sil-panel--counter relative overflow-hidden px-4 py-3.5">
+          <span aria-hidden="true" className="sil-panel__dust" />
+          <p className="sil-label text-[color:var(--sil-counter)]">结果完全相反的人</p>
+          <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[color:var(--sil-counter-soft)]">
             {counterLabel}
           </p>
         </article>
@@ -101,21 +101,21 @@ export function CounterOrbit({
               <li
                 key={`${row.kind}-${index}`}
                 className="flex items-start gap-2.5"
-                style={{ animation: 'fragment-materialize 480ms var(--obs-ease) both', animationDelay: `${index * 110}ms` }}
+                style={{ animation: 'fragment-materialize 480ms var(--sil-ease) both', animationDelay: `${index * 110}ms` }}
               >
                 <span
                   className={`mt-px shrink-0 border px-2 py-0.5 text-[10px] tracking-[0.12em] ${meta.className}`}
                 >
                   {meta.label}
                 </span>
-                <span className="text-[12px] leading-relaxed text-[color:var(--obs-text-1)]">{row.text}</span>
+                <span className="text-[12px] leading-relaxed text-[color:var(--sil-ink-200)]">{row.text}</span>
               </li>
             );
           })}
         </ul>
       ) : null}
 
-      <p className="mt-3 text-[10px] leading-relaxed text-[color:var(--obs-text-2)]">
+      <p className="mt-3 text-[10px] leading-relaxed text-[color:var(--sil-ink-300)]">
         只比较这三件事 —— 不显示匹配度、百分比或评分。他的课程压力是否和你一样，原文没说，就是未知。
       </p>
     </section>

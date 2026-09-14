@@ -28,53 +28,48 @@ export default function RouteError({
   }, [error]);
 
   return (
-    <main className="obs-shell mx-auto flex min-h-[100dvh] w-full max-w-[720px] flex-col justify-center px-5 py-16 sm:py-20">
+    <main
+      id="main-content"
+      className="sil-viewport relative mx-auto flex w-full max-w-[880px] flex-col justify-center px-5 py-16 sm:px-8"
+    >
       <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <p className="obs-kicker">Observation Interrupted</p>
+        <p className="sil-label">Observation Interrupted</p>
         <Link
           href="/"
-          className="text-[11px] text-[color:var(--obs-text-2)] transition-opacity duration-200 hover:opacity-80"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
         >
-          回到观测台 →
+          回到观测台
         </Link>
       </header>
 
-      <section className="mt-6">
-        <h1 className="text-[26px] font-black leading-tight tracking-tight text-[color:var(--obs-text-0)] sm:text-[30px]">
-          这一局没能算完
-        </h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-[color:var(--obs-text-1)]">
-          观测中途断了。你的问题还在，可以再来一次。
+      <section className="mt-8">
+        <h1 className="sil-title sil-title--act">这一局没能算完</h1>
+        <p className="sil-prose mt-4">观测中途断了。你的问题还在，可以再来一次。</p>
+      </section>
+
+      <section className="sil-panel mt-8 flex items-center gap-4 px-5 py-5">
+        <KanshanSprite
+          characterId="kanshan"
+          action="sway"
+          className="h-[64px] w-[64px] shrink-0"
+          alt="刘看山"
+        />
+        <p className="sil-prose text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
+          ……刚才那一下，不算数。
         </p>
       </section>
 
-      <section className="obs-glass mt-8 flex items-center gap-3 px-5 py-5">
-        <span className="gd-guide__base shrink-0">
-          <KanshanSprite
-            characterId="kanshan"
-            action="sway"
-            className="gd-guide__sprite gd-guide__sprite--sm"
-            alt="刘看山"
-          />
-        </span>
-        <p className="gd-guide__line">……刚才那一下，不算数。</p>
-      </section>
-
-      <section className="mt-8 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={reset}
-          className="session-choice session-choice--unlocked justify-center sm:max-w-[200px]"
-        >
-          <span className="session-choice__title">再观测一次</span>
+      <section className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button type="button" onClick={reset} className="sil-btn sm:w-[200px]">
+          再观测一次
         </button>
-        <Link href="/" className="session-choice justify-center sm:max-w-[200px]">
-          <span className="session-choice__title">回到观测台</span>
+        <Link href="/" className="sil-btn sil-btn--ghost sm:w-[200px]">
+          回到观测台
         </Link>
       </section>
 
       {error.digest ? (
-        <p className="mt-6 font-mono text-[11px] text-[color:var(--obs-text-2)] opacity-70">
+        <p className="sil-label sil-label--sm sil-num mt-8 opacity-70">
           诊断编号 {error.digest}
         </p>
       ) : null}

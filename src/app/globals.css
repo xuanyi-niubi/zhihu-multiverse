@@ -12,34 +12,7 @@
     --halo-x: 50%;
     --halo-y: 0%;
 
-    /* ---- DESIGN.md §2 设计令牌（基底已与画布「银盐观象台」对齐） ---- */
-    --gmv-ink-950: #07080c;
-    --gmv-ink-900: #0b0d14;
-    --gmv-ink-800: #10141f;
-    --gmv-ink-700: #131824;
-    --gmv-ink-600: #171c27;
-
-    --gmv-blue-500: #3d8bff;
-    --gmv-blue-400: #5c9fff;
-    --gmv-blue-300: #7db4ff;
-    --gmv-blue-100: #cfe8ff;
-
-    --gmv-amber-400: #c9a45e;
-    --gmv-jade-400: #3dd6a0;
-    --gmv-rose-500: #ff4d6d;
-    --gmv-violet-400: #9a8fd0;
-
-    --gmv-text-100: #eef1f6;
-    --gmv-text-200: #a3aec0;
-    --gmv-text-400: #667284;
-    --gmv-text-600: #5f6c80;
-
-    --gmv-blue-500-rgb: 61 139 255;
-    --gmv-rose-500-rgb: 255 77 109;
-    --gmv-amber-400-rgb: 201 164 94;
-    --gmv-jade-400-rgb: 61 214 160;
-    --gmv-ink-800-rgb: 16 20 31;
-    --gmv-ink-950-rgb: 7 8 12;
+    --sil-void-900-rgb: 7 8 12;
 
     /* 鼠标聚光坐标，由 rAF 节流写入 */
     --mx: 50%;
@@ -53,7 +26,7 @@
 
   body {
     @apply min-h-full bg-ink-900 font-sans text-slate-200 antialiased;
-    background: var(--gmv-ink-950);
+    background: var(--sil-void-900);
     text-rendering: optimizeLegibility;
   }
 
@@ -84,12 +57,6 @@
 /* -------------------------------------------------------------------------- */
 
 @layer components {
-  .panel {
-    @apply relative rounded-2xl border border-white/10 bg-ink-700/70 shadow-inner-line backdrop-blur-md;
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.045),
-      0 22px 60px -44px rgb(0 0 0 / 0.95);
-  }
 
   .panel-header {
     @apply flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3;
@@ -135,14 +102,6 @@
     @apply w-full rounded-xl border border-white/12 bg-ink-800/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 transition-colors duration-200 focus:border-zhihu-500/70 focus:outline-none focus:ring-2 focus:ring-zhihu-500/25;
   }
 
-  /* 命运树连线：默认虚线，taken 态由 SVG 上的 animate-dash-flow 驱动流动 */
-  .fate-edge {
-    fill: none;
-    stroke-linecap: round;
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
-  }
-
   .fate-edge-locked {
     stroke: rgba(148, 163, 184, 0.16);
     stroke-dasharray: 3 7;
@@ -163,250 +122,16 @@
     stroke-dasharray: 10 14;
   }
 
-  /* ---- 游戏机质感 ---- */
-
-  /* CRT 控制台：内发光 + 顶部高光，模拟老式街机屏幕 */
-  .console {
-    @apply relative overflow-hidden rounded-[28px] border border-white/12 bg-ink-800/90 backdrop-blur-xl;
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.07),
-      inset 0 0 80px -38px rgb(var(--gmv-blue-500-rgb) / 0.35),
-      0 44px 100px -54px rgb(0 0 0 / 0.98);
-  }
-
-  .console::before {
-    content: '';
-    position: absolute;
-    inset: 0 12% auto;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(var(--gmv-blue-500-rgb) / 0.75), transparent);
-    pointer-events: none;
-  }
-
-  .console-screen {
-    @apply relative overflow-hidden rounded-xl border border-white/10 bg-black/25;
-  }
-
-  /* 街机按钮：底部厚边框做出可按下的立体感 */
-  .arcade-btn {
-    @apply relative inline-flex min-h-12 items-center justify-center gap-3 rounded-xl px-7 py-3.5 text-sm font-bold tracking-[0.08em] transition-all duration-200 ease-out;
-    box-shadow:
-      0 3px 0 0 rgba(0, 92, 176, 1),
-      0 18px 34px -16px rgba(0, 132, 255, 0.78);
-  }
-
-  .arcade-btn:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      0 4px 0 0 rgba(0, 92, 176, 1),
-      0 22px 40px -16px rgba(0, 132, 255, 0.92);
-  }
-
-  .arcade-btn:active {
-    transform: translateY(2px);
-    box-shadow:
-      0 1px 0 0 rgba(0, 92, 176, 1),
-      0 6px 14px -8px rgba(0, 132, 255, 0.6);
-  }
-
-  /* 卡带插槽 */
-  .cartridge {
-    @apply relative w-full overflow-hidden rounded-2xl border border-white/12 bg-ink-800/70 p-4 text-left transition-all duration-200 ease-out;
-  }
-
-  .cartridge:hover {
-    @apply -translate-y-1 border-zhihu-500/60;
-  }
-
   /* 全屏红光警报 */
   .alert-vignette {
     @apply pointer-events-none fixed inset-0 z-40 bg-danger-flash;
     box-shadow: inset 0 0 220px 60px rgba(255, 77, 109, 0.35);
   }
 
-  /* ---- 叙事舞台组件（DESIGN.md §4）---- */
-
-  /* HUD 血条：斜切是游戏感的核心来源 */
-  .gmv-bar {
-    position: relative;
-    height: 14px;
-    transform: skewX(-14deg);
-    background: rgb(var(--gmv-ink-800-rgb) / 0.9);
-    border: 1px solid rgb(255 255 255 / 0.08);
-    overflow: hidden;
-  }
-
-  .gmv-bar__fill {
-    height: 100%;
-    transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .gmv-bar--san .gmv-bar__fill {
-    background: linear-gradient(
-      90deg,
-      var(--gmv-rose-500),
-      var(--gmv-amber-400) 55%,
-      var(--gmv-jade-400)
-    );
-  }
-
-  .gmv-bar--skill .gmv-bar__fill {
-    background: linear-gradient(90deg, var(--gmv-blue-500), var(--gmv-blue-300));
-  }
-
-  .gmv-bar--bond .gmv-bar__fill {
-    background: linear-gradient(90deg, #6d4aff, var(--gmv-violet-400));
-  }
-
-  .gmv-bar--critical {
-    box-shadow: 0 0 18px rgb(var(--gmv-rose-500-rgb) / 0.55);
-  }
-
-  .gmv-bar--critical .gmv-bar__fill {
-    animation: halo-pulse 1.1s ease-in-out infinite;
-  }
-
-  /* 对话框 */
-  .gmv-dialogue {
-    background: linear-gradient(
-      180deg,
-      rgb(var(--gmv-ink-800-rgb) / 0.86),
-      rgb(var(--gmv-ink-950-rgb) / 0.96)
-    );
-    border: 1px solid rgb(255 255 255 / 0.1);
-    border-top-color: rgb(var(--gmv-blue-500-rgb) / 0.48);
-    backdrop-filter: blur(18px);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.04),
-      0 -28px 80px -48px rgb(0 0 0 / 0.95);
-  }
-
-  .gmv-dialogue--danger {
-    border-top-color: rgb(var(--gmv-rose-500-rgb) / 0.55);
-  }
-
-  .gmv-dialogue__name {
-    letter-spacing: 0.08em;
-    color: var(--gmv-blue-300);
-  }
-
-  .app-backdrop {
-    background:
-      radial-gradient(circle at 14% 10%, rgb(var(--gmv-blue-500-rgb) / 0.12), transparent 26rem),
-      radial-gradient(circle at 88% 78%, rgb(var(--gmv-amber-400-rgb) / 0.055), transparent 30rem),
-      linear-gradient(145deg, #05070c 0%, #070b13 46%, #05070c 100%);
-  }
-
   .display-title {
     font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
     letter-spacing: -0.035em;
     text-wrap: balance;
-  }
-
-  .brand-mark {
-    position: relative;
-    display: grid;
-    height: 44px;
-    width: 44px;
-    flex: 0 0 auto;
-    place-items: center;
-    border: 1px solid rgb(var(--gmv-blue-500-rgb) / 0.42);
-    border-radius: 14px;
-    background: linear-gradient(145deg, rgb(var(--gmv-blue-500-rgb) / 0.2), rgb(255 255 255 / 0.025));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 16px 36px -20px var(--gmv-blue-500);
-  }
-
-  .brand-mark::before,
-  .brand-mark::after {
-    content: '';
-    position: absolute;
-    height: 2px;
-    width: 20px;
-    border-radius: 999px;
-    background: var(--gmv-blue-300);
-    box-shadow: 0 0 12px rgb(var(--gmv-blue-500-rgb) / 0.75);
-  }
-
-  .brand-mark::before { transform: translateY(-4px) rotate(-12deg); }
-  .brand-mark::after { transform: translateY(4px) rotate(12deg); }
-
-  .command-field {
-    position: relative;
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.018));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045);
-    transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background 180ms ease-out;
-  }
-
-  .command-field:focus-within {
-    background: rgb(var(--gmv-blue-500-rgb) / 0.055);
-    box-shadow: 0 0 0 3px rgb(var(--gmv-blue-500-rgb) / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.06);
-  }
-
-  .evidence-card {
-    background:
-      linear-gradient(145deg, rgb(255 255 255 / 0.045), transparent 52%),
-      rgb(var(--gmv-ink-800-rgb) / 0.72);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045);
-  }
-
-  .evidence-card:hover {
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.07),
-      0 22px 48px -30px rgb(var(--gmv-blue-500-rgb) / 0.55);
-  }
-
-  .hud-shell {
-    background: linear-gradient(180deg, rgb(var(--gmv-ink-950-rgb) / 0.92), rgb(var(--gmv-ink-950-rgb) / 0.72));
-    box-shadow: 0 18px 48px -34px rgb(0 0 0 / 0.95);
-  }
-
-  /* 立绘：非说话者降饱和，说话者上浮呼吸 */
-  .gmv-portrait {
-    filter: saturate(0.35) brightness(0.6);
-    transform: translateY(0);
-    transition:
-      filter 420ms ease-out,
-      transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
-  }
-
-  .gmv-portrait--speaking {
-    filter: none;
-    transform: translateY(-6px);
-  }
-
-  .gmv-portrait--speaking .gmv-portrait__body {
-    animation: breath 3.2s ease-in-out infinite;
-  }
-
-  /* 选项卡聚光：跟随鼠标的 radial-gradient，单次 repaint */
-  .gmv-choice {
-    background-image: radial-gradient(
-      220px circle at var(--mx) var(--my),
-      rgb(var(--gmv-blue-500-rgb) / 0.16),
-      transparent 70%
-    );
-  }
-
-  /* 叙事正文：衬线体 + 中文排版硬约束 */
-  .gmv-narrative {
-    font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-    font-size: 1.0625rem;
-    line-height: 1.9;
-    letter-spacing: 0.02em;
-  }
-
-  @media (min-width: 768px) {
-    .gmv-narrative {
-      font-size: 1.1875rem;
-    }
-  }
-
-  /* 幕标题 */
-  .gmv-act-title {
-    font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-    letter-spacing: 0.04em;
-    text-shadow: 0 0 34px rgb(var(--gmv-blue-500-rgb) / 0.35);
   }
 }
 
@@ -558,16 +283,6 @@
   }
 }
 
-@layer utilities {
-  .reveal-in {
-    animation: gmv-reveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  .fade-in {
-    animation: gmv-fade-in 320ms ease-out both;
-  }
-}
-
 /* ========================================================================== */
 /* 平行人生档案馆 · Parallel Life Archive（报告 §1 / §2 / §26-§28 / §36）      */
 /*                                                                            */
@@ -576,32 +291,6 @@
 /* 全部是 SVG + CSS，零 WebGL、零新依赖（报告 §31）。                          */
 /* 刻意放在 @layer 之外：这些类由运行期动画直接驱动，不做按需 purge。         */
 /* ========================================================================== */
-
-:root {
-  /* 基底：暗房深夜，不是纯黑（画布 bg-0 #07080C） */
-  --arc-bg-950: #07080c;
-  --arc-bg-900: #0b0d14;
-  --arc-bg-850: #10141f;
-  --arc-bg-800: #131824;
-
-  /* 知乎蓝 = 真实来源（画布 accent-zhihu #3D8BFF） */
-  --arc-blue: #3d8bff;
-  --arc-blue-soft: #7db4ff;
-  --arc-blue-pale: #a9cdff;
-
-  /* 显影青 = 新行动 / 新路径；安全灯琥珀 = 反例 / 不同条件 */
-  --arc-unlock: #6fe3d8;
-  --arc-counter: #c9a45e;
-
-  /* 文本层级 */
-  --arc-text-100: #eef1f6;
-  --arc-text-200: #a3aec0;
-  --arc-text-400: #667284;
-  --arc-text-600: #5f6c80;
-
-  /* 统一缓动（报告 §27） */
-  --arc-ease: cubic-bezier(0.22, 1, 0.36, 1);
-}
 
 /* film grain：1.5%～3% 的极轻噪点，让深色背景有质感（报告 §28） */
 @keyframes arc-grain {
@@ -620,16 +309,6 @@
   100% {
     transform: translate3d(0, 0, 0);
   }
-}
-
-.arc-grain {
-  pointer-events: none;
-  position: fixed;
-  inset: -60px;
-  z-index: 0;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation: arc-grain 7s steps(3, end) infinite;
 }
 
 /* 1. Worldline Drift —— 世界线缓慢漂移（报告 §26.1） */
@@ -801,40 +480,6 @@
   }
 }
 
-.arc-phrase {
-  animation: arc-phrase-in 520ms var(--arc-ease) both;
-}
-
-/* 坐标输入器：拟物档案控制台，聚焦时才亮（报告 §5） */
-.arc-coordinate {
-  transition:
-    border-color 260ms var(--arc-ease),
-    background-color 260ms var(--arc-ease),
-    box-shadow 260ms var(--arc-ease),
-    transform 260ms var(--arc-ease);
-}
-
-.arc-coordinate:focus-within {
-  background-color: rgb(var(--gmv-blue-500-rgb) / 0.05);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.05),
-    0 0 0 1px rgb(var(--gmv-blue-500-rgb) / 0.22),
-    0 30px 70px -46px rgb(var(--gmv-blue-500-rgb) / 0.7);
-}
-
-.arc-scan {
-  animation: scan-sweep 2.6s var(--arc-ease) infinite;
-}
-
-/* 终局：接近纯黑，动画停止（报告 §22） */
-.arc-vignette {
-  background:
-    radial-gradient(58% 46% at 50% 34%, rgb(var(--gmv-blue-500-rgb) / 0.07), transparent 72%),
-    linear-gradient(180deg, #020204 0%, #04060b 60%, #020204 100%);
-}
-
-/* ========================================================================== */
-/* FINAL SESSION EXPERIENCE — OBSERVATORY                                     */
 /* 命运观象厅 · The Observatory of Borrowed Lives（04_AGENT §4-§37）           */
 /*                                                                            */
 /* 新主链**唯一**的视觉方向：未来天文仪器 / 深空建筑 / 低饱和金属 /            */
@@ -845,618 +490,16 @@
 /* 性能（§36）：零 three.js、零视频、零大面积 canvas 粒子、blur 滤镜同时 <= 3。 */
 /* ========================================================================== */
 
-:root {
-  /* ---- 底色：暗房深空，不是纯黑（§4 / 画布 bg-0 #07080C） ---- */
-  --obs-bg-0: #07080c;
-  --obs-bg-1: #0c0f17;
-  --obs-bg-2: #131824;
-
-  /* ---- 文本层级 ---- */
-  --obs-text-0: #eef1f6;
-  --obs-text-1: #a3aec0;
-  --obs-text-2: #667284;
-
-  /* ---- 颜色语义（§5）：知乎蓝=真实来源 / 显影青=新路径 / 安全灯琥珀=反例 ---- */
-  --obs-zhihu: #3d8bff;
-  --obs-zhihu-soft: #7db4ff;
-
-  --obs-path: #6fe3d8;
-  --obs-path-soft: #9aeade;
-
-  --obs-counter: #c9a45e;
-  --obs-counter-soft: #dcc08a;
-
-  /* 终局认知重写：安全灯琥珀，不再是紫罗兰 */
-  --obs-end: #c9a45e;
-
-  /* rgb 分量：只用于带透明度的边线与光，避免到处写十六进制 */
-  --obs-rgb-bg-0: 7 8 12;
-  --obs-rgb-text-0: 238 241 246;
-  --obs-rgb-text-1: 163 174 192;
-  --obs-rgb-text-2: 102 114 132;
-  --obs-rgb-zhihu: 61 139 255;
-  --obs-rgb-path: 111 227 216;
-  --obs-rgb-path-soft: 154 234 222;
-  --obs-rgb-counter: 201 164 94;
-  --obs-rgb-end: 201 164 94;
-
-  /* 观测玻璃的 0.5～1px 发丝线（§13） */
-  --obs-hairline: rgb(245 247 251 / 0.13);
-  --obs-hairline-strong: rgb(245 247 251 / 0.22);
-
-  --obs-ease: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* -------------------------------------------------------------------------- */
-/* 深空建筑：观象厅底板与体积光                                                */
-/* 体积光只用 radial-gradient，不用 blur 滤镜 —— 同时最多 3 个 blur 的预算      */
-/* 要留给真正的演出（§36）。                                                   */
-/* -------------------------------------------------------------------------- */
-
-.obs-shell {
-  position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(56% 40% at 50% -8%, rgb(var(--obs-rgb-zhihu) / 0.10), transparent 68%),
-    radial-gradient(44% 32% at 84% 76%, rgb(var(--obs-rgb-counter) / 0.045), transparent 72%),
-    radial-gradient(40% 30% at 12% 64%, rgb(var(--obs-rgb-path) / 0.045), transparent 74%),
-    linear-gradient(180deg, var(--obs-bg-0) 0%, var(--obs-bg-1) 46%, var(--obs-bg-0) 100%);
-  color: var(--obs-text-1);
-}
-
-/* 极细刻度网格：只在中景可见，边缘用 mask 化掉 */
-.obs-shell::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.55;
-  background-image:
-    linear-gradient(to right, rgb(var(--obs-rgb-text-0) / 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(var(--obs-rgb-text-0) / 0.04) 1px, transparent 1px);
-  background-size: 96px 96px;
-  -webkit-mask-image: radial-gradient(74% 66% at 50% 42%, #000 0%, transparent 88%);
-  mask-image: radial-gradient(74% 66% at 50% 42%, #000 0%, transparent 88%);
-}
-
-.obs-shell > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* 终局：复杂背景减弱、几乎纯黑（§22 / §31） */
-.obs-shell--still {
-  background: linear-gradient(180deg, #020306 0%, var(--obs-bg-0) 62%, #020306 100%);
-}
-
-.obs-shell--still::before {
-  opacity: 0.18;
-}
-
-.obs-text-0 { color: var(--obs-text-0); }
-.obs-text-1 { color: var(--obs-text-1); }
-.obs-text-2 { color: var(--obs-text-2); }
-.obs-tone-zhihu { color: var(--obs-zhihu-soft); }
-.obs-tone-path { color: var(--obs-path-soft); }
-.obs-tone-counter { color: var(--obs-counter-soft); }
-.obs-tone-end { color: var(--obs-end); }
-
-/* 刻度标签：观象厅里唯一的等宽字用途（短标签，不用于正文） */
-.obs-kicker {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--obs-text-2);
-}
-
-/* -------------------------------------------------------------------------- */
-/* 透明观测玻璃（§13）：0.5～1px 发丝线 / 角括号 / 内高光 / 静态细扫描线        */
-/* -------------------------------------------------------------------------- */
-
-.obs-glass {
-  position: relative;
-  border: 1px solid var(--obs-hairline);
-  background:
-    linear-gradient(180deg, rgb(var(--obs-rgb-text-0) / 0.055), rgb(var(--obs-rgb-text-0) / 0.014)),
-    linear-gradient(180deg, rgb(var(--obs-rgb-bg-0) / 0.72), rgb(var(--obs-rgb-bg-0) / 0.86));
-  box-shadow:
-    inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.07),
-    inset 0 -1px 0 rgb(var(--obs-rgb-bg-0) / 0.6),
-    0 34px 80px -60px rgb(0 0 0 / 0.98);
-  transition:
-    border-color 320ms var(--obs-ease),
-    box-shadow 320ms var(--obs-ease),
-    background-color 320ms var(--obs-ease),
-    transform 320ms var(--obs-ease);
-}
-
-/* 聚焦：控制台微亮 —— 不是霓虹，是玻璃被一束光扫到（§14） */
-.obs-glass--focus {
-  border-color: rgb(var(--obs-rgb-path) / 0.30);
-  box-shadow:
-    inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.09),
-    0 0 0 1px rgb(var(--obs-rgb-path) / 0.12),
-    0 40px 96px -64px rgb(var(--obs-rgb-path) / 0.55);
-}
-
-/* 角括号：四个角由两个伪元素各画两个角，零额外 DOM */
-.obs-brackets::before,
-.obs-brackets::after {
-  content: '';
-  position: absolute;
-  width: 15px;
-  height: 15px;
-  pointer-events: none;
-  transition: border-color 320ms var(--obs-ease);
-}
-
-.obs-brackets::before {
-  top: -1px;
-  left: -1px;
-  border-top: 1px solid rgb(var(--obs-rgb-text-0) / 0.34);
-  border-left: 1px solid rgb(var(--obs-rgb-text-0) / 0.34);
-}
-
-.obs-brackets::after {
-  right: -1px;
-  bottom: -1px;
-  border-right: 1px solid rgb(var(--obs-rgb-text-0) / 0.34);
-  border-bottom: 1px solid rgb(var(--obs-rgb-text-0) / 0.34);
-}
-
-.obs-brackets--path::before,
-.obs-brackets--path::after {
-  border-color: rgb(var(--obs-rgb-path) / 0.6);
-}
-
-/* 静态细扫描线：材质，不是动画（§13 要的是「subtle scan line」） */
-.obs-scanline {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.obs-scanline::after {
-  content: '';
-  position: absolute;
-  top: 32%;
-  right: 0;
-  left: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(var(--obs-rgb-text-0) / 0.10), transparent);
-}
-
-/* -------------------------------------------------------------------------- */
-/* 命运观象仪 Astral Dial（§11）：3~5 主环 / 8~16 刻度 / <=10 节点 / 1 主焦点   */
-/* -------------------------------------------------------------------------- */
-
-.obs-dial {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.obs-dial__svg {
-  width: min(132vw, 1120px);
-  height: min(132vw, 1120px);
-  max-height: 132vh;
-  flex: 0 0 auto;
-  /* §11：只允许非常轻的 1~2° 视差；用 CSS 变量承接指针偏移 */
-  transform: rotate(var(--obs-tilt-y, 0deg)) translate3d(var(--obs-tilt-x, 0px), 0, 0);
-  transition: transform 900ms var(--obs-ease);
-  /* 这是一张 660~1120px 的巨型 SVG：不给合成层提示的话，指针每动一帧
-     都要把整台仪器重新光栅化一次，点击时就是一片「闪」。 */
-  will-change: transform;
-  opacity: 0.9;
-}
-
-.obs-dial__spin,
-.obs-dial__spin-rev {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-}
-
-/* 极慢 40~90s 旋转（§11） */
-.obs-dial__spin {
-  animation: orbit-drift 88s linear infinite;
-}
-
-.obs-dial__spin-rev {
-  animation: orbit-drift 61s linear infinite reverse;
-}
-
-/* 主焦点围绕自己的包围盒呼吸，而不是围绕整张图（fill-box） */
-.obs-dial__focus {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: signal-pulse 4.6s var(--obs-ease) infinite;
-}
-
-.obs-dial__ring { transition: opacity 900ms var(--obs-ease); }
-.obs-dial--focus .obs-dial__ring--near { opacity: 0.85; }
-
-/* -------------------------------------------------------------------------- */
-/* 人生轨道 Orbit Field（§12）：Desktop <=10 / Mobile <=6                      */
-/* opacity 0.08~0.32 / stroke 0.5~1.25，像轨道，不像电路板                     */
-/* -------------------------------------------------------------------------- */
-
-.obs-orbit {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.obs-orbit__svg {
-  width: 100%;
-  height: 100%;
-  opacity: 0.9;
-}
-
-.obs-orbit__drift {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-  animation: orbit-drift 140s linear infinite;
-}
-
-.obs-orbit__path {
-  fill: none;
-  stroke-linecap: round;
-  transition: opacity 620ms var(--obs-ease);
-}
-
-/* 聚焦：附近轨道 opacity +10%（§14）—— 是「附近」，不是全部 */
-.obs-orbit--near .obs-orbit__path--near { opacity: 0.42; }
-.obs-orbit--near .obs-orbit__path--far { opacity: 0.24; }
-.obs-orbit__path--bright { opacity: 0.46; }
-.obs-orbit__path--amber { stroke: var(--obs-counter); }
-
-/* -------------------------------------------------------------------------- */
-/* Signal Pulse：全站唯一的「一点信号」（§14 / §15 的中心脉冲）                */
-/* -------------------------------------------------------------------------- */
-
-.obs-signal {
-  position: relative;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-  /* 尺寸由 React 内联 style 驱动（16 → 24，FateProjectionConsole §14）。
-     没有过渡时，聚焦那一帧这颗发蓝光的脉冲点会「啪」地弹大 50% ——
-     用户看到的就是「随便点一下页面就闪一下蓝」；
-     补上过渡后，它是呼吸，而不是闪。 */
-  transition:
-    width 320ms var(--obs-ease),
-    height 320ms var(--obs-ease);
-}
-
-.obs-signal__ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  border: 1px solid rgb(var(--obs-rgb-path) / 0.55);
-  animation: signal-pulse 3.4s var(--obs-ease) infinite;
-}
-
-.obs-signal__ring:nth-child(2) { animation-delay: 1.1s; }
-.obs-signal__ring:nth-child(3) { animation-delay: 2.2s; }
-
-.obs-signal__core {
-  width: 5px;
-  height: 5px;
-  border-radius: 9999px;
-  background: var(--obs-path);
-  box-shadow: 0 0 14px 2px rgb(var(--obs-rgb-path) / 0.55);
-}
-
-.obs-signal--zhihu .obs-signal__core { background: var(--obs-zhihu-soft); box-shadow: 0 0 14px 2px rgb(var(--obs-rgb-zhihu) / 0.5); }
-.obs-signal--zhihu .obs-signal__ring { border-color: rgb(var(--obs-rgb-zhihu) / 0.5); }
-.obs-signal--counter .obs-signal__core { background: var(--obs-counter-soft); box-shadow: 0 0 14px 2px rgb(var(--obs-rgb-counter) / 0.5); }
-.obs-signal--counter .obs-signal__ring { border-color: rgb(var(--obs-rgb-counter) / 0.5); }
-.obs-signal--end .obs-signal__core { background: var(--obs-end); box-shadow: 0 0 14px 2px rgb(var(--obs-rgb-end) / 0.5); }
-.obs-signal--end .obs-signal__ring { border-color: rgb(var(--obs-rgb-end) / 0.5); }
-
-/* 只播一轮：进入平行宇宙前的那一次中心脉冲（§15） */
-.obs-signal--once .obs-signal__ring {
-  animation-iteration-count: 1;
-  animation-duration: 620ms;
-}
-
-.obs-signal--once .obs-signal__ring:nth-child(2) { animation-delay: 160ms; }
-.obs-signal--once .obs-signal__ring:nth-child(3) { animation-delay: 320ms; }
-
-/* -------------------------------------------------------------------------- */
-/* Fragment Shard（§19）：真实记忆碎片，一行/两行 exactQuote + 来源标签        */
-/* -------------------------------------------------------------------------- */
-
-.obs-shard {
-  position: relative;
-  max-width: 100%;
-  padding: 10px 12px;
-  border: 1px solid rgb(var(--obs-rgb-text-0) / 0.10);
-  background:
-    linear-gradient(150deg, rgb(var(--obs-rgb-text-0) / 0.05), rgb(var(--obs-rgb-bg-0) / 0.5));
-  box-shadow: inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.05);
-  transition:
-    opacity 420ms var(--obs-ease),
-    border-color 420ms var(--obs-ease);
-}
-
-.obs-shard--similar { border-left: 1px solid rgb(var(--obs-rgb-zhihu) / 0.5); }
-.obs-shard--alternative { border-left: 1px solid rgb(var(--obs-rgb-path) / 0.5); }
-.obs-shard--counter { border-left: 1px solid rgb(var(--obs-rgb-counter) / 0.5); }
-
-.obs-shard--materialize {
-  animation: fragment-materialize 640ms var(--obs-ease) both;
-}
-
-.obs-shard__quote {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--obs-text-1);
-}
-
-.obs-shard__meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--obs-text-2);
-}
-
-/* -------------------------------------------------------------------------- */
-/* World Forge（§17 / §20）：中央是问题，外围是三条人生轨道                    */
-/* 真实数据到达时 Fragment Shard 归位；WORLD READY <= 450ms                     */
-/* -------------------------------------------------------------------------- */
-
-.obs-forge {
-  position: relative;
-  overflow: hidden;
-}
-
-.obs-forge__track {
-  fill: none;
-  stroke-linecap: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
-
-.obs-forge--assembling .obs-forge__track {
-  animation: orbit-weave 820ms var(--obs-ease) both;
-}
-
-/* 三轨向中央收束后短暂连接成几何（§20） */
-.obs-forge__weave {
-  transition:
-    opacity 480ms var(--obs-ease),
-    transform 700ms var(--obs-ease);
-}
-
-.obs-forge--assembling .obs-forge__weave {
-  transform: scale(0.82);
-}
-
-.obs-forge--ready .obs-forge__track {
-  stroke-dashoffset: 0;
-  opacity: 1;
-}
-
-.obs-forge__ready {
-  animation: fragment-materialize 420ms var(--obs-ease) both;
-}
-
-.obs-forge__caption {
-  transition: opacity 420ms var(--obs-ease);
-}
-
-.obs-forge__question {
-  max-width: 30ch;
-  text-wrap: balance;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Hidden Path Reveal（§25）：整个产品优先级最高的动画，只播一次               */
-/* 150ms 普通 Gate 变暗 → 250ms 极细轨迹出现 → 250ms 向两端生长                 */
-/* → 250ms 新 Gate 从 opacity 0 / translateY 16px 出现 → 300ms 标签              */
-/* -------------------------------------------------------------------------- */
-
-.obs-reveal__line {
-  height: 1px;
-  transform-origin: 50% 50%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(var(--obs-rgb-path) / 0.85) 32%,
-    rgb(var(--obs-rgb-path-soft) / 0.95) 50%,
-    rgb(var(--obs-rgb-path) / 0.85) 68%,
-    transparent
-  );
-  /* §25 的第一拍：普通 Gate 先暗 150ms，轨迹才出现 */
-  animation: hidden-path-reveal 260ms var(--obs-ease) both;
-  animation-delay: 150ms;
-}
-
-.obs-reveal__gate {
-  animation: fragment-materialize 420ms var(--obs-ease) both;
-  animation-delay: 400ms;
-}
-
-.obs-reveal__label {
-  animation: fragment-materialize 320ms var(--obs-ease) both;
-  animation-delay: 620ms;
-}
-
-/* 播完之后定居：不再重播，也不再参与动画预算 */
-.obs-reveal--settled .obs-reveal__line,
-.obs-reveal--settled .obs-reveal__gate,
-.obs-reveal--settled .obs-reveal__label {
-  animation: none;
-}
-
-/* 新行动 mount 前，普通 Gate 稍暗（§25 第一步） */
-.session-choice--dimmed {
-  opacity: 0.42;
-  transition: opacity 150ms linear;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Counter Orbit（§28）与 Collision（§29）：琥珀轨道从另一侧进入               */
-/* -------------------------------------------------------------------------- */
-
-.obs-collision__orbit {
-  width: 100%;
-  height: 44px;
-}
-
-.obs-collision__orbit path {
-  fill: none;
-  stroke-linecap: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: counter-orbit 760ms var(--obs-ease) both;
-}
-
-.obs-collision__grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-@media (min-width: 768px) {
-  .obs-collision__grid {
-    grid-template-columns: 1fr 1px 1fr;
-    gap: 20px;
-    align-items: stretch;
-  }
-}
-
-/* 中央轴：极细琥珀线，不是 VS 红蓝对抗（§29） */
-.obs-axis {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .obs-axis {
-    display: block;
-    width: 1px;
-    background: linear-gradient(
-      180deg,
-      transparent,
-      rgb(var(--obs-rgb-counter) / 0.5) 18%,
-      rgb(var(--obs-rgb-counter) / 0.5) 82%,
-      transparent
-    );
-  }
-}
-
-.obs-reliquary {
-  position: relative;
-  border: 1px solid rgb(var(--obs-rgb-text-0) / 0.10);
-  background:
-    linear-gradient(168deg, rgb(var(--obs-rgb-text-0) / 0.055), transparent 52%),
-    rgb(var(--obs-rgb-bg-0) / 0.6);
-  box-shadow: inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.06);
-  transition: border-color 420ms var(--obs-ease);
-}
-
-.obs-reliquary--counter {
-  border-color: rgb(var(--obs-rgb-counter) / 0.28);
-}
-
-/* 少量 dust：固定位置的 3 个 1px 点，不用 canvas 粒子（§26 / §36） */
-.obs-reliquary__dust {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(1px 1px at 18% 24%, rgb(var(--obs-rgb-text-0) / 0.5), transparent),
-    radial-gradient(1px 1px at 72% 62%, rgb(var(--obs-rgb-text-0) / 0.4), transparent),
-    radial-gradient(1px 1px at 44% 86%, rgb(var(--obs-rgb-text-0) / 0.32), transparent);
-}
-
 /* -------------------------------------------------------------------------- */
 /* Unknown Lock（§30）：一条轨道进入半透明雾区，不用挂锁图标                    */
 /* -------------------------------------------------------------------------- */
 
-.obs-fog {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--obs-rgb-text-0) / 0.08);
-  background:
-    radial-gradient(120% 90% at 20% 50%, rgb(var(--obs-rgb-text-2) / 0.16), transparent 62%),
-    linear-gradient(180deg, rgb(var(--obs-rgb-bg-0) / 0.4), rgb(var(--obs-rgb-bg-0) / 0.82));
-}
-
-.obs-fog__track {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  left: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    rgb(var(--obs-rgb-text-2) / 0.5),
-    rgb(var(--obs-rgb-text-2) / 0.18) 42%,
-    transparent 78%
-  );
-}
-
-.obs-fog__label {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.28em;
-  color: var(--obs-text-2);
-}
-
 /* -------------------------------------------------------------------------- */
 /* Question Reforge（§31）：旧问题变小、旧关键词淡散、新条件向上浮现            */
-/* -------------------------------------------------------------------------- */
-
-.obs-reforged__old {
-  animation: sentence-reforge 800ms var(--obs-ease) reverse both;
-}
-
-.obs-reforged__new {
-  animation: sentence-reforge 1000ms var(--obs-ease) both;
-  animation-delay: 500ms;
-}
 
 /* -------------------------------------------------------------------------- */
 /* Reality Pass（§32）：薄光票据 —— 未来 timebox / 行动 / 观察点 / 带回现实     */
 /* -------------------------------------------------------------------------- */
-
-.obs-pass {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--obs-rgb-path-soft) / 0.26);
-  background:
-    linear-gradient(168deg, rgb(var(--obs-rgb-path-soft) / 0.075), transparent 58%),
-    rgb(var(--obs-rgb-bg-0) / 0.55);
-  box-shadow: inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.06);
-}
-
-.obs-pass::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 16px;
-  left: 16px;
-  border-top: 1px dashed rgb(var(--obs-rgb-path-soft) / 0.34);
-}
 
 /* -------------------------------------------------------------------------- */
 /* Session 主链语义结构（§21）：只写样式，不动 Agent 03 的 React 业务           */
@@ -1465,34 +508,34 @@
 .session-stage {
   position: relative;
   min-height: 100dvh;
-  transition: background 700ms var(--obs-ease);
+  transition: background 700ms var(--sil-ease);
 }
 
 /* §22 ACT I：冷蓝、开阔、轨道稀疏 */
 .session-stage[data-act='1'] {
   background:
-    radial-gradient(58% 44% at 50% -4%, rgb(var(--obs-rgb-zhihu) / 0.10), transparent 70%),
-    linear-gradient(180deg, var(--obs-bg-0) 0%, var(--obs-bg-1) 58%, var(--obs-bg-0) 100%);
+    radial-gradient(58% 44% at 50% -4%, rgb(var(--sil-rgb-zhihu) / 0.10), transparent 70%),
+    linear-gradient(180deg, var(--sil-void-900) 0%, var(--sil-void-800) 58%, var(--sil-void-900) 100%);
 }
 
 /* §22 ACT II：背景更暗、局部光源更近、轨道略密 */
 .session-stage[data-act='2'] {
   background:
-    radial-gradient(38% 30% at 50% 6%, rgb(var(--obs-rgb-zhihu) / 0.085), transparent 66%),
-    linear-gradient(180deg, #030408 0%, var(--obs-bg-0) 62%, #030408 100%);
+    radial-gradient(38% 30% at 50% 6%, rgb(var(--sil-rgb-zhihu) / 0.085), transparent 66%),
+    linear-gradient(180deg, #030408 0%, var(--sil-void-900) 62%, #030408 100%);
 }
 
 /* §22 ACT III：加入琥珀 Counter Orbit */
 .session-stage[data-act='3'] {
   background:
-    radial-gradient(44% 34% at 22% 2%, rgb(var(--obs-rgb-path) / 0.07), transparent 66%),
-    radial-gradient(44% 34% at 82% 22%, rgb(var(--obs-rgb-counter) / 0.075), transparent 68%),
-    linear-gradient(180deg, var(--obs-bg-0) 0%, var(--obs-bg-2) 52%, var(--obs-bg-0) 100%);
+    radial-gradient(44% 34% at 22% 2%, rgb(var(--sil-rgb-alternate) / 0.07), transparent 66%),
+    radial-gradient(44% 34% at 82% 22%, rgb(var(--sil-rgb-counter) / 0.075), transparent 68%),
+    linear-gradient(180deg, var(--sil-void-900) 0%, var(--sil-void-600) 52%, var(--sil-void-900) 100%);
 }
 
 /* §22 END：背景几乎纯黑，轨道逐渐退出 */
 .session-stage[data-act='end'] {
-  background: linear-gradient(180deg, #020306 0%, var(--obs-bg-0) 60%, #020306 100%);
+  background: linear-gradient(180deg, #020306 0%, var(--sil-void-900) 60%, #020306 100%);
 }
 
 .session-act-header {
@@ -1501,13 +544,13 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgb(var(--obs-rgb-text-0) / 0.07);
+  border-bottom: 1px solid rgb(var(--sil-rgb-ink-100) / 0.07);
 }
 
 .session-story {
   font-size: 15px;
   line-height: 1.95;
-  color: var(--obs-text-1);
+  color: var(--sil-ink-200);
 }
 
 /* §23 Fate Gate：深色玻璃 + 轻微金属边；标题突出、hint 降级 */
@@ -1519,26 +562,26 @@
   gap: 12px;
   min-height: 44px;
   padding: 14px 16px;
-  border: 1px solid rgb(var(--obs-rgb-text-0) / 0.12);
+  border: 1px solid rgb(var(--sil-rgb-ink-100) / 0.12);
   background:
-    linear-gradient(180deg, rgb(var(--obs-rgb-text-0) / 0.045), rgb(var(--obs-rgb-text-0) / 0.012)),
-    rgb(var(--obs-rgb-bg-0) / 0.55);
-  box-shadow: inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.05);
+    linear-gradient(180deg, rgb(var(--sil-rgb-ink-100) / 0.045), rgb(var(--sil-rgb-ink-100) / 0.012)),
+    rgb(var(--sil-rgb-void-900) / 0.55);
+  box-shadow: inset 0 1px 0 rgb(var(--sil-rgb-ink-100) / 0.05);
   text-align: left;
   transition:
-    transform 300ms var(--obs-ease),
-    border-color 300ms var(--obs-ease),
-    box-shadow 300ms var(--obs-ease),
+    transform 300ms var(--sil-ease),
+    border-color 300ms var(--sil-ease),
+    box-shadow 300ms var(--sil-ease),
     opacity 200ms linear;
 }
 
 /* §23 Hover：translateY(-2px) + edge light；**不** scale(1.05) */
 .session-choice:hover {
   transform: translateY(-2px);
-  border-color: rgb(var(--obs-rgb-zhihu) / 0.45);
+  border-color: rgb(var(--sil-rgb-zhihu) / 0.45);
   box-shadow:
-    inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.07),
-    0 20px 44px -34px rgb(var(--obs-rgb-zhihu) / 0.7);
+    inset 0 1px 0 rgb(var(--sil-rgb-ink-100) / 0.07),
+    0 20px 44px -34px rgb(var(--sil-rgb-zhihu) / 0.7);
 }
 
 .session-choice__title {
@@ -1546,7 +589,7 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 1.6;
-  color: var(--obs-text-0);
+  color: var(--sil-ink-100);
 }
 
 .session-choice__hint {
@@ -1554,34 +597,25 @@
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.7;
-  color: var(--obs-text-2);
+  color: var(--sil-ink-300);
 }
 
 /* §24 Unlocked Fate Gate：唯一高亮 —— 青绿发丝线 + 真实来源标签 + 内脉冲 */
 .session-choice--unlocked {
-  border-color: rgb(var(--obs-rgb-path-soft) / 0.4);
+  border-color: rgb(var(--sil-rgb-alternate-soft) / 0.4);
   background:
-    linear-gradient(180deg, rgb(var(--obs-rgb-path-soft) / 0.07), rgb(var(--obs-rgb-path-soft) / 0.02)),
-    rgb(var(--obs-rgb-bg-0) / 0.5);
+    linear-gradient(180deg, rgb(var(--sil-rgb-alternate-soft) / 0.07), rgb(var(--sil-rgb-alternate-soft) / 0.02)),
+    rgb(var(--sil-rgb-void-900) / 0.5);
   box-shadow:
-    inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.07),
-    inset 0 0 0 1px rgb(var(--obs-rgb-path-soft) / 0.08);
+    inset 0 1px 0 rgb(var(--sil-rgb-ink-100) / 0.07),
+    inset 0 0 0 1px rgb(var(--sil-rgb-alternate-soft) / 0.08);
 }
 
 .session-choice--unlocked:hover {
-  border-color: rgb(var(--obs-rgb-path) / 0.7);
+  border-color: rgb(var(--sil-rgb-alternate) / 0.7);
   box-shadow:
-    inset 0 1px 0 rgb(var(--obs-rgb-text-0) / 0.08),
-    0 22px 48px -34px rgb(var(--obs-rgb-path) / 0.65);
-}
-
-.session-choice__badge {
-  display: block;
-  margin-bottom: 5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  color: var(--obs-path-soft);
+    inset 0 1px 0 rgb(var(--sil-rgb-ink-100) / 0.08),
+    0 22px 48px -34px rgb(var(--sil-rgb-alternate) / 0.65);
 }
 
 .session-choice__pulse {
@@ -1608,23 +642,23 @@
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgb(var(--obs-rgb-bg-0) / 0.34) 0%,
+    rgb(var(--sil-rgb-void-900) / 0.34) 0%,
     transparent 42%,
-    rgb(var(--obs-rgb-bg-0) / 0.72) 100%
+    rgb(var(--sil-rgb-void-900) / 0.72) 100%
   );
 }
 
 /* §23/§11 的 locked：不只用 disabled opacity-50，必须给出原因 */
 .session-choice--locked {
   cursor: not-allowed;
-  border-color: rgb(var(--obs-rgb-text-0) / 0.07);
-  background: rgb(var(--obs-rgb-bg-0) / 0.4);
+  border-color: rgb(var(--sil-rgb-ink-100) / 0.07);
+  background: rgb(var(--sil-rgb-void-900) / 0.4);
   opacity: 0.66;
 }
 
 .session-choice--locked:hover {
   transform: none;
-  border-color: rgb(var(--obs-rgb-text-0) / 0.07);
+  border-color: rgb(var(--sil-rgb-ink-100) / 0.07);
   box-shadow: none;
 }
 
@@ -1633,7 +667,7 @@
   margin-top: 5px;
   font-size: 12px;
   line-height: 1.7;
-  color: var(--obs-text-2);
+  color: var(--sil-ink-300);
 }
 
 /* §29 Collision：桌面左遗物 / 中央轴 / 右遗物；移动端上下 */
@@ -1666,29 +700,12 @@
   inset: -40px -24px;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(58% 50% at 50% 30%, rgb(var(--obs-rgb-bg-0) / 0.85), transparent 76%);
+  background: radial-gradient(58% 50% at 50% 30%, rgb(var(--sil-rgb-void-900) / 0.85), transparent 76%);
 }
 
 /* -------------------------------------------------------------------------- */
 /* Fate Projection Console 的进入转场（§15）：600~800ms，绝不拖过 1 秒          */
 /* -------------------------------------------------------------------------- */
-
-.obs-console {
-  transition: transform 620ms var(--obs-ease);
-}
-
-.obs-console--collapsing {
-  transform: perspective(1100px) rotateX(2.4deg) scale(0.975);
-  pointer-events: none;
-}
-
-.obs-console__text {
-  transition: opacity 420ms linear;
-}
-
-.obs-console--collapsing .obs-console__text {
-  opacity: 0;
-}
 
 /* -------------------------------------------------------------------------- */
 /* §34 动画总表：新主链只有这七个 keyframes                                     */
@@ -1708,7 +725,7 @@
 @keyframes fragment-materialize {
   0% {
     opacity: 0;
-    transform: translate3d(var(--obs-shard-dx, 0px), var(--obs-shard-dy, 10px), 0) scale(0.985);
+    transform: translate3d(var(--sil-shard-dx, 0px), var(--sil-shard-dy, 10px), 0) scale(0.985);
   }
   100% {
     opacity: 1;
@@ -1745,71 +762,9 @@
 /* -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .obs-dial__spin,
-  .obs-dial__spin-rev,
-  .obs-orbit__drift,
-  .obs-dial__focus,
-  .obs-signal__ring {
-    animation: none !important;
-    transform: none !important;
-    opacity: 0.7 !important;
-  }
-
-  .obs-dial__svg {
-    transform: none !important;
-    transition: none !important;
-  }
-
-  /* reveal → fade（内容必须仍然出现，只是不再生长） */
-  .obs-reveal__line {
-    animation: none !important;
-    transform: scaleX(1) !important;
-    opacity: 1 !important;
-  }
-
-  .obs-reveal__gate,
-  .obs-reveal__label,
-  .obs-shard--materialize,
-  .obs-forge__ready,
-  .obs-forge--assembling .obs-forge__track {
-    animation: none !important;
-    stroke-dashoffset: 0 !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  /* question morph → crossfade */
-  .obs-reforged__old {
-    animation: none !important;
-    opacity: 0.42 !important;
-  }
-
-  .obs-reforged__new {
-    animation: none !important;
-    opacity: 1 !important;
-    filter: none !important;
-    transform: none !important;
-  }
-
-  .obs-collision__orbit path {
-    animation: none !important;
-    stroke-dashoffset: 0 !important;
-    opacity: 1 !important;
-  }
-
-  .obs-forge--assembling .obs-forge__weave {
-    transform: none !important;
-  }
-
-  .session-choice,
-  .obs-glass,
-  .obs-shard {
+.session-choice
+{
     transition-duration: 1ms !important;
-  }
-
-  .obs-console,
-  .obs-console__text {
-    transition: none !important;
   }
 }
 
@@ -1855,221 +810,14 @@ html[data-reduce-motion='on'] *::after {
 /* 1) 观测窗外框                                                                */
 /* -------------------------------------------------------------------------- */
 
-.obs-frame {
-  position: fixed;
-  inset: 0;
-  z-index: 6;
-  pointer-events: none;
-}
-
-.obs-frame__border {
-  position: absolute;
-  inset: 14px;
-  border: 1px solid rgb(var(--obs-rgb-text-0) / 0.07);
-}
-
-@media (min-width: 768px) {
-  .obs-frame__border {
-    inset: 20px;
-  }
-}
-
-.obs-frame__border::before,
-.obs-frame__border::after {
-  content: '';
-  position: absolute;
-  width: 26px;
-  height: 26px;
-}
-
-.obs-frame__border::before {
-  top: -1px;
-  left: -1px;
-  border-top: 1px solid rgb(var(--obs-rgb-text-0) / 0.3);
-  border-left: 1px solid rgb(var(--obs-rgb-text-0) / 0.3);
-}
-
-.obs-frame__border::after {
-  right: -1px;
-  bottom: -1px;
-  border-right: 1px solid rgb(var(--obs-rgb-text-0) / 0.3);
-  border-bottom: 1px solid rgb(var(--obs-rgb-text-0) / 0.3);
-}
-
-/* 上下两条极细刻度：每 24px 一根，长度不同（仪器读数尺） */
-.obs-frame__ticks {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  height: 6px;
-  opacity: 0.5;
-  background-image: repeating-linear-gradient(
-    to right,
-    rgb(var(--obs-rgb-text-0) / 0.22) 0 1px,
-    transparent 1px 24px
-  );
-}
-
-@media (min-width: 768px) {
-  .obs-frame__ticks {
-    left: 20px;
-    right: 20px;
-  }
-}
-
-.obs-frame__ticks--top {
-  top: 14px;
-}
-
-.obs-frame__ticks--bottom {
-  bottom: 14px;
-}
-
-@media (min-width: 768px) {
-  .obs-frame__ticks--top {
-    top: 20px;
-  }
-
-  .obs-frame__ticks--bottom {
-    bottom: 20px;
-  }
-}
-
-.obs-frame__label {
-  position: absolute;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 9px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--obs-text-2);
-  opacity: 0.45;
-}
-
-.obs-frame__label--tl { top: 26px; left: 26px; }
-.obs-frame__label--tr { top: 26px; right: 26px; }
-.obs-frame__label--bl { bottom: 26px; left: 26px; }
-.obs-frame__label--br { right: 26px; bottom: 26px; }
-
-@media (max-width: 640px) {
-  .obs-frame__label--tr,
-  .obs-frame__label--bl {
-    display: none;
-  }
-}
-
 /* -------------------------------------------------------------------------- */
 /* 2) 深空建筑：地平线弧 + 顶部体积光柱                                        */
 /* 体积光用 radial-gradient，不用 blur（§36 的 blur 预算留给穿越那一下）        */
 /* -------------------------------------------------------------------------- */
 
-.obs-horizon {
-  position: absolute;
-  bottom: -128vw;
-  left: 50%;
-  z-index: 0;
-  width: 232vw;
-  height: 232vw;
-  transform: translateX(-50%);
-  border-radius: 9999px;
-  border-top: 1px solid rgb(var(--obs-rgb-zhihu) / 0.22);
-  background: radial-gradient(
-    closest-side,
-    rgb(var(--obs-rgb-zhihu) / 0.07) 0%,
-    rgb(var(--obs-rgb-path) / 0.03) 42%,
-    transparent 72%
-  );
-  pointer-events: none;
-}
-
-.obs-horizon::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 9999px;
-  box-shadow: 0 -40px 120px -60px rgb(var(--obs-rgb-path) / 0.5);
-}
-
-.obs-shaft {
-  position: absolute;
-  top: -14%;
-  left: 50%;
-  z-index: 0;
-  width: min(52vw, 620px);
-  height: 82%;
-  transform: translateX(-50%);
-  background: radial-gradient(
-    58% 92% at 50% 0%,
-    rgb(var(--obs-rgb-zhihu) / 0.11) 0%,
-    rgb(var(--obs-rgb-path) / 0.035) 46%,
-    transparent 76%
-  );
-  pointer-events: none;
-}
-
-/* 3) 胶片颗粒：2%，让深色不至于「塑料」 */
-.obs-shell::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.022;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
 /* -------------------------------------------------------------------------- */
 /* 4) 命运投影台升级：刻度尺 + 聚焦光条 + 坐标脚注                              */
 /* -------------------------------------------------------------------------- */
-
-.obs-console__ruler {
-  position: absolute;
-  top: 16px;
-  bottom: 16px;
-  left: 7px;
-  width: 4px;
-  opacity: 0.45;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgb(var(--obs-rgb-text-0) / 0.3) 0 1px,
-    transparent 1px 9px
-  );
-}
-
-.obs-console__edge {
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  left: -1px;
-  width: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgb(var(--obs-rgb-path) / 0.8) 30%,
-    rgb(var(--obs-rgb-path-soft) / 0.9) 50%,
-    rgb(var(--obs-rgb-path) / 0.8) 70%,
-    transparent
-  );
-  opacity: 0;
-  transform: scaleY(0.4);
-  transform-origin: 50% 50%;
-  transition:
-    opacity 420ms var(--obs-ease),
-    transform 620ms var(--obs-ease);
-}
-
-.obs-glass--focus .obs-console__edge {
-  opacity: 1;
-  transform: scaleY(1);
-}
-
-.obs-console__coords {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 9px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--obs-text-2);
-  opacity: 0.55;
-}
 
 /* -------------------------------------------------------------------------- */
 /* 5) 穿越平行宇宙（§15 的升级版，用户点名要回来的那一下）                      */
@@ -2079,244 +827,10 @@ html[data-reduce-motion='on'] *::after {
 /*              调用方此时 router.push（真实请求早已并行开始，不增加等待）       */
 /*    900ms    全部收束为白，覆盖层淡出（warp）                                  */
 /*    落点      会话页一次环收 + 闪白（arrive）                                  */
-/* -------------------------------------------------------------------------- */
-
-.obs-jump {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.obs-jump__veil {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    56% 48% at 50% 52%,
-    rgb(var(--obs-rgb-bg-0) / 0.42) 0%,
-    rgb(var(--obs-rgb-bg-0) / 0.94) 74%,
-    rgb(var(--obs-rgb-bg-0) / 0.99) 100%
-  );
-  opacity: 0;
-  transition: opacity 460ms linear;
-}
-
-.obs-jump[data-phase='charge'] .obs-jump__veil {
-  opacity: 0.6;
-}
-
-.obs-jump[data-phase='warp'] .obs-jump__veil {
-  opacity: 1;
-}
-
-.obs-jump__tunnel {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-}
-
-.obs-jump__ring {
-  position: absolute;
-  width: 36vmax;
-  height: 36vmax;
-  border-radius: 9999px;
-  border: 1px solid rgb(var(--obs-rgb-path) / 0.5);
-  opacity: 0;
-  transform: scale(0.22);
-  transition:
-    transform 900ms cubic-bezier(0.55, 0, 0.9, 0.36),
-    opacity 780ms linear;
-}
-
-.obs-jump[data-phase='charge'] .obs-jump__ring {
-  opacity: 0.5;
-  transform: scale(0.3);
-  transition-duration: 300ms;
-}
-
-.obs-jump[data-phase='warp'] .obs-jump__ring {
-  opacity: 0;
-  transform: scale(9);
-}
-
-/* 24 条光轨（decorative particles <= 24，§36） */
-.obs-jump__streak {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 1px;
-  height: 62vmax;
-  transform-origin: 50% 0%;
-  opacity: 0;
-  transform: rotate(var(--obs-streak-angle, 0deg)) scaleY(0.05);
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgb(var(--obs-rgb-path) / 0.5) 38%,
-    rgb(var(--obs-rgb-text-0) / 0.85) 58%,
-    transparent 78%
-  );
-  transition:
-    transform 840ms cubic-bezier(0.5, 0, 0.82, 0.4),
-    opacity 720ms linear;
-}
-
-.obs-jump[data-phase='charge'] .obs-jump__streak {
-  opacity: 0.22;
-  transform: rotate(var(--obs-streak-angle, 0deg)) scaleY(0.12);
-  transition-duration: 300ms;
-}
-
-.obs-jump[data-phase='warp'] .obs-jump__streak {
-  opacity: 0;
-  transform: rotate(var(--obs-streak-angle, 0deg)) scaleY(1.6);
-}
-
-/* 中心：亮核 + 一圈正在收拢的观测环 */
-.obs-jump__core {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin: -3px 0 0 -3px;
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: var(--obs-text-0);
-  box-shadow: 0 0 26px 6px rgb(var(--obs-rgb-path) / 0.7);
-  transition:
-    transform 840ms cubic-bezier(0.5, 0, 0.82, 0.4),
-    opacity 720ms linear;
-}
-
-.obs-jump[data-phase='charge'] .obs-jump__core {
-  transform: scale(1.6);
-}
-
-.obs-jump[data-phase='warp'] .obs-jump__core {
-  transform: scale(30);
-  opacity: 0.9;
-}
-
-.obs-jump__text {
-  position: absolute;
-  top: 52%;
-  left: 50%;
-  width: min(80vw, 520px);
-  transform: translate(-50%, -50%);
-  text-align: center;
-  transition:
-    transform 820ms cubic-bezier(0.6, 0, 0.9, 0.4),
-    opacity 520ms linear 180ms,
-    filter 700ms linear;
-}
-
-.obs-jump[data-phase='warp'] .obs-jump__text {
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(1.55);
-  /* 全站唯一同时出现的 blur：穿越这一下（§36 预算内） */
-  filter: blur(5px);
-}
-
-.obs-jump__question {
-  margin-top: 14px;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.6;
-  color: var(--obs-text-0);
-}
-
-.obs-jump__note {
-  margin-top: 12px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--obs-text-1);
-}
-
-/* 落点：会话页的一次环收 + 闪白 */
-.obs-arrive {
-  position: fixed;
-  inset: 0;
-  z-index: 55;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.obs-arrive__ring {
-  position: absolute;
-  inset: -26%;
-  border-radius: 9999px;
-  border: 1px solid rgb(var(--obs-rgb-path) / 0.7);
-  opacity: 0.85;
-  transform: scale(1.7);
-  transition:
-    transform 640ms cubic-bezier(0.16, 0.9, 0.3, 1),
-    opacity 640ms linear;
-}
-
-.obs-arrive__flash {
-  position: absolute;
-  inset: 0;
-  opacity: 0.85;
-  background: radial-gradient(
-    42% 42% at 50% 50%,
-    rgb(var(--obs-rgb-path) / 0.3) 0%,
-    transparent 72%
-  );
-  transition: opacity 640ms linear;
-}
-
-.obs-arrive[data-phase='settled'] .obs-arrive__ring {
-  transform: scale(0.4);
-  opacity: 0;
-}
-
-.obs-arrive[data-phase='settled'] .obs-arrive__flash {
-  opacity: 0;
-}
 
 /* -------------------------------------------------------------------------- */
 /* 6) Session / Forge 的仪表化细节                                             */
 /* -------------------------------------------------------------------------- */
-
-.obs-act-progress {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.obs-act-progress__seg {
-  width: 22px;
-  height: 2px;
-  background: rgb(var(--obs-rgb-text-0) / 0.16);
-  transition:
-    background-color 420ms var(--obs-ease),
-    box-shadow 420ms var(--obs-ease);
-}
-
-@media (min-width: 640px) {
-  .obs-act-progress__seg {
-    width: 30px;
-  }
-}
-
-.obs-act-progress__seg--on {
-  background: var(--obs-path);
-  box-shadow: 0 0 10px rgb(var(--obs-rgb-path) / 0.6);
-}
-
-.obs-act-progress__seg--done {
-  background: rgb(var(--obs-rgb-path) / 0.42);
-}
-
-.obs-act-progress__label {
-  margin-left: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 9px;
-  letter-spacing: 0.26em;
-  color: var(--obs-text-2);
-}
 
 .session-choice__index {
   flex: 0 0 auto;
@@ -2324,92 +838,26 @@ html[data-reduce-motion='on'] *::after {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 10px;
   letter-spacing: 0.12em;
-  color: var(--obs-text-2);
-  transition: color 300ms var(--obs-ease);
+  color: var(--sil-ink-300);
+  transition: color 300ms var(--sil-ease);
 }
 
 .session-choice:hover .session-choice__index {
-  color: var(--obs-path-soft);
+  color: var(--sil-alternate-soft);
 }
 
 .session-choice__chevron {
   margin-left: auto;
   flex: 0 0 auto;
-  color: var(--obs-text-2);
+  color: var(--sil-ink-300);
   transition:
-    transform 300ms var(--obs-ease),
-    color 300ms var(--obs-ease);
+    transform 300ms var(--sil-ease),
+    color 300ms var(--sil-ease);
 }
 
 .session-choice:hover .session-choice__chevron {
   transform: translateX(3px);
-  color: var(--obs-path);
-}
-
-/* 仪表脚注：永远告诉你「你现在在回答哪个问题」 */
-.obs-instrument-bar {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-top: 22px;
-  padding-top: 10px;
-  border-top: 1px solid rgb(var(--obs-rgb-text-0) / 0.07);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--obs-text-2);
-}
-
-.obs-instrument-bar__key {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 9px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--obs-text-2);
-  opacity: 0.7;
-}
-
-/* Forge 外环 + 三轨标签：把「外围三条人生轨道」写成看得见的东西（§17） */
-.obs-forge__ring {
-  position: absolute;
-  inset: 4% 3%;
-  border-radius: 9999px;
-  border: 1px dashed rgb(var(--obs-rgb-text-0) / 0.08);
-  pointer-events: none;
-  transform-origin: 50% 50%;
-  animation: orbit-drift 200s linear infinite;
-}
-
-.obs-forge__orbit-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--obs-text-2);
-}
-
-.obs-forge__orbit-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 9999px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .obs-forge__ring {
-    animation: none !important;
-  }
-
-  .obs-jump__veil,
-  .obs-jump__ring,
-  .obs-jump__streak,
-  .obs-jump__core,
-  .obs-jump__text,
-  .obs-arrive__ring,
-  .obs-arrive__flash {
-    transition: none !important;
-  }
+  color: var(--sil-alternate);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2418,193 +866,24 @@ html[data-reduce-motion='on'] *::after {
 /*    零图片资源、零新 keyframes（底座呼吸用既有的 signal-pulse）               */
 /* -------------------------------------------------------------------------- */
 
-.obs-kanshan {
-  position: relative;
-  display: inline-grid;
-  flex: 0 0 auto;
-  place-items: center;
-}
-
-.obs-kanshan__svg {
-  position: relative;
-  z-index: 1;
-  display: block;
-  overflow: visible;
-}
-
-/* 全息底座：一小片光，缓慢呼吸 */
-.obs-kanshan__pad {
-  position: absolute;
-  right: 12%;
-  bottom: 4%;
-  left: 12%;
-  height: 7%;
-  border-radius: 9999px;
-  background: radial-gradient(closest-side, rgb(var(--obs-rgb-path) / 0.4), transparent 78%);
-  animation: signal-pulse 7s var(--obs-ease) infinite;
-}
-
-/* 投影锥：从仪器上方打下来的一束光 */
-.obs-kanshan__cone {
-  position: absolute;
-  bottom: 9%;
-  left: 50%;
-  width: 64%;
-  height: 58%;
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, transparent 28%, rgb(var(--obs-rgb-path) / 0.13) 100%);
-  clip-path: polygon(24% 100%, 76% 100%, 60% 0%, 40% 0%);
-  pointer-events: none;
-}
-
-.obs-kanshan--counter .obs-kanshan__pad {
-  background: radial-gradient(closest-side, rgb(var(--obs-rgb-counter) / 0.4), transparent 78%);
-}
-
-.obs-kanshan--counter .obs-kanshan__cone {
-  background: linear-gradient(180deg, transparent 28%, rgb(var(--obs-rgb-counter) / 0.13) 100%);
-}
-
-.obs-kanshan--end .obs-kanshan__pad {
-  background: radial-gradient(closest-side, rgb(var(--obs-rgb-end) / 0.36), transparent 78%);
-}
-
-.obs-kanshan--end .obs-kanshan__cone {
-  background: linear-gradient(180deg, transparent 28%, rgb(var(--obs-rgb-end) / 0.12) 100%);
-}
-
-/* 天空里的星座：极淡，属于仪器的一部分 */
-.obs-kanshan--constellation {
-  opacity: 0.42;
-}
-
-/* 星座的落点必须写在观象厅这一层：`.obs-shell > *` 会覆盖 Tailwind 的
-   `absolute`（两者同权重，后者在后），所以位置由这里显式接管。 */
-.obs-sky {
-  position: absolute;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.obs-sky--left {
-  bottom: 17%;
-  left: 4%;
-}
-
-@media (min-width: 1024px) {
-  .obs-sky--left {
-    left: 7%;
-  }
-}
-
-@media (max-width: 640px) {
-  .obs-sky {
-    display: none;
-  }
-}
-
-/* 终局图章：出场即收，像盖章而不是贴图 */
-.obs-kanshan--stamp {
-  padding: 9%;
-  border: 1px solid rgb(var(--obs-rgb-end) / 0.32);
-  border-radius: 9999px;
-  background: radial-gradient(closest-side, rgb(var(--obs-rgb-end) / 0.07), transparent 78%);
-  transform: rotate(-6deg);
-  animation: fragment-materialize 520ms var(--obs-ease) both;
-}
-
 /* -------------------------------------------------------------------------- */
 /* 8) 首页标题与准线：只有这一处用衬线（产品名的「碑感」）                      */
 /* -------------------------------------------------------------------------- */
-
-.obs-hero-title {
-  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-  font-weight: 900;
-  letter-spacing: 0.03em;
-  background: linear-gradient(180deg, #ffffff 0%, #e2e9f5 42%, #a8b8cf 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-.obs-hero-rule {
-  height: 1px;
-  transform-origin: 0 50%;
-  background: linear-gradient(
-    90deg,
-    rgb(var(--obs-rgb-path) / 0.75) 0%,
-    rgb(var(--obs-rgb-zhihu) / 0.35) 42%,
-    transparent 88%
-  );
-  animation: hidden-path-reveal 900ms var(--obs-ease) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .obs-kanshan__pad,
-  .obs-kanshan--stamp,
-  .obs-hero-rule {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-    stroke-dashoffset: 0 !important;
-  }
-}
-
-/* ========================================================================== */
-/* OBSERVATORY · PASS 2 —— 把 Agent 03 的语义结构接进观象厅材质                 */
-/*                                                                            */
-/* 03 已经用上了 `.session-*` / `.obs-*` 这组 class，但树上还留着两处旧语言：    */
-/* `door-btn`（圆角 + 蓝色玻璃）与 `text-archive-*`（档案馆调色）。              */
-/* 这里只做**样式接管**，不改它们的 React：                                     */
-/*   1) .session-stage 内的 door-btn 变成观象厅 CTA（直角 + 发丝线 + 极弱内光）  */
-/*   2) .session-stage 内的 archive 文本层级换成 obs 文本层级                    */
-/*   3) 去掉 legacy 的圆角，观测玻璃一律直角                                     */
-/*   4) §25 的第一拍：新行动出现时，普通 Gate 自动稍暗（:has，零 React 改动）     */
-/* ========================================================================== */
-
-.session-stage .door-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 14px 28px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--ds-rgb-blue-500) / 0.42);
-  border-radius: 3px;
-  background: linear-gradient(
-    180deg,
-    rgb(var(--ds-rgb-blue-700) / 0.55),
-    rgb(var(--ds-rgb-blue-700) / 0.22)
-  );
-  box-shadow:
-    inset 0 1px 0 rgb(var(--ds-rgb-text-0) / 0.1),
-    0 12px 30px -18px var(--ds-glow-blue);
-  color: var(--ds-text-0);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  transition:
-    transform 220ms var(--ds-ease),
-    box-shadow 320ms var(--ds-ease),
-    border-color 320ms var(--ds-ease);
-}
 
 /* 极光内衬：hover 时一束光扫过整张票（DESIGN-SYSTEM §4.1） */
 .session-stage .door-btn::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--ds-aurora-seek);
+  background: var(--sil-aurora-seek);
   opacity: 0;
   mix-blend-mode: overlay;
   pointer-events: none;
-  transition: opacity 320ms var(--ds-ease);
+  transition: opacity 320ms var(--sil-ease);
 }
 
 .session-stage .door-btn:hover {
-  border-color: rgb(var(--ds-rgb-blue-500) / 0.7);
+  border-color: rgb(var(--sil-rgb-zhihu) / 0.7);
   transform: translateY(-2px);
 }
 
@@ -2621,118 +900,28 @@ html[data-reduce-motion='on'] *::after {
 .session-stage .text-archive-100,
 .session-stage h1,
 .session-stage h2 {
-  color: var(--obs-text-0);
+  color: var(--sil-ink-100);
 }
 
 .session-stage .text-archive-200,
 .session-stage .text-archive-300,
 .session-stage .text-archive-400 {
-  color: var(--obs-text-1);
+  color: var(--sil-ink-200);
 }
 
 .session-stage .text-archive-600 {
-  color: var(--obs-text-2);
-}
-
-/* 观测玻璃与雾区在推演屏里一律直角 */
-.session-stage .obs-glass,
-.session-stage .obs-fog,
-.session-stage .obs-shard,
-.session-stage .obs-reliquary {
-  border-radius: 0;
-}
-
-/* 句读入场：仍然一句一句错位淡入，但只用 §34 的 fragment-materialize */
-.session-story .arc-phrase {
-  animation: fragment-materialize 520ms var(--obs-ease) both;
+  color: var(--sil-ink-300);
 }
 
 .session-reflection {
-  border-top: 1px solid rgb(var(--obs-rgb-text-0) / 0.07);
+  border-top: 1px solid rgb(var(--sil-rgb-ink-100) / 0.07);
   padding-top: 14px;
-}
-
-/* §25 第一拍：一旦这一屏里出现了 Hidden Path，普通 Gate 自动稍暗。
-   用 :has 而不是改 React —— 结构仍然完全归 Agent 03。 */
-.session-choice-list:has(.obs-reveal) .session-choice:not(.session-choice--unlocked) {
-  opacity: 0.5;
-  transition: opacity 150ms linear;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .session-choice-list:has(.obs-reveal) .session-choice:not(.session-choice--unlocked) {
-    transition: none !important;
-  }
 }
 
 /* ========================================================================== */
 /* OBSERVATORY · PASS 3 —— 游戏感：星尘 / 幕转场 / 轨道方向 / Gate 编号         */
 /* 依然零新 keyframes：星尘与幕扫描线都复用既有的两个 keyframe。               */
 /* ========================================================================== */
-
-/* ---- 观测台前的星尘：<= 18 颗极弱点，整层缓慢自转（decorative particles） ---- */
-.obs-dust {
-  position: absolute;
-  inset: -12%;
-  z-index: 0;
-  pointer-events: none;
-  transform-origin: 50% 50%;
-  animation: orbit-drift 260s linear infinite;
-}
-
-.obs-dust__mote {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 9999px;
-  background: var(--obs-text-0);
-  opacity: 0.24;
-}
-
-.obs-dust__mote--path {
-  background: var(--obs-path);
-  opacity: 0.34;
-}
-
-.obs-dust__mote--zhihu {
-  background: var(--obs-zhihu-soft);
-  opacity: 0.28;
-}
-
-/* ---- 幕转场：每一幕开始时，一条极细的扫描线从左侧扫过（复用 hidden-path-reveal） */
-.obs-act-sweep {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 1px;
-  transform-origin: 0 50%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgb(var(--obs-rgb-path) / 0.7) 32%,
-    rgb(var(--obs-rgb-text-0) / 0.85) 50%,
-    rgb(var(--obs-rgb-path) / 0.7) 68%,
-    transparent 100%
-  );
-  animation: hidden-path-reveal 900ms var(--obs-ease) both;
-}
-
-/* ---- 碎片沿它自己的那条轨道滑入（同一个 keyframe，方向来自轨道） ---- */
-.obs-shard--similar {
-  --obs-shard-dx: -16px;
-  --obs-shard-dy: 0px;
-}
-
-.obs-shard--alternative {
-  --obs-shard-dx: 0px;
-  --obs-shard-dy: 14px;
-}
-
-.obs-shard--counter {
-  --obs-shard-dx: 16px;
-  --obs-shard-dy: 0px;
-}
 
 /* ---- Gate 编号：CSS counter，零 React 改动 ---- */
 .session-choice-list {
@@ -2744,27 +933,9 @@ html[data-reduce-motion='on'] *::after {
   content: counter(obs-gate, decimal-leading-zero);
 }
 
-/* ---- 控制台在穿越时前倾：不是抖一下，是仪器被推开 ---- */
-.obs-console--collapsing {
-  transform: perspective(1100px) rotateX(2.4deg) scale(0.975);
-  pointer-events: none;
-}
-
 /* ---- 观测窗在叙事出现时轻微聚焦（blur → clear），替代 legacy 的模糊背景 ---- */
 .session-scene-frame {
-  transition: filter 620ms var(--obs-ease);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .obs-dust,
-  .obs-act-sweep {
-    animation: none !important;
-  }
-
-  .obs-act-sweep {
-    opacity: 0.5 !important;
-    transform: none !important;
-  }
+  transition: filter 620ms var(--sil-ease);
 }
 
 /* ========================================================================== */
@@ -2780,73 +951,10 @@ html[data-reduce-motion='on'] *::after {
 /* ========================================================================== */
 
 :root {
-  /* ---- 基底 Void（银盐观象台：暗房，不是纯黑） ---- */
-  --ds-void-950: #07080c;
-  --ds-void-900: #0b0d14;
-  --ds-void-800: #10141f;
-  --ds-void-700: #171c27;
-
-  /* ---- 结构蓝 Structure（画布 accent-zhihu #3D8BFF） ---- */
-  --ds-blue-900: #04122e;
-  --ds-blue-700: #1c5fd6;
-  --ds-blue-600: #2a6beb;
-  --ds-blue-500: #3d8bff;
-  --ds-blue-300: #7db4ff;
-  --ds-blue-100: #cfe8ff;
-
-  /* ---- 三种证据意图（画布：蓝=来源 / 显影青=解锁 / 安全灯琥珀=反例） ---- */
-  --ds-evidence: #3d8bff;
-  --ds-evidence-soft: #7db4ff;
-  --ds-alternative: #6fe3d8;
-  --ds-alternative-soft: #9aeade;
-  --ds-counter: #c9a45e;
-  --ds-counter-soft: #dcc08a;
-  /* 终局不再是紫罗兰：安全灯琥珀，和「认下现实支线」同一盏灯 */
-  --ds-ending: #c9a45e;
-  --ds-ending-deep: #8a6e3c;
-
-  /* ---- Reality Plane：现实层（仅终局 / 现实支线 / 回执） ---- */
-  --ds-paper-100: #f2efe9;
-  --ds-paper-300: #dcd3c4;
-  --ds-paper-ink: #241f1a;
-  --ds-paper-accent: #c9a87c;
-
-  /* ---- Unknown：未显影（永不补全） ---- */
-  --ds-undev-ink: #2a3242;
-  --ds-undev-text: #5c6879;
-  --ds-undev-line: #3a4455;
-
-  /* ---- 文本层级（画布：#EEF1F6 / #A3AEC0 / #667284） ---- */
-  --ds-text-0: #eef1f6;
-  --ds-text-1: #a3aec0;
-  --ds-text-2: #667284;
-  --ds-text-3: #5c6879;
-
-  /* ---- 边界与光 ---- */
-  --ds-hairline: rgb(238 241 246 / 0.13);
-  --ds-hairline-strong: rgb(238 241 246 / 0.22);
-  --ds-hairline-blue: rgb(61 139 255 / 0.34);
 
   /* ---- 极光带 Aurora（画布信号带：蓝 → 显影青 → 安全灯琥珀） ---- */
-  --ds-aurora-seek: linear-gradient(115deg, #1c5fd6 0%, #3d8bff 46%, #6fe3d8 100%);
-  --ds-aurora-counter: linear-gradient(115deg, #8a6e3c 0%, #c9a45e 52%, #dcc08a 100%);
-  --ds-aurora-end: linear-gradient(115deg, #6b5527 0%, #c9a45e 50%, #dcc08a 100%);
+  --sil-aurora-seek: linear-gradient(115deg, #1c5fd6 0%, #3d8bff 46%, #6fe3d8 100%);
 
-  /* ---- rgb 分量（仅用于带透明度的边线与光） ---- */
-  --ds-rgb-void-950: 7 8 12;
-  --ds-rgb-text-0: 238 241 246;
-  --ds-rgb-blue-700: 28 95 214;
-  --ds-rgb-blue-500: 61 139 255;
-  --ds-rgb-alternative: 111 227 216;
-  --ds-rgb-counter: 201 164 94;
-  --ds-rgb-ending: 201 164 94;
-
-  --ds-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --ds-shadow-ambient: rgb(2 3 8 / 0.62);
-  --ds-shadow-deep: rgb(0 0 0 / 0.96);
-  --ds-glow-blue: rgb(61 139 255 / 0.55);
-  --ds-glow-cyan: rgb(111 227 216 / 0.55);
-  --ds-glow-amber: rgb(201 164 94 / 0.5);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2888,160 +996,13 @@ html[data-reduce-motion='on'] *::after {
     stroke-dashoffset: 0;
   }
 }
-
-.ds-develop {
-  animation: ds-develop 620ms var(--ds-ease) both;
-}
-
-/* -------------------------------------------------------------------------- */
-/* 圆角与材质：全站降到 2–4px（脱离 SaaS 感的第一步，附录 A 的 P0）             */
-/* -------------------------------------------------------------------------- */
-
-.obs-glass,
-.obs-console,
-.ds-glass {
-  border-radius: 3px;
-}
-
 .session-choice,
 .session-choice--unlocked,
 .session-choice--locked,
-.obs-pass,
-.obs-fog,
-.ds-btn-primary,
-.ds-btn-ghost,
-.ds-btn-quiet,
-.ds-btn-danger {
-  border-radius: 3px;
-}
-
-.obs-shard,
-.obs-reliquary,
-.ds-shard,
-.ds-undeveloped,
-.ds-paper,
-.ds-badge,
-.ds-input {
-  border-radius: 2px;
-}
-
-/* -------------------------------------------------------------------------- */
-/* §4.2 观测玻璃 ds-glass                                                      */
-/* -------------------------------------------------------------------------- */
-
-.ds-glass {
-  position: relative;
-  border: 1px solid var(--ds-hairline);
-  background:
-    linear-gradient(180deg, rgb(var(--ds-rgb-text-0) / 0.055), rgb(var(--ds-rgb-text-0) / 0.014)),
-    linear-gradient(180deg, rgb(var(--ds-rgb-void-950) / 0.72), rgb(var(--ds-rgb-void-950) / 0.86));
-  box-shadow:
-    inset 0 1px 0 rgb(var(--ds-rgb-text-0) / 0.07),
-    inset 0 -1px 0 rgb(var(--ds-rgb-void-950) / 0.6),
-    0 34px 80px -60px var(--ds-shadow-deep);
-  backdrop-filter: blur(6px);
-  transition:
-    border-color 320ms var(--ds-ease),
-    box-shadow 320ms var(--ds-ease);
-}
-
-.ds-glass--focus {
-  border-color: rgb(var(--ds-rgb-alternative) / 0.3);
-  box-shadow:
-    inset 0 1px 0 rgb(var(--ds-rgb-text-0) / 0.09),
-    0 0 0 1px rgb(var(--ds-rgb-alternative) / 0.12),
-    0 40px 96px -64px var(--ds-glow-cyan);
-}
-
-/* -------------------------------------------------------------------------- */
-/* §4.1 主 CTA ds-btn-primary（一张被光扫过的票）                               */
-/* -------------------------------------------------------------------------- */
-
-.ds-btn-primary {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 28px;
-  min-height: 44px;
-  border: 1px solid rgb(var(--ds-rgb-blue-500) / 0.42);
-  background: linear-gradient(
-    180deg,
-    rgb(var(--ds-rgb-blue-700) / 0.55),
-    rgb(var(--ds-rgb-blue-700) / 0.22)
-  );
-  color: var(--ds-text-0);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  box-shadow:
-    inset 0 1px 0 rgb(var(--ds-rgb-text-0) / 0.1),
-    0 12px 30px -18px var(--ds-glow-blue);
-  transition:
-    transform 220ms var(--ds-ease),
-    box-shadow 320ms var(--ds-ease),
-    border-color 320ms var(--ds-ease);
-  overflow: hidden;
-}
-
-.ds-btn-primary::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--ds-aurora-seek);
-  opacity: 0;
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  transition: opacity 320ms var(--ds-ease);
-}
-
-.ds-btn-primary:hover {
-  transform: translateY(-2px);
-  border-color: rgb(var(--ds-rgb-blue-500) / 0.7);
-}
-
-.ds-btn-primary:hover::after {
-  opacity: 0.32;
-}
-
-.ds-btn-primary:active {
-  transform: translateY(1px);
-  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.5);
-}
-
-.ds-btn-primary:disabled {
-  opacity: 0.42;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.ds-btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 10px 18px;
-  border: 1px solid rgb(245 247 251 / 0.12);
-  background: transparent;
-  color: var(--ds-text-2);
-  font-size: 14px;
-  transition:
-    border-color 260ms var(--ds-ease),
-    color 260ms var(--ds-ease);
-}
-
-.ds-btn-ghost:hover {
-  border-color: rgb(245 247 251 / 0.24);
-  color: var(--ds-text-0);
-}
-
-/* 统一键盘焦点：3px 蓝 10% 外环（§7 Do#6） */
-.ds-btn-primary:focus-visible,
-.ds-btn-ghost:focus-visible,
-.ds-input:focus-visible,
-.session-choice:focus-visible {
+.session-choice:focus-visible
+{
   outline: none;
-  box-shadow: 0 0 0 3px rgb(var(--ds-rgb-blue-500) / 0.1);
+  box-shadow: 0 0 0 3px rgb(var(--sil-rgb-zhihu) / 0.1);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -3049,373 +1010,36 @@ html[data-reduce-motion='on'] *::after {
 /* 45° 斜线 + 0.5px 虚线 + 不可点、不发光、永不补全。                          */
 /* -------------------------------------------------------------------------- */
 
-.ds-undeveloped {
-  position: relative;
-  padding: 10px 12px;
-  border: 1px dashed var(--ds-undev-line);
-  color: var(--ds-undev-text);
-  background-image: repeating-linear-gradient(
-    45deg,
-    var(--ds-undev-ink) 0 1px,
-    transparent 1px 8px
-  );
-  background-blend-mode: soft-light;
-  cursor: default;
-  user-select: none;
-}
-
-.ds-undeveloped::after {
-  content: attr(data-unknown-label);
-  display: block;
-  margin-top: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ds-undev-text);
-}
-
-.ds-undeveloped--inline::after {
-  display: inline;
-  margin-top: 0;
-  margin-left: 8px;
-}
-
 /* -------------------------------------------------------------------------- */
 /* §4.4 记忆碎片 ds-shard（知乎逐字原文一律衬线）                               */
 /* -------------------------------------------------------------------------- */
 
-.ds-shard {
-  max-width: 100%;
-  padding: 10px 12px;
-  border: 1px solid rgb(var(--ds-rgb-text-0) / 0.1);
-  border-left: 1px solid rgb(var(--ds-rgb-blue-500) / 0.5);
-  background: linear-gradient(
-    150deg,
-    rgb(var(--ds-rgb-text-0) / 0.05),
-    rgb(var(--ds-rgb-void-950) / 0.5)
-  );
-  box-shadow: inset 0 1px 0 rgb(var(--ds-rgb-text-0) / 0.05);
-}
-
-.ds-shard--alternative {
-  border-left-color: rgb(var(--ds-rgb-alternative) / 0.5);
-}
-
-.ds-shard--counter {
-  border-left-color: rgb(var(--ds-rgb-counter) / 0.5);
-}
-
-.ds-shard__quote {
-  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-  font-size: 13px;
-  line-height: 1.72;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.ds-shard__meta {
-  margin-top: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--ds-text-2);
-}
-
 /* -------------------------------------------------------------------------- */
 /* §4.5 困惑输入框 ds-input（首页唯一主角：大到像一页纸）                        */
-/* -------------------------------------------------------------------------- */
-
-.ds-input {
-  width: 100%;
-  min-height: 132px;
-  padding: 20px 22px;
-  border: 1px solid var(--ds-hairline);
-  background: linear-gradient(180deg, rgb(var(--ds-rgb-text-0) / 0.03), transparent);
-  color: var(--ds-text-0);
-  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-  font-size: 18px;
-  line-height: 1.8;
-  letter-spacing: 0.01em;
-  resize: none;
-  transition:
-    border-color 320ms var(--ds-ease),
-    box-shadow 320ms var(--ds-ease);
-}
-
-.ds-input::placeholder {
-  color: var(--ds-text-3);
-}
-
-.ds-input:focus-visible {
-  outline: none;
-  border-color: rgb(var(--ds-rgb-blue-500) / 0.55);
-  box-shadow:
-    0 0 0 3px rgb(var(--ds-rgb-blue-500) / 0.1),
-    0 24px 60px -40px var(--ds-glow-blue);
-}
 
 /* -------------------------------------------------------------------------- */
 /* §4.6 三意图徽标 ds-badge                                                    */
 /* -------------------------------------------------------------------------- */
 
-.ds-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border: 1px solid transparent;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  line-height: 1.4;
-}
-
-.ds-badge--similar {
-  background: rgb(var(--ds-rgb-blue-500) / 0.12);
-  color: var(--ds-evidence-soft);
-  border-color: rgb(var(--ds-rgb-blue-500) / 0.32);
-}
-
-.ds-badge--alternative {
-  background: rgb(var(--ds-rgb-alternative) / 0.12);
-  color: var(--ds-alternative-soft);
-  border-color: rgb(var(--ds-rgb-alternative) / 0.32);
-}
-
-.ds-badge--counter {
-  background: rgb(var(--ds-rgb-counter) / 0.12);
-  color: var(--ds-counter-soft);
-  border-color: rgb(var(--ds-rgb-counter) / 0.32);
-}
-
-.ds-badge--unlock {
-  background: rgb(var(--ds-rgb-text-0) / 0.06);
-  color: var(--ds-text-0);
-  border-color: rgb(var(--ds-rgb-text-0) / 0.3);
-  border-left: 1px solid rgb(var(--ds-rgb-alternative) / 0.85);
-}
-
-.ds-badge--unknown {
-  background: transparent;
-  color: var(--ds-undev-text);
-  border: 1px dashed var(--ds-undev-line);
-}
-
 /* -------------------------------------------------------------------------- */
 /* §4.7 极光带 ds-aurora（替代传统 HUD 数值条）                                 */
 /* -------------------------------------------------------------------------- */
-
-.ds-aurora {
-  position: relative;
-  width: 100%;
-  height: 2px;
-  background: var(--ds-aurora-seek);
-  transform-origin: left center;
-  animation: ds-aurora-sweep 2.4s var(--ds-ease) infinite;
-}
-
-.ds-aurora--counter {
-  background: var(--ds-aurora-counter);
-}
-
-.ds-aurora--end {
-  background: var(--ds-aurora-end);
-}
-
-.ds-aurora--fixed {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 12;
-}
 
 /* -------------------------------------------------------------------------- */
 /* §4.8 经验解锁轨道 ds-unlock-rail —— 本代核心组件                            */
 /* 一条真实经历沿 1px 青蓝虚线轨道滑进选项列表。                                */
 /* -------------------------------------------------------------------------- */
 
-.ds-unlock-rail {
-  position: relative;
-}
-
-.ds-unlock-rail__line {
-  display: block;
-  width: 100%;
-  height: 1px;
-  transform-origin: 0 50%;
-  background-image: linear-gradient(
-    90deg,
-    rgb(var(--ds-rgb-alternative) / 0.85) 0 6px,
-    transparent 6px 12px
-  );
-  background-size: 12px 1px;
-  animation: ds-rail-draw 620ms var(--ds-ease) both;
-}
-
-.ds-unlock-rail__drop {
-  position: absolute;
-  top: 0;
-  left: 12px;
-  width: 5px;
-  height: 5px;
-  margin: -2px 0 0 -2px;
-  border-radius: 9999px;
-  background: var(--ds-alternative);
-  box-shadow: 0 0 10px 2px rgb(var(--ds-rgb-alternative) / 0.5);
-}
-
 /* -------------------------------------------------------------------------- */
 /* §4.9 现实层 ds-paper（全站唯一允许暖色的地方：终局 / 现实支线）               */
 /* -------------------------------------------------------------------------- */
-
-.ds-paper {
-  padding: 32px 34px;
-  background: var(--ds-paper-100);
-  color: var(--ds-paper-ink);
-  box-shadow:
-    0 40px 90px -50px rgb(0 0 0 / 0.9),
-    inset 0 1px 0 rgb(255 255 255 / 0.6);
-  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-}
-
-.ds-paper__seal {
-  border: 1px dashed var(--ds-paper-300);
-  border-left: 2px solid var(--ds-paper-accent);
-  padding-left: 12px;
-}
-
-.ds-paper__kicker {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: rgb(36 31 26 / 0.55);
-}
 
 /* -------------------------------------------------------------------------- */
 /* §3 Type Scale                                                              */
 /* -------------------------------------------------------------------------- */
 
-.ds-display {
-  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-  font-weight: 700;
-  font-size: clamp(34px, 4.2vw, 56px);
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  color: var(--ds-text-0);
-}
-
-.ds-h1 {
-  font-size: clamp(28px, 3vw, 40px);
-  font-weight: 700;
-  line-height: 1.16;
-  letter-spacing: -0.01em;
-  color: var(--ds-text-0);
-}
-
-.ds-h2 {
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.28;
-  color: var(--ds-text-0);
-}
-
-@media (max-width: 640px) {
-  .ds-h2 {
-    font-size: 22px;
-  }
-}
-
-.ds-h3 {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: 0.01em;
-  color: var(--ds-text-0);
-}
-
-.ds-body-lead {
-  font-size: 18px;
-  line-height: 1.8;
-  letter-spacing: 0.02em;
-  color: var(--ds-text-1);
-}
-
-@media (max-width: 640px) {
-  .ds-body-lead {
-    font-size: 16px;
-  }
-}
-
-.ds-body {
-  font-size: 15px;
-  line-height: 1.75;
-  letter-spacing: 0.02em;
-  color: var(--ds-text-1);
-}
-
-.ds-quote {
-  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-  font-size: 13px;
-  line-height: 1.72;
-  letter-spacing: 0.01em;
-  color: var(--ds-text-1);
-}
-
-.ds-caption {
-  font-size: 12px;
-  line-height: 1.6;
-  letter-spacing: 0.03em;
-  color: var(--ds-text-2);
-}
-
-.ds-kicker {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--ds-text-2);
-}
-
-@media (max-width: 640px) {
-  .ds-kicker {
-    letter-spacing: 0.24em;
-  }
-}
-
-.ds-nano {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: 0.06em;
-  color: var(--ds-text-2);
-}
-
 /* §8 移动端降级块的完整版本在文件末尾（PASS 5 之后），
    保证 gd-* 基础规则先声明、媒体查询后覆盖。 */
-
-@media (prefers-reduced-motion: reduce) {
-  .ds-develop,
-  .ds-aurora,
-  .ds-unlock-rail__line {
-    animation: none !important;
-    filter: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .ds-glass {
-    backdrop-filter: none !important;
-  }
-}
 
 /* ========================================================================== */
 /* PASS 5 · 游戏化体验层（GAME-DESIGN.md）                                      */
@@ -3430,323 +1054,30 @@ html[data-reduce-motion='on'] *::after {
 /* 3. 克制地游戏化：看山台词 ≤15s 可读量，永远用「…」「。」收尾。               */
 /* ========================================================================== */
 
-:root {
-  --gd-energy: #6fe3d8;        /* 能量 / 解锁（只在演出时出现，画布显影青） */
-  --gd-coin: #c9a45e;          /* 收集 / 高光（画布安全灯琥珀） */
-  --gd-jade: #3dd6a0;          /* 达成 / 经验卡 */
-  --gd-danger: #ff4d6d;        /* 临界 */
-  --gd-kanshan: #dce9fb;       /* 看山毛色：只用于名牌与立绘底座光 */
-  --gd-ghost: #7db4ff;         /* 虚影模式（反例专属） */
-
-  --gd-rgb-energy: 111 227 216;
-  --gd-rgb-kanshan: 220 233 251;
-  --gd-rgb-ghost: 125 180 255;
-  --gd-rgb-jade: 61 214 160;
-}
-
 /* -------------------------------------------------------------------------- */
 /* §4.1 看山引导条 gd-guide：GIF 立绘 + 一句台词                                */
 /* 立绘本身就在动（GIF），容器只做呼吸阴影与状态切换（transition）。            */
-/* -------------------------------------------------------------------------- */
-
-.gd-guide {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.gd-guide__sprite {
-  width: 72px;
-  height: 72px;
-  flex: 0 0 auto;
-  filter: drop-shadow(0 10px 16px rgb(0 0 0 / 0.5));
-  transition:
-    transform 320ms var(--ds-ease),
-    opacity 320ms var(--ds-ease),
-    filter 320ms var(--ds-ease);
-}
-
-.gd-guide__sprite--sm {
-  width: 56px;
-  height: 56px;
-}
-
-/* 立绘脚下的圆形底座光：让黏土立绘在深空里有「落地感」 */
-.gd-guide__base {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.gd-guide__base::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 72%;
-  height: 10px;
-  transform: translateX(-50%);
-  border-radius: 9999px;
-  background: radial-gradient(
-    50% 100% at 50% 50%,
-    rgb(var(--gd-rgb-kanshan) / 0.2),
-    transparent 80%
-  );
-  pointer-events: none;
-}
-
-/* 虚影模式（GAME-DESIGN §4.1）：反例揭示专属，视觉先于内容「不对」 */
-.gd-guide--ghost .gd-guide__sprite {
-  opacity: 0.6;
-  filter: saturate(0.4) drop-shadow(0 10px 16px rgb(0 0 0 / 0.5));
-}
-
-.gd-guide--ghost .gd-guide__base::after {
-  background: radial-gradient(
-    50% 100% at 50% 50%,
-    rgb(var(--gd-rgb-ghost) / 0.18),
-    transparent 80%
-  );
-}
-
-/* 台词：衬线（它是叙事者），克制 —— 二级文本色，不抢正文 */
-.gd-guide__line {
-  font-family: 'Noto Serif SC', 'Songti SC', Georgia, serif;
-  font-size: 13px;
-  line-height: 1.8;
-  letter-spacing: 0.01em;
-  color: var(--ds-text-2);
-}
-
-.gd-guide__name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--gd-kanshan);
-}
 
 /* -------------------------------------------------------------------------- */
 /* §4.8 极简 HUD gd-hud：幕次 / 经验卡 / 未知 —— 没有血条、没有分数             */
 /* -------------------------------------------------------------------------- */
-
-.gd-hud {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-}
-
-.gd-hud__act {
-  color: var(--ds-text-2);
-}
-
-.gd-hud__cards {
-  color: var(--gd-jade);
-}
-
-/* 未知数刻意不亮：它不是待解锁的成就，是永远不会知道的事 */
-.gd-hud__unknown {
-  color: var(--ds-undev-text);
-}
-
-/* 新经验卡入册的一瞬间：HUD 数字脉冲一次（复用 signal-pulse，不新增 keyframes） */
-.gd-hud__cards--pulse {
-  display: inline-block;
-  animation: signal-pulse 900ms var(--obs-ease) 2;
-}
 
 /* -------------------------------------------------------------------------- */
 /* §4.3 经验卡获得演出 gd-card-gain：一张借来的人生，从底部浮现一次             */
 /* 入场复用 fragment-materialize（钉死的十个 keyframes 之一），出场用 transition */
 /* -------------------------------------------------------------------------- */
 
-.gd-card-gain {
-  position: fixed;
-  right: 16px;
-  bottom: calc(72px + env(safe-area-inset-bottom));
-  z-index: 80;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: min(320px, calc(100vw - 32px));
-  padding: 12px 16px;
-  border: 1px solid rgb(var(--gd-rgb-jade) / 0.35);
-  border-radius: 3px;
-  background:
-    linear-gradient(135deg, rgb(var(--gd-rgb-jade) / 0.1), transparent 60%),
-    rgb(6 10 18 / 0.92);
-  box-shadow:
-    0 0 0 1px rgb(var(--gd-rgb-jade) / 0.08),
-    0 16px 40px rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(8px);
-  animation: fragment-materialize 520ms var(--obs-ease) both;
-  transition:
-    opacity 380ms var(--obs-ease),
-    transform 380ms var(--obs-ease);
-  pointer-events: none;
-}
-
-.gd-card-gain--leaving {
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-.gd-card-gain__kicker {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--gd-jade);
-}
-
-.gd-card-gain__title {
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.5;
-  color: var(--ds-text-0);
-}
-
-.gd-card-gain__line {
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--ds-text-2);
-}
-
 /* -------------------------------------------------------------------------- */
 /* §4.6 成就 Toast gd-toast：一局 ≤ 2 个，「…」「。」收尾，禁感叹号              */
 /* -------------------------------------------------------------------------- */
-
-.gd-toast {
-  position: fixed;
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  left: 50%;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: min(420px, calc(100vw - 32px));
-  padding: 10px 16px;
-  border: 1px solid rgb(var(--gd-rgb-kanshan) / 0.22);
-  border-radius: 3px;
-  background: rgb(6 10 18 / 0.94);
-  box-shadow: 0 12px 36px rgb(0 0 0 / 0.55);
-  transform: translateX(-50%);
-  animation: fragment-materialize 480ms var(--obs-ease) both;
-  transition:
-    opacity 360ms var(--obs-ease),
-    transform 360ms var(--obs-ease);
-  pointer-events: none;
-}
-
-.gd-toast--leaving {
-  opacity: 0;
-  transform: translateX(-50%) translateY(6px);
-}
-
-.gd-toast__name {
-  flex: 0 0 auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  color: var(--gd-coin);
-}
-
-.gd-toast__line {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--ds-text-1);
-}
 
 /* -------------------------------------------------------------------------- */
 /* §4.4 卡册 gd-album：借来过的世界 + 未显影空槽「还没走过的世界」               */
 /* 纪律：禁稀有度、禁「未解锁 0/10」成就语言；空槽不可点、永不补全。             */
 /* -------------------------------------------------------------------------- */
 
-.gd-album {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-.gd-album__slot {
-  display: flex;
-  min-height: 96px;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid rgb(var(--gd-rgb-jade) / 0.22);
-  border-radius: 3px;
-  background: linear-gradient(160deg, rgb(var(--gd-rgb-jade) / 0.07), transparent 55%);
-}
-
-.gd-album__slot-kicker {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--gd-jade);
-}
-
-.gd-album__slot-title {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.6;
-  color: var(--ds-text-1);
-}
-
-/* 未显影空槽：45° 斜线 + 0.5px 虚线 + 不可点 —— 它只有一个状态，永不补全 */
-.gd-album__slot--undev {
-  border: 1px dashed var(--ds-undev-line);
-  background-image: repeating-linear-gradient(
-    45deg,
-    var(--ds-undev-ink) 0 1px,
-    transparent 1px 10px
-  );
-}
-
-.gd-album__slot--undev .gd-album__slot-kicker {
-  color: var(--ds-undev-text);
-}
-
-.gd-album__slot--undev .gd-album__slot-title {
-  color: var(--ds-undev-text);
-}
-
 /* -------------------------------------------------------------------------- */
 /* §8 移动端降级（观象厅 + 显影厅 + 游戏层合并的唯一 640px 断点块）              */
 /* 刻意放在文件最末尾：gd-* 基础规则先声明，这里的覆盖才能生效；                */
 /* tests/designSystem.test.ts 用 lastIndexOf 定位本块，三块规则必须同处。       */
 /* -------------------------------------------------------------------------- */
-@media (max-width: 640px) {
-  .obs-dial__svg {
-    width: min(112vw, 640px);
-    height: min(112vw, 640px);
-  }
-
-  .obs-dust {
-    display: none;
-  }
-
-  .gd-guide__sprite {
-    width: 60px;
-    height: 60px;
-  }
-
-  .gd-guide__sprite--sm {
-    width: 48px;
-    height: 48px;
-  }
-
-  .gd-hud {
-    gap: 12px;
-    letter-spacing: 0.1em;
-  }
-}

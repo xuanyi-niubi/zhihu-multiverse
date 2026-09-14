@@ -96,9 +96,11 @@ function JournalStep({
   readonly children: React.ReactNode;
 }) {
   return (
-    <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[11px] leading-relaxed">
-      <span className="shrink-0 font-mono text-[10px] text-slate-600">{label}</span>
-      <span className="min-w-0 text-slate-400">{children}</span>
+    <p className="mt-2.5 flex flex-wrap items-baseline gap-x-2.5 text-[13px] leading-relaxed">
+      <span className="shrink-0 font-mono text-[10px] tracking-[0.14em] text-[color:var(--sil-ink-400)]">
+        {label}
+      </span>
+      <span className="min-w-0 text-[color:var(--sil-ink-200)]">{children}</span>
     </p>
   );
 }
@@ -153,94 +155,112 @@ export default function JournalPage() {
   }, []);
 
   return (
-    <main id="main-content" className="mx-auto w-full max-w-[720px] flex-1 px-4 py-6 sm:py-8">
+    <main
+      id="main-content"
+      className="sil-viewport relative mx-auto w-full max-w-[760px] px-5 py-12 sm:px-8 sm:py-14"
+    >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-[10px] tracking-[0.2em] text-slate-500">选择日志</p>
-          <h1 className="mt-1 text-lg font-bold text-slate-100">我曾经卡住的选择</h1>
+          <p className="sil-label">选择日志</p>
+          <h1 className="sil-title sil-title--act mt-3">我曾经卡住的选择</h1>
         </div>
-        <Link href="/" className="btn-ghost shrink-0 text-xs">
+        <Link href="/" className="sil-btn sil-btn--ghost mt-1 shrink-0 px-4 text-[13px]">
           新的问题
         </Link>
       </header>
 
       {error ? (
-        <p role="alert" className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/[0.08] px-3 py-2 text-[12px] text-rose-200">
+        <p
+          role="alert"
+          className="mt-6 border-l-2 border-[color:var(--sil-counter)] bg-[color:rgb(179_133_74_/_0.06)] px-3.5 py-3 text-[13px] leading-relaxed text-[color:var(--sil-counter-soft)]"
+        >
           {error}
         </p>
       ) : null}
 
       {/*
-        跨会话记忆（P1-3）：现实里验证过的事。
+        跨会话记忆：现实里验证过的事。
         它与下面的会话记录刻意分开 —— 会话是「我当时怎么想」，
         记忆是「现实已经告诉过我什么」。后者在下一局会被当成硬条件。
       */}
       {memory.length > 0 ? (
-        <section className="mt-5 rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.04] p-3.5">
-          <h2 className="text-[12px] font-semibold text-emerald-100">现实已经告诉过我的</h2>
-          <ul className="mt-2 flex flex-col gap-1.5">
+        <section className="sil-panel mt-8 px-5 py-5 sm:px-6">
+          <h2 className="sil-label">现实已经告诉过我的</h2>
+          <ul className="mt-4 flex flex-col gap-2.5">
             {memory.slice(-6).map((item) => (
-              <li key={item.id} className="flex flex-wrap items-baseline gap-x-2 text-[12px] leading-relaxed">
-                <span className="min-w-0 text-slate-200">{item.claim}</span>
-                <span className="shrink-0 font-mono text-[10px] text-emerald-300/80">
+              <li
+                key={item.id}
+                className="flex flex-wrap items-baseline gap-x-2.5 text-[14px] leading-relaxed"
+              >
+                <span className="min-w-0 text-[color:var(--sil-ink-200)]">{item.claim}</span>
+                <span className="sil-num shrink-0 text-[10px] tracking-[0.14em] text-[color:var(--sil-alternate-soft)]">
                   {CONFIDENCE_LABEL[item.confidence]}
                 </span>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+          <p className="mt-4 text-[12px] leading-relaxed text-[color:var(--sil-ink-400)]">
             这些来自你做过的实验，不是我们的判断。下一次提问时，它们会被当成已知条件。
           </p>
         </section>
       ) : null}
 
       {entries === null && !error ? (
-        <p className="mt-6 font-mono text-[11px] text-slate-500">正在读取…</p>
+        <p className="sil-label mt-8">正在读取…</p>
       ) : null}
 
       {/*
-        卡册（GAME-DESIGN §4.4）：借来过的世界 + 未显影空槽。
+        借来过的世界 + 未显影空槽。
         空槽不可点、永不补全 —— 「还没走过的世界」只有一个状态。
       */}
       {walkedWorlds.length > 0 ? (
-        <section className="mt-5 rounded-2xl border border-white/10 bg-ink-800/50 p-3.5">
-          <h2 className="text-[12px] font-semibold text-slate-200">借来过的世界</h2>
-          <div className="gd-album mt-3">
+        <section className="mt-8">
+          <h2 className="sil-label">借来过的世界</h2>
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {walkedWorlds.map((label, index) => (
-              <div key={label} className="gd-album__slot">
-                <span className="gd-album__slot-kicker">
+              <div
+                key={label}
+                className="sil-panel flex min-h-[76px] flex-col justify-between px-3.5 py-3"
+              >
+                <span className="sil-num text-[10px] tracking-[0.16em] text-[color:var(--sil-ink-400)]">
                   World · {String(index + 1).padStart(3, '0')}
                 </span>
-                <span className="gd-album__slot-title">{label}</span>
+                <span className="mt-2 text-[13px] font-semibold leading-snug text-[color:var(--sil-ink-100)]">
+                  {label}
+                </span>
               </div>
             ))}
             {[0, 1].map((slot) => (
-              <div key={`undev-${slot}`} className="gd-album__slot gd-album__slot--undev" aria-label="还没走过的世界">
-                <span className="gd-album__slot-kicker">Undeveloped</span>
-                <span className="gd-album__slot-title">还没走过的世界</span>
+              <div
+                key={`undev-${slot}`}
+                aria-label="还没走过的世界"
+                className="sil-undev flex min-h-[76px] flex-col justify-between px-3.5 py-3"
+              >
+                <span className="sil-num text-[10px] tracking-[0.16em]">Undeveloped</span>
+                <span className="mt-2 text-[13px] leading-snug">还没走过的世界</span>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+          <p className="mt-4 text-[12px] leading-relaxed text-[color:var(--sil-ink-400)]">
             每一张都是某个知乎答主真实走过的一段路。空着的不是待解锁，是世界本来就比你看过的大。
           </p>
         </section>
       ) : null}
 
       {entries !== null && entries.length === 0 ? (
-        <section className="mt-6 panel p-5 text-center">
-          <p className="text-[13px] font-semibold text-slate-200">还没有记录</p>
-          <p className="mx-auto mt-1.5 max-w-[380px] text-[12px] leading-relaxed text-slate-500">
+        <section className="sil-panel mt-10 px-5 py-8 text-center sm:px-6">
+          <p className="text-[15px] font-semibold text-[color:var(--sil-ink-100)]">还没有记录</p>
+          <p className="sil-prose mx-auto mt-2 text-[14px]">
             把你现在卡住的那个选择写下来，走一次完整流程，它就会出现在这里。
           </p>
-          <Link href="/" className="btn-primary mt-4 inline-flex text-xs">
+          <Link href="/" className="sil-btn mt-6 inline-flex">
             去写下它
           </Link>
         </section>
       ) : null}
 
       {entries !== null && entries.length > 0 ? (
-        <ol className="mt-5 flex flex-col gap-2.5">
+        <ol className="mt-8 flex flex-col gap-3">
           {entries.map((entry) => {
             const pathLabels = entry.pathLabels ?? [];
             const reviewedAt = entry.followUp?.answeredAt ?? entry.followUp?.dueAt;
@@ -248,11 +268,13 @@ export default function JournalPage() {
               <li key={entry.id}>
                 <Link
                   href={`/session/${entry.id}`}
-                  className="block rounded-2xl border border-white/10 bg-ink-800/50 p-3.5 transition-colors duration-150 hover:border-zhihu-500/40"
+                  className="sil-panel block px-4 py-4 transition-colors duration-200 hover:border-[color:var(--sil-rule-strong)] sm:px-5"
                 >
                   <header className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-mono text-[10px] text-slate-500">{dayOf(entry.createdAt)}</span>
-                    <span className="font-mono text-[10px] text-slate-600">
+                    <span className="sil-num text-[10px] tracking-[0.14em] text-[color:var(--sil-ink-400)]">
+                      {dayOf(entry.createdAt)}
+                    </span>
+                    <span className="sil-num text-[10px] tracking-[0.14em] text-[color:var(--sil-ink-400)]">
                       {(entry.experiencePathCount ?? 0) > 0
                         ? `${entry.experiencePathCount} 条真实走法`
                         : `${entry.pathCount} 条路径`}
@@ -260,7 +282,7 @@ export default function JournalPage() {
                   </header>
 
                   {/* 1. 当时我在纠结什么 */}
-                  <p className="mt-1.5 text-[13px] font-semibold leading-snug text-slate-100">
+                  <p className="mt-2 text-[15px] font-semibold leading-snug text-[color:var(--sil-ink-100)]">
                     {entry.question}
                   </p>
 
@@ -291,11 +313,11 @@ export default function JournalPage() {
                     entry.followUp.outcome ? (
                       <>
                         <JournalStep label="现实发生了什么">
-                          <span className="rounded-md border border-white/14 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+                          <span className="sil-plate px-1.5 py-0.5 text-[10px]">
                             {OUTCOME_LABEL[entry.followUp.outcome] ?? entry.followUp.outcome}
                           </span>
                           {reviewedAt ? (
-                            <span className="ml-2 font-mono text-[10px] text-slate-600">
+                            <span className="sil-num ml-2 text-[10px] text-[color:var(--sil-ink-400)]">
                               {dayOf(reviewedAt)}
                             </span>
                           ) : null}
@@ -306,7 +328,7 @@ export default function JournalPage() {
                       </>
                     ) : (
                       <JournalStep label="现实验证中">
-                        <span className="font-mono text-[10px] text-amber-200/90">
+                        <span className="sil-num text-[11px] text-[color:var(--sil-counter-soft)]">
                           待回访 · {dayOf(entry.followUp.dueAt)}
                         </span>
                       </JournalStep>

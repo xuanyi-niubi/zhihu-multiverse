@@ -71,8 +71,8 @@ export function HiddenPathReveal({
   return (
     <section
       className={[
-        'obs-reveal ds-unlock-rail relative',
-        phase === 'settled' ? 'obs-reveal--settled' : '',
+        'sil-reveal sil-unlock-rail relative',
+        phase === 'settled' ? 'sil-reveal--settled' : '',
         className,
       ]
         .filter(Boolean)
@@ -82,15 +82,15 @@ export function HiddenPathReveal({
     >
       {/* §4.8 解锁轨道：一条 1px 青蓝虚线从证据层画向选项，620ms */}
       <div aria-hidden="true" className="relative">
-        <span className="ds-unlock-rail__line" />
-        <span className="ds-unlock-rail__drop" />
+        <span className="sil-unlock-rail__line" />
+        <span className="sil-unlock-rail__drop" />
       </div>
 
-      <div className="obs-reveal__gate mt-3 flex flex-col gap-3">{children}</div>
+      <div className="sil-reveal__gate mt-3 flex flex-col gap-3">{children}</div>
 
-      <p className="obs-reveal__label mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="ds-kicker text-[color:var(--ds-alternative-soft)]">{label}</span>
-        <span className="ds-caption">{subLabel}</span>
+      <p className="sil-reveal__label mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="sil-label text-[color:var(--sil-alternate-soft)]">{label}</span>
+        <span className="sil-label sil-label--sm">{subLabel}</span>
       </p>
     </section>
   );

@@ -5,30 +5,28 @@ import * as React from 'react';
 import { SignalPulse } from '@/components/visual/SignalPulse';
 
 /**
- * Fate Projection Console —— 命运投影台（04_AGENT §13 / §14 / §15）。
+ * Fate Projection Console —— 命运投影台
  *
- * ## 材质（§13）
+ * ## 这是一张「待显影的相纸」，不是一块控制台
  *
- * ```text
- * dark glass
- * 0.5~1px hairline
- * corner brackets
- * inner highlight
- * subtle scan line
- * ```
+ * 旧版把它做成深色玻璃面板 + 静态扫描线 + 左侧读数尺 + `Input · 001` 坐标。
+ * 那些元素单独看都有理由，合起来的问题是：**它在扮演一台机器，而不是
+ * 在邀请人写下自己的困惑**。而「扫描线 + 坐标 + 玻璃面板」恰好也是
+ * AI 生成界面的常见套话。
  *
- * 明确**不要**：强 glow、大 blur、街机 3D button。所以这里没有 `shadow-glow`、
- * 没有 `backdrop-blur`、没有下沿立体边 —— 玻璃的质感来自发丝线与内高光。
+ * 新版的语言来自暗房：一张还没显影的相纸，四周是压暗的暗房环境。
+ * 输入即「曝光」，提交即「显影」。
  *
- * ## 交互（§14）
+ * ## 修掉的两个真实缺陷
  *
- * 聚焦时：Console 微亮 → 附近轨道 opacity +10%（父级通过 `onFocusChange` 收到
- * 信号）→ 主焦点出现 Signal Pulse。输入过程中**不**逐字触发夸张动画。
+ * **1. 打字时字太小。** 旧版提示行 11px、标签 10px。移动端这两处
+ * 都在可读性红线以下（<12px），实测被审计脚本抓到。
  *
- * ## 进入（§15）
- *
- * 点击 CTA：Console 轻微收缩 → 输入文字 opacity 0 → 中心 Signal Pulse →
- * 由调用方 `router.push`。总时长 600~800ms，不超过 1 秒。
+ * **2. 焦点脉冲的尺寸跳变。** 旧版 `size={focused ? 24 : 16}` 让这颗
+ * 带 14px 外发光的点在一次点击里**瞬间**变大 125%，没有过渡 ——
+ * 这正是「首页随便点一下就闪蓝、像卡住」的根因（见
+ * `.workbuddy/memory/2026-09-14.md`）。现在尺寸变化交给 CSS 过渡，
+ * 并且**不再带外发光**（发光是旧代的装饰语言）。
  */
 
 export interface FateProjectionConsoleProps {
@@ -74,9 +72,12 @@ export function FateProjectionConsole({
 
   return (
     <form
-      className={['obs-console relative', collapsing ? 'obs-console--collapsing' : '', className]
+      className={['relative transition-[transform,opacity] duration-500', className]
         .filter(Boolean)
         .join(' ')}
+      style={{
+        transform: collapsing ? 'scale(0.985)' : undefined,
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         if (!disabled) {
@@ -86,24 +87,18 @@ export function FateProjectionConsole({
     >
       <div
         className={[
-          'obs-glass obs-brackets obs-brackets--path relative px-4 pb-4 pt-3.5 sm:px-5 sm:pb-5',
-          focused || collapsing ? 'obs-glass--focus' : '',
+          'sil-panel relative px-4 pb-5 pt-4 transition-colors duration-300 sm:px-5 sm:pb-6 sm:pt-5',
+          focused || collapsing ? 'border-[color:color-mix(in_srgb,var(--sil-alternate)_42%,transparent)]' : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        {/* 静态细扫描线：材质，不动画 */}
-        <span aria-hidden="true" className="obs-scanline" />
-        {/* 左侧读数尺 + 聚焦时才亮起的一条光边 */}
-        <span aria-hidden="true" className="obs-console__ruler" />
-        <span aria-hidden="true" className="obs-console__edge" />
-
         <div className="flex items-baseline justify-between gap-3">
-          <label className="obs-kicker block" htmlFor="fate-projection-input">
+          <label className="sil-label text-[11px]" htmlFor="fate-projection-input">
             {title}
           </label>
-          <span aria-hidden="true" className="obs-console__coords">
-            Input · 001
+          <span aria-hidden="true" className="sil-label sil-label--sm sil-num">
+            待显影
           </span>
         </div>
 
@@ -125,14 +120,18 @@ export function FateProjectionConsole({
           disabled={busy}
           placeholder={placeholder}
           aria-label={title}
-          className="ds-input obs-console__text mt-3 disabled:opacity-60"
+          className="sil-input mt-3 disabled:opacity-60"
+          style={{
+            opacity: collapsing ? 0 : undefined,
+            transition: 'opacity 400ms var(--sil-ease)',
+          }}
         />
 
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-4 flex items-center gap-3">
           <button
             type="submit"
             disabled={disabled}
-            className="ds-btn-primary obs-console__cta group flex-1"
+            className="sil-btn group flex-1"
           >
             {busy ? '正在建立坐标…' : ctaLabel}
           </button>
@@ -148,7 +147,7 @@ export function FateProjectionConsole({
           </span>
         </div>
 
-        <p className="mt-2.5 text-[11px] leading-relaxed text-[color:var(--obs-text-2)]">{hint}</p>
+        <p className="mt-3 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">{hint}</p>
       </div>
     </form>
   );

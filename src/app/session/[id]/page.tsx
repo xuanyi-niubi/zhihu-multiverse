@@ -315,30 +315,30 @@ export default function SessionPage() {
     return (
       <main
         id="main-content"
-        className="obs-shell mx-auto flex min-h-[100dvh] w-full max-w-[760px] flex-col justify-center px-5 py-14 sm:py-20"
+        className="sil-viewport relative mx-auto flex w-full max-w-[880px] flex-col justify-center px-5 py-12 sm:px-8 sm:py-16"
       >
         <AuroraBand tone="seek" />
 
-        <header className="mb-6 flex items-center justify-between gap-3">
-          <p className="obs-kicker">The Observatory</p>
+        <header className="mb-8 flex items-center justify-between gap-3">
+          <p className="sil-label">The Observatory</p>
           <Link
             href="/"
-            className="text-[11px] text-[color:var(--obs-text-2)] transition-opacity duration-200 hover:opacity-80"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
           >
             换个问题
           </Link>
         </header>
 
-        <div className="gd-guide mb-5">
-          <span className="gd-guide__base">
+        <div className="mb-6 flex items-center gap-3.5">
+          <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center">
             <KanshanSprite
               characterId="kanshan"
               action="computer"
-              className="gd-guide__sprite gd-guide__sprite--sm"
+              className="h-full w-full object-contain"
               alt=""
             />
           </span>
-          <p className="gd-guide__line">
+          <p className="sil-prose text-[14px] leading-relaxed text-[color:var(--sil-ink-300)]">
             我去找找，有没有人活过你正在纠结的这几种人生。
           </p>
         </div>
@@ -357,24 +357,27 @@ export default function SessionPage() {
 
   if (error && !view) {
     return (
-      <main id="main-content" className="obs-shell mx-auto flex min-h-[100dvh] w-full max-w-[720px] flex-col justify-center px-5 py-20">
-        <p className="obs-kicker">Session</p>
-        <p role="alert" className="mt-4 text-[14px] leading-relaxed text-[color:var(--obs-text-1)]">
+      <main
+        id="main-content"
+        className="sil-viewport relative mx-auto flex w-full max-w-[880px] flex-col justify-center px-5 py-16 sm:px-8"
+      >
+        <p className="sil-label">Session</p>
+        <p role="alert" className="sil-prose mt-4 text-[15px] text-[color:var(--sil-ink-100)]">
           {error.title}
         </p>
         {error.hint ? (
-          <p className="mt-2 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">{error.hint}</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">{error.hint}</p>
         ) : null}
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="session-choice max-w-[220px] justify-center"
+            className="sil-btn sm:w-[180px]"
           >
-            <span className="session-choice__title">重试</span>
+            重试
           </button>
-          <Link href="/" className="session-choice max-w-[220px] justify-center">
-            <span className="session-choice__title">修改问题</span>
+          <Link href="/" className="sil-btn sil-btn--ghost sm:w-[180px]">
+            修改问题
           </Link>
         </div>
       </main>
@@ -408,41 +411,41 @@ export default function SessionPage() {
   return (
     <main
       id="main-content"
-      className="obs-shell mx-auto flex min-h-[100dvh] w-full max-w-[760px] flex-col justify-center px-5 py-14 sm:py-20"
+      className="sil-viewport relative mx-auto flex w-full max-w-[880px] flex-col justify-center px-5 py-12 sm:px-8 sm:py-16"
     >
       {/* 极光带：编译期是 seek（蓝 → 青） */}
       <AuroraBand tone="seek" />
 
-      <header className="mb-6 flex items-center justify-between gap-3">
-        <p className="obs-kicker">The Observatory</p>
+      <header className="mb-8 flex items-center justify-between gap-3">
+        <p className="sil-label">The Observatory</p>
         <Link
           href="/"
-          className="text-[11px] text-[color:var(--obs-text-2)] transition-opacity duration-200 hover:opacity-80"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
         >
           换个问题
         </Link>
       </header>
 
       {showClarify ? (
-        <section className="obs-glass obs-brackets relative px-5 py-5 sm:px-7 sm:py-6">
+        <section className="sil-panel relative px-5 py-6 sm:px-8 sm:py-7">
           {/*
             看山状态机 · 动态澄清态 sway（GAME-DESIGN §4.1）：
             它追问的不是客套，而是「会改变接下来去找谁」的事。
           */}
-          <div className="gd-guide mb-4">
-            <span className="gd-guide__base">
+          <div className="mb-5 flex items-center gap-3.5">
+            <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center">
               <KanshanSprite
                 characterId="kanshan"
                 action="sway"
-                className="gd-guide__sprite gd-guide__sprite--sm"
+                className="h-full w-full object-contain"
                 alt="刘看山"
               />
             </span>
-            <p className="gd-guide__line">
+            <p className="sil-prose text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
               只问会改变结论的事。你答的每一句，都会改变我接下来去找谁。
             </p>
           </div>
-          <p className="obs-kicker">正在理解你的处境</p>
+          <p className="sil-label">正在理解你的处境</p>
           <ClarificationStep
             questions={view.questions}
             busy={busy}
@@ -459,16 +462,16 @@ export default function SessionPage() {
             看山状态机 · 检索/编译态（GAME-DESIGN §4.1）：
             检索与编译时它在 computer 态工作，WORLD READY 那一刻换成 wave 交接。
           */}
-          <div className="mb-5 flex items-center gap-3">
-            <span className="gd-guide__base">
+          <div className="mb-6 flex items-center gap-3.5">
+            <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center">
               <KanshanSprite
                 characterId="kanshan"
                 action={worldReady ? 'wave' : 'computer'}
-                className="gd-guide__sprite gd-guide__sprite--sm"
+                className="h-full w-full object-contain"
                 alt=""
               />
             </span>
-            <p className="text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+            <p className="sil-prose text-[14px] leading-relaxed text-[color:var(--sil-ink-300)]">
               {worldReady
                 ? '找到了。走吧。'
                 : '我去找找，有没有人活过你正在纠结的这几种人生。'}
@@ -478,43 +481,41 @@ export default function SessionPage() {
           <WorldForge question={view.question} stages={stages} phase={phase} fragments={shards} />
 
           {error ? (
-            <p role="alert" className="mt-4 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+            <p role="alert" className="mt-4 text-[13px] leading-relaxed text-[color:var(--sil-counter-soft)]">
               {error.title}
               {error.hint ? ` ${error.hint}` : ''}
             </p>
           ) : null}
 
           {worldReady ? (
-            <div className="mt-6">
+            <div className="mt-8">
               {foundTotal === 0 ? (
                 /**
                  * 一条都没找到：如实说，并给两条出路 —— 不假装、也不困住用户。
                  * 文案与按钮固定为 05_AGENT §9 的那一套。
                  */
-                <div className="obs-glass px-5 py-4">
-                  <p className="text-[13px] leading-relaxed text-[color:var(--obs-text-1)]">
+                <div className="sil-panel px-5 py-5 sm:px-6">
+                  <p className="sil-prose text-[15px] text-[color:var(--sil-ink-100)]">
                     {NO_RELIABLE_EXPERIENCE.title}
                   </p>
-                  <p className="mt-1.5 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+                  <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
                     {NO_RELIABLE_EXPERIENCE.hint}
                   </p>
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                    <Link href="/" className="session-choice justify-center sm:max-w-[240px]">
-                      <span className="session-choice__title">{NO_RELIABLE_EXPERIENCE.actions[0]}</span>
+                  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Link href="/" className="sil-btn sil-btn--ghost sm:w-[220px]">
+                      {NO_RELIABLE_EXPERIENCE.actions[0]}
                     </Link>
                     <button
                       type="button"
                       data-action="prepare-world"
                       disabled={busy}
                       onClick={() => void act({ action: 'prepare-world' })}
-                      className="session-choice justify-center disabled:opacity-50 sm:max-w-[240px]"
+                      className="sil-btn sm:w-[240px]"
                     >
-                      <span className="session-choice__title">
-                        {busy ? '正在重新检索…' : NO_RELIABLE_EXPERIENCE.actions[1]}
-                      </span>
+                      {busy ? '正在重新检索…' : NO_RELIABLE_EXPERIENCE.actions[1]}
                     </button>
                   </div>
-                  <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--obs-text-2)]">
+                  <p className="mt-4 text-[12px] leading-relaxed text-[color:var(--sil-ink-400)]">
                     也可以先进入这一局：
                     <Link
                       href={`/play?session=${encodeURIComponent(id)}`}
@@ -529,40 +530,38 @@ export default function SessionPage() {
                 <Link
                   href={`/play?session=${encodeURIComponent(id)}`}
                   data-destination="play-session"
-                  className="session-choice session-choice--unlocked justify-center"
+                  className="sil-btn sil-btn--block"
                 >
-                  <span className="session-choice__title">进入我的平行宇宙</span>
+                  进入我的平行宇宙
                 </Link>
               )}
             </div>
           ) : compileFailed ? (
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 data-action="prepare-world"
                 disabled={busy}
                 onClick={() => void act({ action: 'prepare-world' })}
-                className="session-choice justify-center disabled:opacity-50 sm:max-w-[240px]"
+                className="sil-btn sm:w-[220px]"
               >
-                <span className="session-choice__title">{busy ? '正在重试…' : '重试一次'}</span>
+                {busy ? '正在重试…' : '重试一次'}
               </button>
-              <Link href="/" className="session-choice justify-center sm:max-w-[200px]">
-                <span className="session-choice__title">换个问题</span>
+              <Link href="/" className="sil-btn sil-btn--ghost sm:w-[180px]">
+                换个问题
               </Link>
             </div>
           ) : (
             /* 兜底入口：自动跳转被拦时，用户仍有明确的一步可走 */
-            <div className="mt-6">
+            <div className="mt-8">
               <button
                 type="button"
                 data-action="prepare-world"
                 disabled={busy}
                 onClick={() => void act({ action: 'prepare-world' })}
-                className="session-choice justify-center disabled:opacity-50 sm:max-w-[280px]"
+                className="sil-btn sil-btn--block sm:w-[280px]"
               >
-                <span className="session-choice__title">
-                  {busy ? '正在编译你的世界…' : '进入我的平行宇宙'}
-                </span>
+                {busy ? '正在编译你的世界…' : '进入我的平行宇宙'}
               </button>
             </div>
           )}

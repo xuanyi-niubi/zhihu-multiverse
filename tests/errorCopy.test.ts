@@ -109,6 +109,28 @@ describe('技术细节永不出现在页面上', () => {
       expect(looksTechnical(raw), raw).toBe(false);
     }
   });
+
+  it('本项目自己的 kebab-case 错误码也不算人话（2026-09 补的缺口）', () => {
+    /*
+      这是一个真实漏出去的 bug：原来的词表只认英文技术词与数字状态码，
+      而本项目的内部错误码全是 `word-word` 形态，于是
+      `提交失败：invalid-response` 会**整句原样**出现在页面上。
+      玩家看到的是一句带着自己看不懂的英文短横线的中文 ——
+      信息量为零，还暴露了实现细节。
+    */
+    for (const code of [
+      'invalid-response',
+      'missing-story',
+      'empty-choices',
+      'insufficient-valid-choices',
+      'app-provider-unavailable',
+    ]) {
+      expect(looksTechnical(`提交失败：${code}`), code).toBe(true);
+      const copy = playerFacingError({ message: `提交失败：${code}` });
+      expect(copy.title, code).not.toContain(code);
+      expect(copy).toEqual(AI_UNAVAILABLE);
+    }
+  });
 });
 
 describe('网络层文案', () => {
@@ -123,13 +145,37 @@ describe('网络层文案', () => {
  *
  * `提交失败：invalid-response` 这种写法对玩家毫无信息量，
  * 却正好是「技术细节泄露到页面」的典型形态。
+ *
+ * ## 契约迁移说明
+ *
+ * 这条纪律原来钉在 `components/BossTerminal.tsx` 上（它把原因码留在
+ * `data-boss-error` 里、人话照常显示）。Boss 整屏随旧 RPG 一并删除后，
+ * 本测试改钉**现在真正承担翻译职责的那一层**：`playerFacingError()`。
+ *
+ * 这比原来更强 —— 原来只保证一个组件写对了，现在保证
+ * 「任何服务端原因码进来，出口都必须是给人看的话」。
  */
 describe('界面不直接把原因码拼进文案', () => {
-  const source = readFileSync(join(process.cwd(), 'src/components/BossTerminal.tsx'), 'utf8');
+  it('原因码一律先经 playerFacingError 翻译，且译后文案不含原始码', () => {
+    const raw = { code: 'invalid-response', message: '提交失败：invalid-response' };
+    const faced = playerFacingError(raw);
 
-  it('BossTerminal 只给人话，原因码留在 data-boss-error', () => {
-    expect(source).toContain('这次提交没能完成');
-    expect(source).not.toContain('提交失败：{error}');
-    expect(source).toContain('data-boss-error={error}');
+    // 原文里那些「技术细节泄露」的形态，翻译后必须消失
+    expect(faced.title).not.toContain('invalid-response');
+    expect(faced.title).not.toContain('提交失败');
+    expect(faced.title.length).toBeGreaterThan(0);
+
+    // 空输入也不能漏出原始码
+    const empty = playerFacingError({});
+    expect(empty.title.length).toBeGreaterThan(0);
+    expect(empty.title).not.toContain('undefined');
+  });
+
+  it('首页只能渲染翻译后的文案，不能渲染服务端原文', () => {
+    const page = readFileSync(join(process.cwd(), 'src/app/page.tsx'), 'utf8');
+    expect(page).toContain('playerFacingError');
+    // 不许把 payload.error.message 直接铺到 JSX 里
+    expect(page).not.toContain('{payload.error.message}');
+    expect(page).not.toContain('{error.message}');
   });
 });

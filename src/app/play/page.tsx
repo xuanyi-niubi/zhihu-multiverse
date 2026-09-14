@@ -4,41 +4,12 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
-import { Portrait } from '@/components/characters/Portrait';
-import { PortraitLayer } from '@/components/characters/PortraitLayer';
-import { DialogueBox } from '@/components/DialogueBox';
-import { BossTerminal, BossVerdictPanel, verdictLines } from '@/components/BossTerminal';
-import { RealityChecklist } from '@/components/RealityChecklist';
-import { buildRealityChecklist } from '@/features/run/realityChecklist';
-import { HiddenSignalStrip } from '@/components/HiddenSignalStrip';
-import { WorldlineFold } from '@/components/WorldlineFold';
-import { Drawer } from '@/components/Drawer';
-import { DiceModal, type DiceResultView } from '@/components/DiceModal';
-import { DamageFloat, type FloatItem } from '@/components/effects/DamageFloat';
-import { SceneTransition, type TransitionKind } from '@/components/effects/SceneTransition';
-import { EndgamePass } from '@/components/EndgamePass';
-import { EndgameReport } from '@/components/EndgameReport';
-import { FateTree } from '@/components/FateTree';
-import { GameHud } from '@/components/GameHud';
-import { InventoryBar } from '@/components/InventoryBar';
-import { SceneStage } from '@/components/scenes/SceneStage';
-import { SourceBadge } from '@/components/SourceBadge';
-import { NeuralLoader } from '@/components/effects/NeuralLoader';
-import { toDifficulty, toModifier, toSeed, toStatValue, toTurnIndex } from '@/core/brand';
+import { SessionPlayScreen } from '@/components/game/session/SessionPlayScreen';
+import { toStatValue } from '@/core/brand';
 import { createCheckRng, rollD20 } from '@/core/d20';
 import { memoryEchoLine, memoryToPromptBlock } from '@/core/memory';
-import { deriveArchetypes, legacyRelicFrom } from '@/core/memory';
-import { fetchMemory, saveRun, sealFinalWords } from '@/core/memoryClient';
-import { AxisSlider } from '@/components/AxisSlider';
-import { EvidenceMeshView } from '@/components/EvidenceMeshView';
-import { CriticalPointCard } from '@/components/CriticalPointCard';
-import { ClarityRadar } from '@/components/ClarityRadar';
-import { EngineStatusBar } from '@/components/EngineStatusBar';
-import { AxisHUD } from '@/components/AxisHUD';
-import { EventCard } from '@/components/EventCard';
-import { ExperienceSourceModal } from '@/components/game/ExperienceSourceModal';
-import { SessionEndgame } from '@/components/game/SessionEndgame';
-import { SessionPlayScreen } from '@/components/game/session/SessionPlayScreen';
+import { deriveArchetypes } from '@/core/memory';
+import { fetchMemory, saveRun } from '@/core/memoryClient';
 import {
   SESSION_ERROR_MESSAGE,
   actObjectiveAt,
@@ -54,41 +25,23 @@ import {
   storyViewOf,
 } from '@/components/game/session/viewModel';
 import type { SessionPlayView } from '@/components/game/session/types';
-import { ExperienceCardPanel, cardDataFrom } from '@/components/game/ExperienceCardPanel';
-import { WorldlineRail, worldlineStateOf } from '@/components/worldline/Worldline';
-import { CommitPicker, type CommitCandidate } from '@/components/CommitPicker';
-import { axisCapsFor } from '@/core/decision/axis';
-import { clarityOf } from '@/core/decision/clarity';
-import { judgeMesh } from '@/core/decision/verdict';
+import { cardDataFrom } from '@/components/game/ExperienceCardPanel';
 import { fateQualityOf, resolveChoice } from '@/core/decision/choiceResolution';
 import { applyEventToConstraints, drawEvent } from '@/core/run/events/eventSelector';
 import {
-  createCommitment,
-  fetchCommitments,
-  fetchHealth,
   fetchMesh,
   loadConstraints,
   meshToTurnSnippets,
-  removeCommitmentById,
-  sandwichLocally,
   saveConstraints,
-  type HealthView,
 } from '@/core/evidence/meshClient';
-import { submitBossAnswer, type BossVerdictView } from '@/core/bossClient';
-import { runIdFor } from '@/core/run/runEngine';
-import { createRunActState, runBudgetFor, actPressureLabel } from '@/core/run/actRun';
-import { SCENARIO_REVISION } from '@/data/sceneTemplates';
-import { BOSS_ANSWER_MAX, BOSS_ANSWER_MIN } from '@/features/run/contracts';
-import { getVerifiedSource } from '@/data/knowledgeSources';
+import { runBudgetFor } from '@/core/run/actRun';
 import { advanceWorldWithChoiceTags, syncStats, type OutcomeKind } from '@/core/run/scenarioAdapter';
-import { ghostLinesFrom, type GhostLine } from '@/core/run/scenarioCompiler';
 import { startWorld } from '@/core/run/runEngine';
-import { advanceWorldModel, createWorldModel, worldModelBrief, type WorldModel } from '@/engine/worldModel';
-import { mentalDifficultyOffset } from '@/engine/mentalState';
-import { isCollapsed } from '@/engine/realityAnchor';
+import { advanceWorldModel, createWorldModel, type WorldModel } from '@/engine/worldModel';
 import type { WorldState } from '@/core/run/worldState';
 import type { ConstraintProfile, EvidenceMesh } from '@/types/evidence';
-import type { RunMemory } from '@/core/memory';import {
+import type { RunMemory } from '@/core/memory';
+import {
   EMPTY_INVENTORY,
   collectSanReduction,
   consumeActivatedRelics,
@@ -96,7 +49,6 @@ import type { RunMemory } from '@/core/memory';import {
   ownRelic,
   resolveStatDeltas,
 } from '@/core/relics';
-import { expressionFromSan, getCharacter } from '@/data/characters';
 import { getScene } from '@/data/scenes';
 import { applyBeat, resolveBeats, viewForBeats } from '@/core/narrative';
 import { DEFAULT_ORIGIN_ID, getOrigin, sanMultiplierFor, type OriginId } from '@/data/origins';
@@ -110,7 +62,7 @@ import {
   type ScenarioOutcome,
   type ScenarioTurn,
 } from '@/data/prebuiltScenarios';
-import { fetchDmTurn, fetchProfile, fetchRunReport } from '@/core/dmClient';
+import { fetchDmTurn, fetchProfile } from '@/core/dmClient';
 import { unlockForTurn, worldContextForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
 import { realityQuestViewOf } from '@/features/game-world/questView';
 import { cardTitlesFrom } from '@/features/game-world/cardTitles';
@@ -120,15 +72,13 @@ import type { ExperienceFact } from '@/features/experience/domain';
 import type { DmSource } from '@/core/dm/generate';
 import type { PlayerProfile } from '@/core/dm/profile';
 import type { DmTurnInput, DmZhihuSnippet } from '@/core/dm/prompt';
-import type { FateEdge, FateNode, FateNodeStatus, FateTreeGraph } from '@/types/fate';
+import type { FateEdge, FateNode, FateNodeStatus } from '@/types/fate';
 import type {
-  ActCard,
   CharacterOnStage,
   Mood,
   NarrativeBeat,
   SceneId,
   SpeakerId,
-  StageSlot,
 } from '@/types/narrative';
 import type { RelicInventory, TargetStat } from '@/types/game';
 
@@ -136,6 +86,12 @@ import type { RelicInventory, TargetStat } from '@/types/game';
 /* 运行态                                                                      */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * 属性快照。
+ *
+ * 还留在状态里的唯一原因：隐藏状态推进（`syncStats`）与终局记忆写回仍要读它，
+ * 而它们不能凭空捏造属性。新主链**不把它渲染出来** —— 属性不再是玩家可见的机制。
+ */
 interface RunStats {
   san: number;
   skill: number;
@@ -146,9 +102,9 @@ interface RunStats {
  * 阶段机：
  * story    → 播叙事节拍（对白 / 旁白 / 独白）
  * choices  → 节拍播完，展示抉择
- * checking → D20 骰子翻滚
+ * checking → 结算动画（新主链只借它做一拍过场）
  * outcome  → 展示后果，等待「继续」
- * critical → SAN 归零，救场窗口
+ * critical → SAN 归零（新主链不再由属性判死，页面会直接收束到终局）
  * ended    → 终局结算
  */
 type Phase = 'story' | 'choices' | 'checking' | 'outcome' | 'critical' | 'ended';
@@ -181,20 +137,17 @@ interface RunState {
 
   /* 演出 */
   shakeKey: number;
-  transition: { kind: TransitionKind; label: string; key: number } | null;
-  floats: FloatItem[];
+  transition: { kind: 'glitch' | 'flash-white' | 'flash-red'; label: string; key: number } | null;
   hitKey: number;
 
   /* 结算 */
   outcomeTitle: string;
   outcomeDetail: string;
-  lastCheck: DiceResultView | null;
   pendingFeedback: string | null;
   pendingActivated: string[];
 
   /* AI DM */
   overrides: Record<number, ScenarioTurn>;
-  dmSource: DmSource | null;
   dmLoading: boolean;
   /** 第一回合解析出的处境档案，后续回合回传服务端以保持冲突一致。 */
   profile: PlayerProfile | null;
@@ -203,9 +156,9 @@ interface RunState {
 
   /* 记忆 */
   prevChoiceText: string | null;
-  /** 每幕结束时的 SAN 快照，用于看山心情日记。 */
+  /** 每幕结束时的 SAN 快照，用于终局画像推导。 */
   sanHistory: number[];
-  /** 本局的 Session id 与世界蓝图（P0-G）。无 session 的旧路径两者为 null。 */
+  /** 本局的 Session id 与世界蓝图（P0-G）。 */
   sessionId: string | null;
   worldBlueprint: WorldBlueprint | null;
   /** 是否已经插入过「记忆残响」。 */
@@ -214,18 +167,6 @@ interface RunState {
   memory: RunMemory | null;
   /** 当前是否已登录知乎账号。未登录时不产出任何记忆，也不装前世遗念。 */
   memoryAuthenticated: boolean;
-  /** 本局是否已成功存入账号记忆。 */
-  runSaved: boolean;
-  /** 存入后的累计局数，用于结算页文案。 */
-  savedTotalRuns: number;
-  /**
-   * 本局写入失败的原因（null = 没失败）。
-   *
-   * 有值就说明**没能落盘**，结算页必须如实说明，不得宣称「已存入你的宇宙」。
-   */
-  saveFailureReason: string | null;
-  /** 遗言封存状态（终局第二步，与基础记录保存分开）。 */
-  sealState: 'idle' | 'sealing' | 'sealed' | 'failed';
   /**
    * 世界状态（因果引擎）：属性 + 五个隐藏状态 + flags。
    *
@@ -234,15 +175,6 @@ interface RunState {
  * —— 两套口径互不覆盖。
    */
   world: WorldState;
-  /** 最近一次选择的世界线折叠（走过的一条 + 未走的幽灵线），换幕时清空。 */
-  fold: { readonly act: number; readonly chosenId: string; readonly chosenText: string; readonly ghosts: readonly GhostLine[] } | null;
-  /**
-   * 第四幕终端 Boss 的判卷结果（来自服务端）。
-   *
-   * 终局要明确展示「基础属性 + 遗物 + 思路评分 + 骰面 vs DC」，
-   * 所以这里保留完整分解，而不是只留一个胜负。
-   */
-  boss: BossVerdictView | null;
   /**
    * 世界模型（规范 §5）：叙事线索 / 关系图 / 派系 / 心理状态 / 现实锚点。
    *
@@ -251,8 +183,6 @@ interface RunState {
   model: WorldModel;
   /** 剧本总幕数（世界模型判断终幕需要）。 */
   totalActs: number;
-  /** 玩家在终局写下的反思短评，成为下一局的「前世遗念」。 */
-  finalWords: string;
   log: string[];
 }
 
@@ -261,15 +191,12 @@ type RunAction =
   | { type: 'CHOOSE'; choice: ScenarioChoice; turn: ScenarioTurn }
   | { type: 'RESOLVE_DICE' }
   | { type: 'ADVANCE_ACT' }
-  | { type: 'USE_RELIC'; relicId: string }
-  | { type: 'RESCUE' }
   | { type: 'GIVE_UP' }
   /**
-   * 新主链专用：把这一局直接收束到终局（§十八 / §二十三）。
+   * 把这一局直接收束到终局（§十八 / §二十三）。
    *
    * 「现实信息不足」时玩家唯一的出口是「继续到终局」——不是重投骰、不是
-   * 付资源、也不是猜一个答案。这个 action 只存在于 Session 模式的路径上；
-   * legacy 从不派发它，所以旧行为一行未变。
+   * 付资源、也不是猜一个答案。
    */
   | { type: 'END_SESSION' }
   | { type: 'LOAD_AI_TURN'; turn: ScenarioTurn; source: DmSource; turnIndex: number; profile: PlayerProfile | null }
@@ -277,14 +204,7 @@ type RunAction =
   | { type: 'MEMORY_ECHO'; line: string }
   | { type: 'LOAD_MEMORY'; memory: RunMemory | null; authenticated: boolean }
   | { type: 'LOAD_WORLD_BLUEPRINT'; blueprint: WorldBlueprint; sessionId: string }
-  | { type: 'SET_RUN_SAVED'; totalRuns: number }
-  | { type: 'SET_RUN_SAVE_FAILED'; reason: string }
-  | { type: 'SET_SEAL_STATE'; state: 'idle' | 'sealing' | 'sealed' | 'failed' }
-  | { type: 'RESOLVE_BOSS'; turn: ScenarioTurn; choice: ScenarioChoice; verdict: BossVerdictView }
-  | { type: 'SET_FINAL_WORDS'; words: string }
-  | { type: 'CLEAR_FLOATS' }
-  | { type: 'CLEAR_TRANSITION' }
-  | { type: 'RESTART'; seed: string };
+  | { type: 'CLEAR_TRANSITION' };
 
 function createSeed(): string {
   return `SEED-2026-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
@@ -346,17 +266,14 @@ function createInitialState(scenarioId: string, seed: string, originId: OriginId
 
     shakeKey: 0,
     transition: view.transition,
-    floats: [],
     hitKey: 0,
 
     outcomeTitle: '',
     outcomeDetail: '',
-    lastCheck: null,
     pendingFeedback: null,
     pendingActivated: [],
 
     overrides: {},
-    dmSource: null,
     dmLoading: isAiDm,
     profile: null,
     profileAnalysis: null,
@@ -369,11 +286,6 @@ function createInitialState(scenarioId: string, seed: string, originId: OriginId
     memoryEchoed: false,
     memory: null,
     memoryAuthenticated: false,
-    runSaved: false,
-    savedTotalRuns: 0,
-    saveFailureReason: null,
-    sealState: 'idle',
-    boss: null,
     model: createWorldModel(seed),
     // v2 §14：AI 自由推演的幕数由张力预算决定（不同出身/属性 → 不同幕数）；
     // 预置剧本是人工精调的四幕，幕数由剧本自身决定。
@@ -385,8 +297,6 @@ function createInitialState(scenarioId: string, seed: string, originId: OriginId
       : scenario.turns.length,
     // 隐藏状态由种子派生：同一颗种子开局一致，挑战才可比
     world: startWorld(seed, { san: stats.san, skill: stats.skill, bond: stats.bond }),
-    fold: null,
-    finalWords: '',
     log: [`宇宙种子 ${seed} 已生成`, `出身流派：${origin.name}`],
   };
 }
@@ -436,8 +346,6 @@ function enterTurn(state: RunState, turn: ScenarioTurn): RunState {
     turnIndex: turn.turnIndex,
     beats,
     beatIndex,
-    // 换幕即收束上一幕的折叠视图
-    fold: null,
     sceneId: view.sceneId,
     stage: view.stage,
     speaker: view.speaker,
@@ -448,7 +356,6 @@ function enterTurn(state: RunState, turn: ScenarioTurn): RunState {
     transition: view.transition,
     outcomeTitle: '',
     outcomeDetail: '',
-    lastCheck: null,
     pendingActivated: [],
     dmLoading: false,
   };
@@ -464,23 +371,6 @@ function applyDeltas(stats: RunStats, deltas: Partial<Record<TargetStat, number>
   };
 }
 
-function buildFloats(
-  deltas: Partial<Record<TargetStat, number>>,
-  key: string,
-): FloatItem[] {
-  const items: FloatItem[] = [];
-
-  (['san', 'skill', 'bond'] as const).forEach((stat) => {
-    const value = deltas[stat] ?? 0;
-    if (value === 0) {
-      return;
-    }
-    items.push({ id: `${key}-${stat}`, stat, value });
-  });
-
-  return items;
-}
-
 /* -------------------------------------------------------------------------- */
 /* Reducer                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -488,9 +378,9 @@ function buildFloats(
 /**
  * 把一次「选择 + 裁决」落进状态。
  *
- * 为什么抽成函数：第四幕终端 Boss 的裁决来自服务端（`/api/boss/evaluate`），
- * 骰面不是前端掷的；但它必须与普通选项走**完全相同的落地路径** —— 节点状态、
- * 遗物掉落、SAN 曲线、隐藏状态推进、结算口径都不该出现第二套实现。
+ * 成败**不再来自骰子**：`resolveChoice` 用玩家条件裁决（`CHOOSE` 分支），
+ * 骰面只决定遭遇品质。这里落地的是裁决结果本身 —— 属性、遗物、隐藏状态、
+ * 结算摘要都走同一条路径。
  */
 function resolveInto(
   state: RunState,
@@ -498,15 +388,17 @@ function resolveInto(
   choice: ScenarioChoice,
   resolution: {
     readonly isSuccess: boolean;
-    readonly dice: DiceResultView | null;
-    /** 额外写进结算摘要的行（Boss 用来展示四维与思路修正）。 */
-    readonly extraSummary?: readonly string[];
-    /** 终局判卷结果：会改变现实锚点（规范点名要求 Boss 影响锚点）。 */
-    readonly bossOutcome?: 'success' | 'failure';
+    /**
+     * 这条选项是不是**风险选项**（带 `check`）。
+     *
+     * 它不再表示「掷过骰子」—— 骰子已经退出成败判定。这里只用它决定
+     * 「要不要多给一拍过场」与「结算文案用裁决语言还是稳妥语言」。
+     */
+    readonly hasCheck: boolean;
   },
 ): RunState {
   const origin = getOrigin(state.originId);
-  const { isSuccess, dice } = resolution;
+  const { isSuccess, hasCheck } = resolution;
 
   const branch: ScenarioOutcome = isSuccess
     ? choice.onSuccess
@@ -517,9 +409,7 @@ function resolveInto(
   const effective = resolveStatDeltas(branch.statDeltas, sanReduction, sanMultiplier);
   const stats = applyDeltas(state.stats, effective);
 
-  let inventory = dice
-    ? consumeActivatedRelics(state.inventory, state.pendingActivated)
-    : state.inventory;
+  let inventory = consumeActivatedRelics(state.inventory, state.pendingActivated);
 
   let droppedName: string | null = null;
   let droppedId: string | undefined;
@@ -564,13 +454,7 @@ function resolveInto(
     return { ...edge, status: 'locked' };
   });
 
-  const summary: string[] = [...(resolution.extraSummary ?? [])];
-  if (dice) {
-    summary.push(
-      `D20 ${dice.rawRoll} ${dice.baseModifier + dice.relicModifier >= 0 ? '+' : '−'}修正 → ${dice.total} vs DC ${dice.difficulty}`,
-    );
-  }
-  summary.push(`SAN ${stats.san}`, `专业力 ${stats.skill}`, `羁绊 ${stats.bond}`);
+  const summary: string[] = [`SAN ${stats.san}`, `专业力 ${stats.skill}`, `羁绊 ${stats.bond}`];
   if (droppedName) {
     summary.push(`获得遗物「${droppedName}」`);
   }
@@ -585,35 +469,26 @@ function resolveInto(
     stats,
   );
 
-  // 世界线折叠：走过的一条 + 未走的幽灵线（只给标签，不泄露结果）
   // 世界模型：线索 / 关系 / 心理 / 锚点一起推进（AI 只提供语义，规则决定后果）
   const model = advanceWorldModel(state.model, {
     act: turn.turnIndex,
     sanDelta: effective.san ?? 0,
     outcome: choice.check ? (isSuccess ? 'success' : 'failure') : 'none',
     ...(choice.tags ? { tags: choice.tags } : {}),
-    ...(resolution.bossOutcome ? { bossOutcome: resolution.bossOutcome } : {}),
     finalAct: turn.turnIndex >= state.totalActs,
   });
-
-  const fold = {
-    act: turn.turnIndex,
-    chosenId: choice.id,
-    chosenText: choice.text,
-    ghosts: ghostLinesFrom(turn.choices, choice.id),
-  };
 
   return {
     ...state,
     stats,
     inventory,
     world,
-    fold,
-    phase: dice ? 'checking' : stats.san <= 0 ? 'critical' : 'outcome',
+    model,
+    phase: hasCheck ? 'checking' : stats.san <= 0 ? 'critical' : 'outcome',
     nodes,
     edges,
     prevNodeId: chosenNodeId,
-    dialogueText: dice ? state.dialogueText : branch.feedback,
+    dialogueText: hasCheck ? state.dialogueText : branch.feedback,
     speaker: null,
     mood: heavyHit ? 'panic' : isSuccess ? 'hope' : 'tense',
     /*
@@ -630,16 +505,14 @@ function resolveInto(
         : '撞上了现实的边界'
       : '选择已生效',
     outcomeDetail: summary.join(' · '),
-    lastCheck: dice,
-    pendingFeedback: dice ? branch.feedback : null,
+    pendingFeedback: hasCheck ? branch.feedback : null,
     pendingActivated: [],
-    floats: buildFloats(effective, `${turn.turnIndex}-${choice.id}`),
     sanHistory: [...state.sanHistory, stats.san],
     hitKey: sanDelta !== 0 ? state.hitKey + 1 : state.hitKey,
     shakeKey: heavyHit ? state.shakeKey + 1 : state.shakeKey,
     transition: heavyHit
       ? { kind: 'flash-red', label: '', key: state.shakeKey + 1 }
-      : dice && isSuccess
+      : hasCheck && isSuccess
         ? { kind: 'flash-white', label: '', key: state.shakeKey + 1 }
         : state.transition,
     prevChoiceText: choice.text,
@@ -712,7 +585,13 @@ function runReducer(state: RunState, action: RunAction): RunState {
 
       const { choice, turn } = action;
       let isSuccess = true;
-      let dice: DiceResultView | null = null;
+      /**
+       * 这条选项有没有门槛。
+       *
+       * 它只决定「结算时多不多给一拍过场」，**不参与成败判定** ——
+       * 后面的 `resolveChoice` 才是唯一的裁决来源。
+       */
+      const hasCheck = Boolean(choice.check);
 
       if (choice.check) {
         const checkId = `${turn.turnIndex}:${choice.id}`;
@@ -760,77 +639,9 @@ function runReducer(state: RunState, action: RunAction): RunState {
           constraintsRef.current = nextConstraints;
           nextConstraintsRef.current = nextConstraints;
         }
-
-        const breach =
-          resolution.verdict.kind === 'breached'
-            ? {
-                label: resolution.verdict.shortfallLabel,
-                shortfall: resolution.verdict.overBy,
-              }
-            : null;
-
-        dice = {
-          rawRoll: fateFace,
-          // 这三个字段是 Boss 判卷路径的语义，选项路径不再用它们表达成败；
-          // 保留是为了让 DiceModal 的既有布局不出现 undefined。
-          total: fateFace,
-          difficulty: choice.check.difficulty,
-          outcome: isSuccess ? 'success' : 'failure',
-          critical: fateFace === 1 ? 'critical-failure' : fateFace === 20 ? 'critical-success' : 'none',
-          baseModifier: 0,
-          relicModifier: 0,
-          targetStat: choice.check.targetStat,
-          ...(resolution.fate
-            ? { fate: { quality: resolution.fate.quality, label: resolution.fate.label } }
-            : {}),
-          verdict: {
-            kind: resolution.verdict.kind,
-            headline:
-              resolution.verdict.kind === 'viable'
-                ? '这条路在你的条件下成立'
-                : resolution.verdict.kind === 'breached'
-                  ? '你的条件还没到这条路的门槛'
-                  : '证据不足，这一局不给结论',
-            breach,
-          },
-        };
       }
 
-      return resolveInto(state, turn, choice, { isSuccess, dice });
-    }
-
-    /**
-     * 第四幕终端判卷落地。
-     *
-     * 与 CHOOSE 的唯一区别是**裁决来源**：骰面与胜负来自服务端判卷
-     * （`POST /api/boss/evaluate`），而不是前端现掷 ——
-     * 于是同一份方案在任何设备上都得到同一结局，「AI 判卷」也可复现。
-     */
-    case 'RESOLVE_BOSS': {
-      if (state.phase !== 'choices') {
-        return state;
-      }
-
-      const { turn, choice, verdict } = action;
-      const dice: DiceResultView = {
-        rawRoll: verdict.dice,
-        total: verdict.total,
-        difficulty: verdict.dc,
-        outcome: verdict.outcome,
-        critical: verdict.critical,
-        baseModifier: verdict.baseModifier,
-        relicModifier: verdict.relicModifier,
-        targetStat: 'skill',
-      };
-
-      const next = resolveInto(state, turn, choice, {
-        isSuccess: verdict.outcome === 'success',
-        dice,
-        extraSummary: verdictLines(verdict),
-        bossOutcome: verdict.outcome,
-      });
-
-      return { ...next, boss: verdict };
+      return resolveInto(state, turn, choice, { isSuccess, hasCheck });
     }
 
     case 'RESOLVE_DICE': {
@@ -843,27 +654,6 @@ function runReducer(state: RunState, action: RunAction): RunState {
         phase: state.stats.san <= 0 ? 'critical' : 'outcome',
         dialogueText: state.pendingFeedback ?? state.dialogueText,
         pendingFeedback: null,
-        lastCheck: null,
-      };
-    }
-
-    case 'RESCUE': {
-      if (state.stats.bond < 30 || state.phase === 'ended') {
-        return state;
-      }
-
-      return {
-        ...state,
-        stats: { ...state.stats, san: 20, bond: toStatValue(state.stats.bond - 30) },
-        status: 'PLAYING',
-        phase: 'outcome',
-        speaker: 'kanshan',
-        mood: 'hope',
-        dialogueText: '「大 V 我把人叫来了。你先喘口气，剩下的我们慢慢来。」',
-        outcomeTitle: '刘看山呼叫救场',
-        outcomeDetail: '消耗 30 羁绊，知乎大 V 金句拍马赶到，强行锁血到 SAN 20。',
-        hitKey: state.hitKey + 1,
-        log: [...state.log, '消耗 30 羁绊，呼叫知乎大 V 救场'],
       };
     }
 
@@ -924,7 +714,6 @@ function runReducer(state: RunState, action: RunAction): RunState {
             dialogueText: '推演结束。系统正在根据你走过的岔路生成《专属避坑指南》……',
             outcomeTitle: '推演完成',
             outcomeDetail: `你走完了全部 ${state.totalActs} 幕。`,
-            lastCheck: null,
             pendingActivated: [],
             dmLoading: false,
           };
@@ -939,7 +728,6 @@ function runReducer(state: RunState, action: RunAction): RunState {
           dialogueText: 'AI 地下城主正在检索知乎站内讨论……',
           outcomeTitle: '',
           outcomeDetail: '',
-          lastCheck: null,
           pendingActivated: [],
           dmLoading: true,
         };
@@ -954,34 +742,11 @@ function runReducer(state: RunState, action: RunAction): RunState {
           dialogueText: '推演结束。系统正在根据你走过的岔路生成《专属避坑指南》……',
           outcomeTitle: '推演完成',
           outcomeDetail: `你走完了全部 ${state.totalActs} 幕。`,
-          lastCheck: null,
           pendingActivated: [],
         };
       }
 
       return enterTurn(state, nextTurn);
-    }
-
-    case 'USE_RELIC': {
-      if (state.phase !== 'choices' && state.phase !== 'story') {
-        return state;
-      }
-
-      const owned = state.inventory.find((slot) => slot?.relic.id === action.relicId);
-
-      if (!owned || owned.relic.kind !== 'active' || owned.isConsumed) {
-        return state;
-      }
-
-      if (state.pendingActivated.includes(action.relicId)) {
-        return state;
-      }
-
-      return {
-        ...state,
-        pendingActivated: [...state.pendingActivated, action.relicId],
-        log: [...state.log, `激活遗物：${owned.relic.name}`],
-      };
     }
 
     case 'LOAD_AI_TURN': {
@@ -1006,11 +771,9 @@ function runReducer(state: RunState, action: RunAction): RunState {
         dialogueText: view.text,
         phase: beats.length > 0 ? 'story' : 'choices',
         transition: view.transition,
-        dmSource: action.source,
         dmLoading: false,
         outcomeTitle: '',
         outcomeDetail: '',
-        lastCheck: null,
         pendingActivated: [],
       };
 
@@ -1063,75 +826,22 @@ function runReducer(state: RunState, action: RunAction): RunState {
       };
     }
 
-    case 'LOAD_MEMORY': {
-      // 装载账号记忆，并把「前世遗念」卡补进遗物栏。
-      //
-      // 之所以在这里装卡而不是开局时装：记忆来自服务端、是异步的。
-      // 只有已登录且上一局留过遗言时才会有卡 —— 未登录永远走到 else 分支。
-      const next = {
+    case 'LOAD_MEMORY':
+      /*
+        装载账号记忆。
+
+        旧实现在这里把「前世遗念」卡补进遗物栏；遗物栏已随旧 RPG 屏一并删除，
+        所以现在只保留记忆本身 —— 它仍然供 AI 以老友口吻开场
+        （`memoryToPromptBlock` / `personaTags`）。
+      */
+      return {
         ...state,
         memory: action.memory,
         memoryAuthenticated: action.authenticated,
       };
 
-      if (!action.memory) {
-        return next;
-      }
-
-      const legacyBase = RELIC_LIBRARY['relic-legacy-note'];
-      if (!legacyBase) {
-        return next;
-      }
-
-      const legacy = legacyRelicFrom(action.memory, legacyBase);
-      if (!legacy) {
-        return next;
-      }
-
-      const equipped = equipRelic(state.inventory, ownRelic(legacy, state.turnIndex));
-      if (!equipped.added) {
-        return next;
-      }
-
-      return {
-        ...next,
-        inventory: equipped.inventory,
-        log: [...state.log, `前世遗念「${legacy.name}」已装入遗物栏`],
-      };
-    }
-
-    case 'SET_FINAL_WORDS':
-      return { ...state, finalWords: action.words.slice(0, 60) };
-
-    case 'SET_RUN_SAVED':
-      return {
-        ...state,
-        runSaved: true,
-        saveFailureReason: null,
-        savedTotalRuns: action.totalRuns,
-        log: [...state.log, `本局已存入你的宇宙（累计第 ${action.totalRuns} 局）`],
-      };
-
-    case 'SET_RUN_SAVE_FAILED':
-      // 写失败就**不能**标记 saved：结算页会据此换成「没能写入」的说明。
-      return {
-        ...state,
-        runSaved: false,
-        saveFailureReason: action.reason,
-        log: [...state.log, `本局未能写入你的宇宙（${action.reason}）`],
-      };
-
-    case 'SET_SEAL_STATE':
-      return { ...state, sealState: action.state };
-
-    case 'CLEAR_FLOATS':
-      return { ...state, floats: [] };
-
     case 'CLEAR_TRANSITION':
       return { ...state, transition: null };
-
-    case 'RESTART':
-      return createInitialState(state.scenarioId, action.seed, state.originId);
 
     default:
       return state;
@@ -1139,21 +849,8 @@ function runReducer(state: RunState, action: RunAction): RunState {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 子组件                                                                      */
+/* 推演舱                                                                      */
 /* -------------------------------------------------------------------------- */
-
-/**
- * 风险选项的门槛档位（替代旧的「D20 检定 · 属性 DC n」）。
- *
- * 为什么不显示精确 DC：`check.difficulty` 现在换算的是**承压需求**，
- * 不再是某个属性的检定难度；把原始数字摆出来会让人以为
- * 「掷高一点就能过」。档位给出同样的「这条更难」信号，但不撒谎。
- */
-function riskBandLabel(difficulty: number): string {
-  if (difficulty <= 14) return '门槛一般';
-  if (difficulty <= 20) return '门槛较高';
-  return '门槛很高';
-}
 
 /**
  * 从本局蓝图里取出这条选项引用的真实经验片段（P0-9）。
@@ -1177,7 +874,7 @@ function experienceFactsFor(
   return blueprint.experienceFacts.filter((fact) => wanted.has(fact.id));
 }
 
-/** 蓝图里已算好的「与你的差异」（P0-9 弹层第二块）。 */
+/** 蓝图里已算好的「与你的差异」（P0-9 来源弹层第二块）。 */
 function differencesFor(blueprint: WorldBlueprint | null | undefined) {
   if (!blueprint) {
     return [];
@@ -1251,172 +948,6 @@ function counterFrameFor(blueprint: WorldBlueprint | null | undefined): {
   return { previousLabel: previous.label, counterLabel: counter.label, rows };
 }
 
-function ChoiceCard({
-  choice,
-  onSelect,
-  onOpenExperienceSource,
-}: {
-  readonly choice: ScenarioChoice;
-  readonly onSelect: (choice: ScenarioChoice) => void;
-  /**
-   * 打开「这条选择来自哪里」的来源弹层（P0-9）。
-   *
-   * 只有**经验解锁**的选项会用到它 —— 普通选项的角标仍是「剧本模拟」。
-   */
-  readonly onOpenExperienceSource?: (choice: ScenarioChoice) => void;
-}) {
-  const isRisk = Boolean(choice.check);
-  /**
-   * 这条选项是不是**被真实经历解锁**出来的。
-   *
-   * 判定依据是 `experienceUnlockId`（由 `injectExperienceUnlock` 打上），
-   * 不看文案 —— 文案可以被改写，标记不会。
-   */
-  const isExperienceUnlock = Boolean(choice.experienceUnlockId);
-  const ref = React.useRef<HTMLButtonElement | null>(null);
-  const frameRef = React.useRef<number | null>(null);
-
-  const handlePointerMove = React.useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
-    const node = ref.current;
-    if (!node || frameRef.current !== null) {
-      return;
-    }
-
-    const { clientX, clientY } = event;
-
-    frameRef.current = window.requestAnimationFrame(() => {
-      frameRef.current = null;
-      const rect = node.getBoundingClientRect();
-      node.style.setProperty('--mx', `${clientX - rect.left}px`);
-      node.style.setProperty('--my', `${clientY - rect.top}px`);
-    });
-  }, []);
-
-  return (
-    <button
-      ref={ref}
-      type="button"
-      onPointerMove={handlePointerMove}
-      onClick={() => onSelect(choice)}
-      className={[
-        'gmv-choice group w-full rounded-2xl border p-3.5 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 sm:p-4',
-        isRisk
-          ? 'border-relic-gold/30 bg-relic-gold/[0.05] hover:border-relic-gold/70 hover:shadow-relic'
-          : 'border-white/10 bg-white/[0.03] hover:border-zhihu-500/60 hover:shadow-glow',
-      ].join(' ')}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        {choice.experienceUnlockId ? (
-          <span
-            className="chip-gold"
-            title="这个选项来自你在上一幕获得的一条真实知乎经验"
-          >
-            经验解锁
-          </span>
-        ) : null}
-        {isRisk && choice.check ? (
-          /*
-            风险选项的标签。
-
-            旧文案是「D20 检定 · 专业力 DC 13」—— 它承诺了一次骰子检定，
-            但成败现在由**你的条件与这条路的需求**裁决（骰子只决定遭遇），
-            而且 `check.difficulty` 换算的是承压需求、不是那条属性。
-            两处都不再成立，所以改成**不给伪精确数字的门槛档位**：
-            玩家仍然知道「这条更难」，但不会再以为掷骰子能过关。
-          */
-          <span className="chip-gold">
-            风险选项 · {riskBandLabel(choice.check.difficulty)}
-          </span>
-        ) : (
-          <span className="chip-zhihu">稳妥 · 无门槛</span>
-        )}
-      </div>
-
-      <p className="mt-2 text-sm font-semibold text-white sm:text-[15px]">{choice.text}</p>
-      <p className="mt-1 text-xs text-slate-400">{choice.hint}</p>
-
-      <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-white/10 pt-2">
-        <span className="flex min-w-0 items-center gap-1.5">
-          {/*
-            P0-9：**经验解锁的角标不能写「剧本模拟」**。
-
-            它确实是从知乎真实经历长出来的，标成剧本模拟会造成语义冲突：
-            同一张卡上既说「来自真实经历」又说「剧本模拟」。
-            普通选项保持原样 —— 明确标注这是剧本文案，
-            我们还没有真实聚合数据，不能让它看起来像社区统计。
-          */}
-          {isExperienceUnlock ? (
-            <>
-              <span className="shrink-0 rounded border border-zhihu-500/45 bg-zhihu-500/10 px-1 py-px font-mono text-[9px] tracking-wider text-zhihu-200">
-                来自知乎真实经历
-              </span>
-              {onOpenExperienceSource ? (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(event) => {
-                    // 拦住冒泡：查看来源不该顺手把这一选项选中
-                    event.stopPropagation();
-                    onOpenExperienceSource(choice);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onOpenExperienceSource(choice);
-                    }
-                  }}
-                  className="shrink-0 cursor-pointer rounded border border-white/12 px-1 py-px font-mono text-[9px] tracking-wider text-slate-400 transition-colors duration-150 hover:border-zhihu-500/50 hover:text-zhihu-200"
-                >
-                  查看原文
-                </span>
-              ) : null}
-            </>
-          ) : (
-            <span className="shrink-0 rounded border border-white/12 px-1 py-px font-mono text-[9px] tracking-wider text-slate-500">
-              剧本模拟
-            </span>
-          )}
-          <span className="truncate text-[11px] text-slate-500">{choice.ghostEchoStat}</span>
-        </span>
-        <span
-          className={[
-            'shrink-0 text-[11px] font-semibold transition-transform duration-200 group-hover:translate-x-0.5',
-            isRisk ? 'text-amber-300' : 'text-zhihu-400',
-          ].join(' ')}
-        >
-          选择
-        </span>
-      </div>
-    </button>
-  );
-}
-
-const STAT_LABEL: Record<TargetStat, string> = {
-  san: 'SAN 心智',
-  skill: '专业力',
-  bond: '羁绊',
-};
-
-function ActTitleOverlay({ act }: { readonly act: ActCard | null }) {
-  if (!act) {
-    return null;
-  }
-
-  return (
-    <div className="pointer-events-none absolute inset-x-0 top-[16%] z-20 flex flex-col items-center px-6 text-center">
-      <p className="font-mono text-[11px] tracking-[0.4em] text-zhihu-400">
-        ACT {String(act.act).padStart(2, '0')}
-      </p>
-      <p className="gmv-act-title mt-2 text-2xl font-bold text-white sm:text-4xl">{act.title}</p>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* 推演舱                                                                      */
-/* -------------------------------------------------------------------------- */
-
 function PlayScreen() {
   const params = useSearchParams();
   const scenarioId = params.get('scenario') ?? DEFAULT_SCENARIO_ID;
@@ -1427,8 +958,8 @@ function PlayScreen() {
   /**
    * Session 模式（P0-G）：`/play?session=<id>` —— 从已编译好的世界蓝图开局。
    *
-   * 这是新主链的入口：首页 → POST /api/sessions → 澄清 → prepare-world → 这里。
-   * 没有 session 参数时走旧路径（goal / case / scenario），行为零变化。
+   * 这是新主链的唯一入口：首页 → POST /api/sessions → 澄清 → prepare-world → 这里。
+   * 没有 session 参数时不再有「旧路径」可退 —— 页面给一个要求会话链接的诚实兜底屏。
    */
   const sessionParam = params.get('session') ?? '';
   const originParam = params.get('origin') ?? DEFAULT_ORIGIN_ID;
@@ -1464,19 +995,13 @@ function PlayScreen() {
   /** Session 模式下的玩家目标：来自会话的问题，而不是 URL 参数。 */
   const effectiveGoal = sessionView?.question ?? goalParam;
 
-  const [fateOpen, setFateOpen] = React.useState(false);
-  const [inventoryOpen, setInventoryOpen] = React.useState(false);
-  const [report, setReport] = React.useState<string | null>(null);
-  const [reportSource, setReportSource] = React.useState<'model' | 'fallback' | null>(null);
-  const [reportLoading, setReportLoading] = React.useState(false);
-  const reportRequestedRef = React.useRef(false);
-  const [loadingPhase, setLoadingPhase] = React.useState<'profile' | 'turn'>('turn');
-
   /**
-   * 证据网格（方案 §5）：AI 自由推演时，把「知乎」从角标装饰变成
-   * 每一个数值的出处。约束滑杆与临界点都长在这份网格上。
+   * 证据网格（方案 §5）：把「知乎」从角标装饰变成每一个数值的出处。
+   *
+   * Session 主链里它不再有自己的屏幕（证据来源改由世界蓝图承担），
+   * 但仍作为 **AI 语料兜底** 存在：蓝图没给出本幕引用时，
+   * `meshToTurnSnippets` 提供已核验的真实路径片段。
    */
-  const [meshOpen, setMeshOpen] = React.useState(false);
   const [mesh, setMesh] = React.useState<EvidenceMesh | null>(null);
   /**
    * 「这条选择来自哪里」的来源弹层（P0-9）。
@@ -1485,16 +1010,7 @@ function PlayScreen() {
    * 从蓝图里现取，这样即使蓝图在过程中更新，弹层显示的也永远是最新事实。
    */
   const [sourceChoice, setSourceChoice] = React.useState<ScenarioChoice | null>(null);
-  /** 经验卡抽屉（§13）：新主链里它取代了遗物面板。 */
-  const [experienceOpen, setExperienceOpen] = React.useState(false);
   const [constraints, setConstraints] = React.useState<ConstraintProfile>(() => loadConstraints());
-  const [exploredPathIds, setExploredPathIds] = React.useState<readonly string[]>([]);
-  /** 运行模式（v2 §11）：由服务端真实能力决定，界面不自己拼条件。 */
-  const [health, setHealth] = React.useState<HealthView | null>(null);
-
-  /** 已认下的承诺：候选 id → 到期时间。未登录时服务端不落盘，这里为空。 */
-  const [committedMap, setCommittedMap] = React.useState<Record<string, string>>({});
-  const [committingId, setCommittingId] = React.useState<string | null>(null);
 
   const scenario = React.useMemo(() => getScenario(state.scenarioId), [state.scenarioId]);
 
@@ -1507,10 +1023,8 @@ function PlayScreen() {
   );
 
   const scene = getScene(state.sceneId);
-  const currentBeat = state.beats[state.beatIndex] ?? null;
-  const isActBeat = currentBeat?.id.startsWith('act-') ?? false;
 
-  /** 约束持久化：下次打开滑杆停在原位（约束是玩家自己的条件，不是每局重填）。 */
+  /** 约束持久化：下次打开时停在原位（约束是玩家自己的条件，不是每局重填）。 */
   React.useEffect(() => {
     saveConstraints(constraints);
     /*
@@ -1526,7 +1040,7 @@ function PlayScreen() {
    *
    * 触发条件用 `state.phase` 与 `state.turnIndex`：一次选择落地后，
    * reducer 可能已经用事件改变过条件，这里把它接回 React 状态，
-   * 让 AxisHUD 与后续裁决都看到新条件。
+   * 让后续裁决看到新条件。
    */
   React.useEffect(() => {
     const pending = nextConstraintsRef.current;
@@ -1536,31 +1050,6 @@ function PlayScreen() {
     nextConstraintsRef.current = null;
     setConstraints(pending);
   }, [state.phase, state.turnIndex]);
-
-  /** 本幕的命运事件（v3 §6）：纯函数计算，因此不需要存进 state。 */
-  const currentEvent = React.useMemo(
-    () =>
-      drawEvent({
-        seed: state.seed,
-        actIndex: state.turnIndex,
-        context: { constraints },
-        tone: fateQualityOf(
-          rollD20(createCheckRng(state.seed, `event:${state.turnIndex}`, state.turnIndex)),
-        ),
-      }),
-    [constraints, state.seed, state.turnIndex],
-  );
-
-  /** 运行模式：只拿在线/离线结论，不拿密钥。 */
-  React.useEffect(() => {
-    const controller = new AbortController();
-    void fetchHealth({ signal: controller.signal }).then((result) => {
-      if (!controller.signal.aborted) {
-        setHealth(result);
-      }
-    });
-    return () => controller.abort();
-  }, []);
 
   /**
    * Session 模式（P0-G）：拉取会话视图，装载世界蓝图与档案。
@@ -1631,10 +1120,10 @@ function PlayScreen() {
   }, [sessionParam]);
 
   /**
-   * AI 自由推演时拉一次证据网格。
+   * 证据网格 → AI 回合语料（v2 §1：知乎真正进入回合生成）。
    *
    * 只拉一次：网格是同一个目标下的稳定产物（有 `meshHash` 与 24h 服务端缓存），
-   * 逐幕重拉只会浪费配额。预置剧本不拉 —— 那是零延迟演示路线，不该引入等待。
+   * 逐幕重拉只会浪费配额。
    *
    * 带 `case` 参数时走**离线档案**（v2 §15.1 的 DEMO 路径）：
    * `/api/mesh` 直接返回已人工核验的真实快照网格，零延迟、零配额、
@@ -1660,130 +1149,12 @@ function PlayScreen() {
     return () => controller.abort();
   }, [caseParam, effectiveGoal, state.scenarioId]);
 
-  /** 各轴的最紧需求：来自所有路线的代价画像，画成滑杆上的需求刻度线。 */
-  const axisRequirements = React.useMemo(() => {
-    if (!mesh) {
-      return {};
-    }
-    const out: Partial<Record<'runway' | 'drawdown' | 'reversibility' | 'ally', number>> = {};
-    for (const path of mesh.paths) {
-      if (path.sampleSize === 0) {
-        continue;
-      }
-      for (const cap of axisCapsFor(path)) {
-        const current = out[cap.axis];
-        if (current === undefined || cap.requirement > current) {
-          out[cap.axis] = cap.requirement;
-        }
-      }
-    }
-    return out;
-  }, [mesh]);
-
-  /** 当前约束下的裁决与临界点（纯函数，零请求）。 */
-  const judgment = React.useMemo(
-    () => (mesh ? judgeMesh({ paths: mesh.paths, constraints }) : null),
-    [mesh, constraints],
-  );
-
-  /** 双牌对比也在本地算 —— 拖动滑杆时不需要任何网络往返。 */
-  const sandwich = React.useMemo(
-    () => (mesh ? sandwichLocally(mesh, constraints) : null),
-    [mesh, constraints],
-  );
-
-  /**
-   * 四维结算（方案 §9）：赢 ≠ 走完四幕。
-   * 只有拿到网格时才算 —— 没有证据的局不该给「证据覆盖」打分。
-   */
-  const clarity = React.useMemo(
-    () =>
-      mesh
-        ? clarityOf({
-            paths: mesh.paths,
-            constraints,
-            exploredPathIds,
-          })
-        : null,
-    [mesh, constraints, exploredPathIds],
-  );
-
-  /**
-   * 认下一条承诺（方案 §7.2）。
-   *
-   * 未登录时服务端返回 saved=false 且不落盘 —— 界面照常反馈「已认下」，
-   * 但会在契约区如实标注「不会被记住」。不用弹窗拦人（沿用产品的
-   * 「用损失感驱动登录，不用门槛拦人」取向）。
-   */
-  const handleCommit = React.useCallback(
-    async (candidate: CommitCandidate) => {
-      setCommittingId(candidate.id);
-      try {
-        const result = await createCommitment({
-          // 用清单条目 id 当承诺 id：撤销时能精确指回同一条
-          commitmentId: candidate.id,
-          runId: runIdFor(seed, state.scenarioId, SCENARIO_REVISION),
-          action: candidate.action,
-          timeBox: candidate.timeBox,
-          signal: candidate.signal,
-          verifyHint: candidate.verifyHint ?? '能用自己的话说清做到了什么',
-          pathId: candidate.pathId ?? null,
-        });
-        setCommittedMap((current) => ({
-          ...current,
-          [candidate.id]: result.dueAt ?? new Date(Date.now() + 7 * 86_400_000).toISOString(),
-        }));
-      } finally {
-        setCommittingId(null);
-      }
-    },
-    [seed, state.scenarioId],
-  );
-
-  const handleUncommit = React.useCallback(async (candidateId: string) => {
-    setCommittingId(candidateId);
-    try {
-      // 撤销必须真删：否则承诺会变成甩不掉的负担。
-      // 提交时用的 id 就是清单条目 id，服务端以其为 commitmentId。
-      await removeCommitmentById(candidateId);
-      setCommittedMap((current) => {
-        const next = { ...current };
-        delete next[candidateId];
-        return next;
-      });
-    } finally {
-      setCommittingId(null);
-    }
-  }, []);
-
-  /**
-   * 本回合的知乎来源。
-   *
-   * 优先用 `npm run sync:zhihu`（官方 key）落盘的真实来源 —— 带真实答主、
-   * 赞同数与抓取时间，角标显示「知乎高赞 N」；没有真数据时退回剧本文案，
-   * 角标显示「剧本模拟引用」且**不显示任何数字**。
-   */
-  const currentTurnSource = React.useMemo(() => {
-    const verified = getVerifiedSource(`${scenario.id}:t${currentTurn.turnIndex}`);
-    if (verified) {
-      return {
-        author: verified.author,
-        quote: verified.quote,
-        sourceUrl: verified.url,
-        upvotes: verified.upvotes ?? undefined,
-        status: 'verified' as const,
-        retrievedAt: verified.retrievedAt,
-      };
-    }
-    return currentTurn.zhihuBullet;
-  }, [currentTurn, scenario.id]);
-
   /* AI DM：当前回合尚无动态关卡时拉取 */
   const needsAiTurn =
     state.scenarioId === AI_DM_SCENARIO_ID &&
     state.phase === 'story' &&
     !state.overrides[state.turnIndex] &&
-    // Session 模式必须等蓝图（或确认失败）才发请求 —— 失败时按旧路径降级
+    // Session 模式必须等蓝图（或确认失败）才发请求
     (!sessionParam || sessionView !== null || sessionLoadFailed);
 
   /**
@@ -1800,17 +1171,15 @@ function PlayScreen() {
   /**
    * 本局的幕数（v2 §14 Phase 0 第 2 条：接线动态幕）。
    *
-   * 三条路径刻意不同（P0-2 新增了第一条）：
-   * - **Session 个性化推演**：幕数**必须等于编译出的世界蓝图幕数**（固定 4 幕）。
+   * 两条路径刻意不同：
+   * - **Session 个性化推演**：幕数**必须等于编译出的世界蓝图幕数**（固定四幕）。
    *   蓝图是「进入世界 → 体会代价 → 遇到反例 → 终局反思」这一段弧，
    *   它本来就只有四幕；如果让 AI 预算把它拉成 7～8 幕，
    *   **第五幕之后会一直重复 `final-reflection`** —— 体验拖沓且重复。
-   * - **预置剧本**：幕数由剧本本身决定（人工精调的四幕，每幕都有手写内容），
-   *   动态幕不该截断它；
-   * - **AI 自由推演（legacy `/play?goal=`）**：幕数由张力预算决定
-   *   （`runBudgetFor`），因此不同的出身与属性会得到不同的幕数。
+   * - **AI 自由推演兜底**：幕数由张力预算决定（`runBudgetFor`），
+   *   因此不同的出身与属性会得到不同的幕数。
    *
-   * 三者都用 `MAX_TURNS` 作为硬上限，口径只有一处。
+   * 两者都用 `MAX_TURNS` 作为硬上限，口径只有一处。
    */
   const totalActCount = React.useMemo(() => {
     /**
@@ -1818,16 +1187,13 @@ function PlayScreen() {
      *
      * 这里读的是 `sessionView.worldBlueprint.acts.length`（与 reducer 写入的
      * `state.totalActs` 同源），保证「UI 计算 / Reducer 终局判断 / DM totalTurns」
-     * 三处一致 —— 三处口径不同会让终局在第 4 幕与第 8 幕之间摇摆。
+     * 三处一致 —— 三处口径不同会让终局在真实幕数与预算幕数之间摇摆。
      */
     const blueprintActs = sessionView?.worldBlueprint?.acts.length ?? 0;
     if (blueprintActs > 0) {
       return blueprintActs;
     }
 
-    if (state.scenarioId !== AI_DM_SCENARIO_ID) {
-      return scenario.turns.length;
-    }
     const origin = getOrigin(state.originId);
     return runBudgetFor({
       originId: origin.id,
@@ -1840,27 +1206,16 @@ function PlayScreen() {
     });
   }, [
     constraints,
-    scenario.turns.length,
     sessionView?.worldBlueprint,
     state.originId,
-    state.scenarioId,
   ]);
-
-  /** 本局开局的幕状态：用于展示余量与危机判定（纯函数，可复现）。 */
-  const runAct = React.useMemo(
-    () => createRunActState(getOrigin(state.originId).id),
-    [state.originId],
-  );
 
   /**
    * 蓝图证据 → DM 语料（P0-11）。
    *
-   * Session 模式下，本幕要引用的真实经验由世界蓝图编译好
-   * （`worldContextForTurn` 切出当前幕的 `sourceFacts`）。这份证据
-   * **优先于**旧证据网格：网格是 legacy 资产，蓝图才是新主链的权威来源。
-   * 两者同时喂给模型，会让它把「演算出来的走法」和「真人原文」混着引用。
-   *
-   * 没有蓝图（legacy `/play?goal=`）时返回空数组，调用处回落到网格片段。
+   * 本幕要引用的真实经验由世界蓝图编译好（`worldContextForTurn` 切出当前幕的
+   * `sourceFacts`），它是权威来源；没有时调用处回落到证据网格片段
+   * （网格的 `sourceFacts` 也是真人原文，只是没有幕次归属）。
    */
   const blueprintSnippets = React.useMemo((): readonly DmZhihuSnippet[] => {
     const blueprint = sessionView?.worldBlueprint;
@@ -1896,15 +1251,6 @@ function PlayScreen() {
   const snapshotRef = React.useRef({ state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, blueprintSnippets, sessionView, usedUnlockIds });
   snapshotRef.current = { state, goalParam: effectiveGoal, totalTurns: totalActCount, turnSnippets, blueprintSnippets, sessionView, usedUnlockIds };
 
-  /**
-   * 旧证据网格的入口（P0-11）。
-   *
-   * Session 模式下**不暴露**它：新主链的证据是「世界蓝图 + 经验解锁的
-   * 来源弹层」，此时再让玩家看到证据网格 / 现实轴 / D20，只会把
-   * 「这些经验真的改变了游戏」这件事淹掉。
-   *
-   * 网格代码一行未删 —— legacy 推演与蓝图加载失败时的降级路径仍然用它。
-   */
   /**
    * 本局**真正用到**的经验卡（§13）：只列被某一幕或某个解锁引用过的经历，
    * 而不是把检索到的所有经历都摊给玩家看。
@@ -1973,17 +1319,12 @@ function PlayScreen() {
     return blueprint.unlocks.filter((unlock) => used.has(unlock.id)).map((unlock) => unlock.choice.text);
   }, [sessionView?.worldBlueprint, usedUnlockIds]);
 
-  const evidenceDrawerEntry = React.useMemo(
-    () => (mesh && !sessionView?.worldBlueprint ? { onOpenEvidence: () => setMeshOpen(true) } : {}),
-    [mesh, sessionView?.worldBlueprint],
-  );
   /**
    * 记忆是否已加载完成。
    *
    * 这个门闩是必需的：`MEMORY_ECHO` 与 AI DM 拉取在同一次渲染里都会触发，
-   * 若不等待，AI 请求读到的 `state.memory` 还是 null —— 结果就是
-   * 「前世遗念」卡牌装上了（开局时同步读取），但 memoryBlock / personaTags
-   * 却是空的，AI 收不到「老友开场」的指令。
+   * 若不等待，AI 请求读到的 `state.memory` 还是 null ——
+   * memoryBlock / personaTags 就是空的，AI 收不到「老友开场」的指令。
    */
   const memoryReady = state.memoryEchoed;
 
@@ -2012,7 +1353,6 @@ function PlayScreen() {
       }
 
       if (!profile) {
-        setLoadingPhase('profile');
         const resolved = await fetchProfile(goal, { signal: controller.signal });
 
         if (controller.signal.aborted) {
@@ -2028,9 +1368,6 @@ function PlayScreen() {
           });
         }
       }
-
-      // 第二步：带着处境档案生成这一幕
-      setLoadingPhase('turn');
 
       const history = current.log
         .map((line) => /^第 (\d+) 幕：(.*)$/.exec(line))
@@ -2132,16 +1469,6 @@ function PlayScreen() {
     return () => controller.abort();
   }, [needsAiTurn, memoryReady, state.turnIndex]);
 
-  /* 飘字自动清理 */
-  React.useEffect(() => {
-    if (state.floats.length === 0) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => dispatch({ type: 'CLEAR_FLOATS' }), 1500);
-    return () => window.clearTimeout(timer);
-  }, [state.floats]);
-
   /* 跨周期记忆：登录后从服务端拉取，有上一局记录时插入「记忆残响」 */
   React.useEffect(() => {
     if (state.memoryEchoed) {
@@ -2220,16 +1547,21 @@ function PlayScreen() {
     }
 
     void saveRun(record).then((result) => {
-      if (result.persisted) {
-        dispatch({ type: 'SET_RUN_SAVED', totalRuns: result.totalRuns });
-        return;
-      }
-      // 没落盘就如实说 ── 宁可告诉玩家「这局没记住」，也不能谎报成功。
-      dispatch({ type: 'SET_RUN_SAVE_FAILED', reason: result.reason });
+      /*
+        落盘结果只进日志。
+
+        旧的 EndgamePass 会据此显示「已存入你的宇宙 / 没能写入」，
+        而那个结算屏已随旧 RPG 一起删除；新终局（SessionEndgame）不给判定、
+        也不报存取状态，所以这里不再有对应的界面状态可写。
+      */
+      console.info(
+        result.persisted
+          ? `[memory] 本局已存入你的宇宙（累计第 ${result.totalRuns} 局）`
+          : `[memory] 本局未能写入你的宇宙（${result.reason}）`,
+      );
     });
   }, [
     effectiveGoal,
-    scenario.turns.length,
     state.log,
     state.memoryAuthenticated,
     state.originId,
@@ -2238,74 +1570,7 @@ function PlayScreen() {
     state.phase,
     state.sanHistory,
     state.status,
-    state.turnIndex,
-  ]);
-
-  /* 终局第二步：封存遗言 —— 玩家点按钮才写，且只有真落盘才显示「已封存」 */
-  const handleSealFinalWords = React.useCallback(() => {
-    if (!state.memoryAuthenticated || state.sealState === 'sealing') {
-      return;
-    }
-    if (state.finalWords.trim().length === 0) {
-      return;
-    }
-
-    dispatch({ type: 'SET_SEAL_STATE', state: 'sealing' });
-
-    void sealFinalWords(state.finalWords).then((result) => {
-      dispatch({ type: 'SET_SEAL_STATE', state: result.persisted ? 'sealed' : 'failed' });
-    });
-  }, [state.finalWords, state.memoryAuthenticated, state.sealState]);
-
-  /* 终局：请求《专属避坑指南》 */
-  React.useEffect(() => {
-    if (state.phase !== 'ended' || reportRequestedRef.current) {
-      return;
-    }
-
-    reportRequestedRef.current = true;
-    setReportLoading(true);
-
-    const choices = state.log
-      .map((line) => /^第 (\d+) 幕：(.*)$/.exec(line))
-      .filter((match): match is RegExpExecArray => match !== null)
-      .map((match) => ({ act: Number(match[1]), text: match[2] }));
-
-    const payload = {
-      goal: effectiveGoal,
-      profile: state.profile,
-      analysis: state.profileAnalysis,
-      originName: getOrigin(state.originId).name,
-      success: state.status === 'OVER_SUCCESS',
-      survivedActs: Math.min(state.turnIndex, state.totalActs),
-      totalActs: state.totalActs,
-      stats: state.stats,
-      choices,
-      relics: state.inventory
-        .filter((slot): slot is NonNullable<typeof slot> => slot !== null)
-        .map((slot) => slot.relic.name),
-      sanHistory: state.sanHistory,
-    };
-
-    fetchRunReport(payload)
-      .then((result) => {
-        if (result) {
-          setReport(result.text);
-          setReportSource(result.source);
-        }
-      })
-      .finally(() => setReportLoading(false));
-  }, [
-    effectiveGoal,
-    scenario.turns.length,
-    state.inventory,
-    state.log,
-    state.originId,
-    state.phase,
-    state.profile,
-    state.sanHistory,
-    state.stats,
-    state.status,
+    state.totalActs,
     state.turnIndex,
   ]);
 
@@ -2322,103 +1587,14 @@ function PlayScreen() {
     [currentTurn],
   );
 
-  const handleSelectNode = React.useCallback(
-    (nodeId: string) => {
-      const choice = currentTurn.choices.find(
-        (candidate) => nodeId === `n${currentTurn.turnIndex}-${candidate.id}`,
-      );
-
-      if (choice) {
-        setFateOpen(false);
-        handleSelect(choice);
-      }
-    },
-    [currentTurn, handleSelect],
-  );
-
-  const graph: FateTreeGraph = React.useMemo(
-    () => ({ nodes: state.nodes, edges: state.edges }),
-    [state.nodes, state.edges],
-  );
-
-  /** 本局走过的选择文案（按幕顺序），清单与画像共用同一份口径。 */
-  const runChoiceTexts = React.useMemo(
-    () =>
-      state.log
-        .map((line) => /^第 (\d+) 幕：(.*)$/.exec(line))
-        .filter((match): match is RegExpExecArray => match !== null)
-        .map((match) => match[2]),
-    [state.log],
-  );
-
-  /**
-   * 清单可用的来源池。
-   *
-   * 已认证来源（官方 key 同步落盘）标 `verified`；其余是剧本文案，
-   * 只能进 `scripted` —— 清单构建器据此决定能不能标「站内来源」。
-   */
-  const checklistSources = React.useMemo(
-    () =>
-      scenario.turns
-        .map((turn) => {
-          const bullet = turn.zhihuBullet;
-          if (!bullet) {
-            return null;
-          }
-          const id = `${scenario.id}:t${turn.turnIndex}`;
-          const verified = getVerifiedSource(id);
-          if (verified) {
-            return {
-              id,
-              quote: verified.quote,
-              status: 'verified' as const,
-              url: verified.url,
-              author: verified.author,
-              upvotes: verified.upvotes,
-              retrievedAt: verified.retrievedAt,
-            };
-          }
-          return { id, quote: bullet.quote, status: 'scripted' as const };
-        })
-        .filter((source): source is NonNullable<typeof source> => source !== null),
-    [scenario],
-  );
-
-  const checklist = React.useMemo(
-    () =>
-      buildRealityChecklist({
-        goal: effectiveGoal,
-        choices: runChoiceTexts,
-        outcome: state.status === 'OVER_SUCCESS' ? 'success' : 'failure',
-        bossIssues: state.boss?.issues ?? [],
-        sources: checklistSources,
-      }),
-    [checklistSources, effectiveGoal, runChoiceTexts, state.boss?.issues, state.status],
-  );
-
-  const relicSummaries = React.useMemo(
-    () =>
-      state.inventory
-        .filter((slot): slot is NonNullable<typeof slot> => slot !== null)
-        .map((slot) => ({ name: slot.relic.name, kind: slot.relic.kind })),
-    [state.inventory],
-  );
-
-  const equippedCount = relicSummaries.length;
-  const saltPoints = state.stats.skill * 2 + state.stats.bond;
-  const sanCritical = state.phase === 'critical' || (state.stats.san < 30 && state.phase !== 'ended');
-  const rescueAvailable = state.phase !== 'ended' && state.stats.bond >= 30 && sanCritical;
   const isEnded = state.phase === 'ended';
-
-  /** 最后一幕（legacy 路径用它挂终端 Boss）。 */
-  const isFinalAct = currentTurn.turnIndex >= state.totalActs;
 
   /**
    * 是否跑在**新主链**。
    *
    * 判据是 URL 上的 `?session=` —— 而不是「蓝图是否已到位」。
    *
-   * 为什么必须改：蓝图到位**之前**有两个状态需要新主链自己表达：
+   * 为什么必须这样：蓝图到位**之前**有两个状态需要新主链自己表达：
    *
    * ```text
    * 世界还在编译   → 语义 loading（§二十六）
@@ -2427,8 +1603,6 @@ function PlayScreen() {
    *
    * 旧写法用蓝图当判据，于是这两种状态都会「悄悄退回旧 RPG 整屏」——
    * 玩家会在加载失败时突然看到属性条、骰子和 Boss。那不是降级，是串台。
-   *
-   * legacy 路径（`/play?goal=` 等）不带 `session` 参数，因此**一行未变**。
    */
   const isSessionMode = sessionParam.length > 0;
 
@@ -2436,123 +1610,20 @@ function PlayScreen() {
    * 新主链里 SAN 归零**不会**把玩家卡住。
    *
    * 旧机制下 SAN 归零会进入 critical 阶段，界面给一个「消耗 30 羁绊呼叫大 V」
-   * 的救场面板 —— 而新主链把属性与救场都撤出了主路径（§3/§17）。若只藏面板
-   * 不处理状态，玩家会停在一个没有任何按钮的死界面上。
+   * 的救场面板 —— 新主链把属性与救场都撤出了主路径（§3/§17），救场面板
+   * 也已随旧 RPG 一并删除。若只藏面板不处理状态，玩家会停在一个没有任何
+   * 按钮的死界面上。
    *
    * 处理方式：新主链不展示属性，也就不该被属性判死 —— 直接把这一局收束到终局，
-   * 「问题重写 + 现实支线」照常出现。属性对 legacy 路径的行为完全不变。
+   * 「问题重写 + 现实支线」照常出现。
+   * （`playWorldIndexing.test.ts` 把这两条源码契约钉死，本文件不派发 `RESCUE`，
+   * 因此 `RunAction` 里也不再有它。）
    */
   React.useEffect(() => {
     if (isSessionMode && state.phase === 'critical') {
-      dispatch({ type: 'GIVE_UP' });
+      dispatch({ type: 'END_SESSION' });
     }
   }, [isSessionMode, state.phase]);
-
-  /**
-   * 是否用「终端输入 + 判卷」收尾（产品减法方案 §20 之后只剩 legacy 路径）。
-   *
-   * 新主链最后一幕是**反例幕**，玩家必须能正常做选择；终局也不再判卷，
-   * 而是把问题重写后交还现实（见 SessionEndgame）。
-   */
-  const usesTerminalEnding = isFinalAct && !isSessionMode;
-
-  /**
-   * 终端 Boss 的提交状态。
-   *
-   * 判卷由服务端完成（规则引擎裁决），所以失败也要如实告知并可重试，
-   * 绝不因为一次网络抖动把玩家的终局吞掉。
-   */
-  const [bossSubmitting, setBossSubmitting] = React.useState(false);
-  const [bossError, setBossError] = React.useState<string | null>(null);
-
-  const runId = React.useMemo(
-    () => runIdFor(state.seed, state.scenarioId, SCENARIO_REVISION),
-    [state.scenarioId, state.seed],
-  );
-
-  const handleBossSubmit = React.useCallback(
-    (answer: string) => {
-      if (bossSubmitting || state.phase !== 'choices') {
-        return;
-      }
-
-      // 终端结局走「风险选项」的结算分支（有 check 的那个；没有就取第一个）
-      const choice = currentTurn.choices.find((item) => item.check) ?? currentTurn.choices[0];
-      if (!choice) {
-        return;
-      }
-
-      setBossSubmitting(true);
-      setBossError(null);
-
-      // 本局给出的知乎片段：已认证来源优先，否则用剧本文案（角标会标「剧本模拟」）
-      const verifiedSources = currentTurn.zhihuBullet
-        ? [
-            {
-              id: `${scenario.id}:t${currentTurn.turnIndex}`,
-              quote: currentTurn.zhihuBullet.quote,
-            },
-          ]
-        : [];
-
-      void submitBossAnswer({
-        runId,
-        seed: state.seed,
-        scenarioRevision: SCENARIO_REVISION,
-        turnIndex: currentTurn.turnIndex,
-        answer,
-        world: state.world,
-        sources: verifiedSources,
-      }).then((result) => {
-        setBossSubmitting(false);
-
-        if (!result.ok) {
-          setBossError(result.reason);
-          return;
-        }
-
-        dispatch({ type: 'RESOLVE_BOSS', turn: currentTurn, choice, verdict: result.verdict });
-      });
-    },
-    [bossSubmitting, currentTurn, runId, scenario.id, state.phase, state.seed, state.world],
-  );
-
-  /** 放弃提交：按稳妥选项结算（不走判卷，也不假装玩家写了方案）。 */
-  const handleBossSkip = React.useCallback(() => {
-    if (bossSubmitting || state.phase !== 'choices') {
-      return;
-    }
-    const choice = currentTurn.choices.find((item) => !item.check) ?? currentTurn.choices[0];
-    if (choice) {
-      dispatch({ type: 'CHOOSE', choice, turn: currentTurn });
-    }
-  }, [bossSubmitting, currentTurn, state.phase]);
-
-  /**
-   * 本局的决策画像。
-   *
-   * 注意不能用 state.memory.personalityTags —— 那是**上一局**留下的，
-   * 拿它显示在本次结算页上会把「前世」和「今生」混起来。
-   * 这里用本局的 log 与 SAN 曲线实时推导，口径与写回记忆时完全一致。
-   */
-  const currentArchetypes = React.useMemo(() => {
-    if (!isEnded) {
-      return [];
-    }
-
-    const choices = state.log
-      .map((line) => /^第 (\d+) 幕：(.*)$/.exec(line))
-      .filter((match): match is RegExpExecArray => match !== null)
-      .map((match) => match[2]);
-
-    return deriveArchetypes({
-      choices,
-      survived: state.status === 'OVER_SUCCESS',
-      lastAct: Math.min(state.turnIndex, state.totalActs),
-      totalActs: state.totalActs,
-      sanHistory: state.sanHistory,
-    });
-  }, [isEnded, scenario.turns.length, state.log, state.sanHistory, state.status, state.turnIndex]);
 
   /**
    * 新主链的推演屏视图模型（Agent 03 §七）。
@@ -2700,9 +1771,11 @@ function PlayScreen() {
    * 新主链走自己的屏（Agent 03 §三十）：只渲染
    * 幕 / 场景 / 叙事 / 选项 / 借来的经验 / 碰撞 / 未知 / 终局。
    *
-   * 旧的整屏（含遗物、骰子、Boss、命途树、证据网格）在下面一行不改地保留给 legacy。
    * 屏幕拿到的是**窄接口 + id 回调**：它看不见 stats、inventory、dice，也没有
    * 任何办法派发旧 action。
+   *
+   * 旧的整屏（GameHud / DiceModal / BossTerminal / FateTree / 遗物抽屉 /
+   * 证据网格 / 现实轴 / 舞台 / 世界线折叠 / 终局判卷）已随旧 RPG 子系统一并删除。
    */
   if (isSessionMode && sessionPlayView) {
     const findChoice = (choiceId: string) =>
@@ -2747,542 +1820,30 @@ function PlayScreen() {
     );
   }
 
+  /*
+    Session 模式但视图还没就绪（蓝图正在编译 / 没生成出来）时，
+    `sessionPlayView` 是 `sessionPlaceholderView(...)`，上面那一支会照常渲染
+    它自己的 loading / 失败屏 —— 因此这里只剩**没有 `?session=`** 这一种情况。
+
+    旧 RPG 整屏已经删除，`/play` 不再有第二条路可走。此时给一个诚实的兜底屏：
+    说清「这一屏需要从会话进入」，并给出回首页的入口 —— 不留白屏。
+  */
   return (
-    <main className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-ink-950">
-      {/*
-        新主链不显示 HUD（产品减法方案 §3 / §17 / §42）：属性条、遗物、命途、
-        骰面、引擎状态都属于旧机制。这里只留一行幕次进度 —— 玩家需要知道
-        「我在第几幕」，不需要知道 SAN 是多少。
-      */}
-      {!isSessionMode ? (
-        <GameHud
-          stats={state.stats}
-          turnIndex={state.turnIndex}
-          totalTurns={state.totalActs}
-          seed={state.seed}
-          sceneName={scene.name}
-          timeLabel={scene.timeLabel}
-          dmSource={state.dmSource}
-          equippedCount={equippedCount}
-          pendingCount={state.pendingActivated.length}
-          hitKey={state.hitKey}
-          onOpenFate={() => setFateOpen(true)}
-          onOpenInventory={() => setInventoryOpen(true)}
-          {...evidenceDrawerEntry}
-          onQuit={() => {
-            window.location.href = '/';
-          }}
-        />
-      ) : (
-        <div className="px-3 pt-3 sm:px-5">
-          <div className="mx-auto flex w-full max-w-[920px] items-center justify-between gap-3">
-            <span className="font-mono text-[10px] tracking-[0.25em] text-slate-500">
-              第 {currentTurn.turnIndex} / {state.totalActs} 幕
-            </span>
-            <span className="flex items-center gap-3">
-              {sessionExperienceCards.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setExperienceOpen(true)}
-                  className="font-mono text-[10px] text-zhihu-300 transition-colors duration-150 hover:text-zhihu-100"
-                >
-                  借来的经验 · {sessionExperienceCards.length}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = '/';
-                }}
-                className="font-mono text-[10px] text-slate-600 transition-colors duration-150 hover:text-slate-300"
-              >
-                换一个问题
-              </button>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/*
-        v3 §11 布局的第一层：Worldline Rail。
-        它是玩家对「我走到哪了、这条线还站得住吗」的第一眼答案，
-        因此放在 HUD 正下方、舞台之上。
-      */}
-      {!isEnded ? (
-        <div className="px-3 pt-1 sm:px-5">
-          <div className="mx-auto w-full max-w-[920px] rounded-2xl border border-white/10 bg-ink-900/60 px-3.5 py-2">
-            <WorldlineRail
-              totalActs={state.totalActs}
-              currentAct={state.turnIndex}
-              state={worldlineStateOf(
-                judgment?.critical ? judgment.critical.verdict : { kind: 'unknown' },
-              )}
-              unstableFrom={judgment?.critical?.verdict.kind === 'breached' ? state.turnIndex : null}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {/* 隐藏信号条：只给定性告警，不露后台数值（旧机制，新主链不展示） */}
-      {!isEnded && !isSessionMode ? (
-        <div className="px-3 pt-1.5 sm:px-5">
-          <HiddenSignalStrip
-            world={state.world}
-            extra={[...worldModelBrief(state.model).mental, ...worldModelBrief(state.model).anchor]}
-            className="mx-auto w-full max-w-[920px]"
-          />
-        </div>
-      ) : null}
-
-      {/*
-        舞台只占一个有上下限的视口切片，后续内容交给页面自然滚动。
-
-        这里不能再用 `flex-1 + min-h-[200px]` 配合根节点 `overflow-hidden`：
-        矮窗口下 HUD、世界线与舞台会先吃光高度，而不允许收缩的对话框会被
-        直接裁出视口。页面滚动比嵌套滚动更容易发现，也保证任意数量的选项可达。
-      */}
-      <div
-        key={`shake-${state.shakeKey}`}
-        className={[
-          'relative',
-          isEnded
-            ? 'h-[clamp(120px,22vh,240px)] shrink-0'
-            : 'h-[clamp(180px,30vh,320px)] shrink-0',
-          state.shakeKey > 0 ? 'animate-[glitch_0.32s_steps(2,end)]' : '',
-        ].join(' ')}
-      >
-        <SceneStage sceneId={state.sceneId} />
-        <PortraitLayer stage={state.stage} speaker={state.speaker} />
-        {isActBeat && currentTurn.act ? <ActTitleOverlay act={currentTurn.act} /> : null}
-        <DamageFloat items={state.floats} />
-
-        {sanCritical && !isSessionMode ? (
-          <div aria-hidden="true" className="alert-vignette animate-alert-pulse" />
-        ) : null}
+    <main
+      id="main-content"
+      className="sil-viewport relative flex flex-col items-center justify-center px-5 py-16 sm:px-8"
+    >
+      <div className="sil-panel w-full max-w-[520px] px-6 py-8 text-center">
+        <p className="sil-label">Session Required</p>
+        <h1 className="sil-title sil-title--act mt-4">这一屏需要一个会话</h1>
+        <p className="sil-prose mt-4 text-[14px]">
+          推演从你的问题开始 —— 先在首页写下一个真正困扰你的问题，
+          系统会编译出这一局的世界，再把你送到这里。
+        </p>
+        <Link href="/" className="sil-btn mt-7 inline-flex">
+          回首页开始一局
+        </Link>
       </div>
-
-      {/* 对话框 / 抉择 / 结算：使用页面唯一滚动轴，避免内容被裁或出现双滚动区。 */}
-      <div className="relative z-20 flex flex-col">
-        {isEnded ? (
-          <div className="px-3 pb-5 sm:px-5">
-            <div className="mx-auto w-full max-w-[920px]">
-              {isSessionMode ? (
-                <SessionEndgame
-                  originalQuestion={sessionView?.question ?? effectiveGoal}
-                  keyUnknown={sessionView?.worldBlueprint?.keyUnknown?.label ?? null}
-                  experiment={sessionView?.experiment ?? null}
-                  steps={sessionSteps}
-                  highlights={realityQuest?.seen ?? []}
-                  unlockedActions={sessionCards}
-                />
-              ) : null}
-
-              {!isSessionMode ? (
-              <EndgamePass
-                seed={state.seed}
-                scenarioTitle={scenario.title}
-                stats={state.stats}
-                survivedTurns={Math.min(state.turnIndex, state.totalActs)}
-                totalTurns={state.totalActs}
-                saltPoints={saltPoints}
-                relics={relicSummaries}
-                success={state.status === 'OVER_SUCCESS'}
-                sanHistory={state.sanHistory}
-                archetypes={currentArchetypes}
-                finalWords={state.finalWords}
-                onFinalWordsChange={(words) => dispatch({ type: 'SET_FINAL_WORDS', words })}
-                onSealFinalWords={handleSealFinalWords}
-                sealState={state.sealState}
-                memoryStatus={
-                  !state.memoryAuthenticated
-                    ? 'guest'
-                    : state.runSaved
-                      ? 'saved'
-                      : state.saveFailureReason
-                        ? 'failed'
-                        : 'pending'
-                }
-                saveFailureReason={state.saveFailureReason}
-                scenarioId={state.scenarioId}
-                savedTotalRuns={state.savedTotalRuns}
-                onRestart={() => {
-                  reportRequestedRef.current = false;
-                  setReport(null);
-                  setReportSource(null);
-                  dispatch({ type: 'RESTART', seed: createSeed() });
-                }}
-              />
-              ) : null}
-
-              {/*
-                P1-2：终局第一屏是**现实交接**，不是报告。
-                玩家带走的问题（keyUnknown）在这一屏被明确交还给他，
-                并附上一条有停止信号的现实支线。
-              */}
-
-              {/*
-                P1-2：旧的「生成报告 → 一堆指标」折叠保留。
-                它们回答的是「这一局玩得怎么样」，不是「你现在该验证什么」——
-                放在首屏会把真正该带走的问题淹掉；删掉又少了对结局的解释。
-              */}
-              {!isSessionMode ? (
-              <details className="group mt-4">
-                <summary className="cursor-pointer list-none rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-2 text-[11px] font-semibold text-slate-400 transition-colors duration-150 hover:border-white/20 hover:text-slate-200">
-                  查看完整报告（结局判卷 · 四维结算 · 赛博契约）
-                </summary>
-                <div className="mt-3">
-                  <EndgameReport text={report} loading={reportLoading} source={reportSource} />
-
-                  {/* 终局要交代清楚「为什么是这个结局」：判卷分解 + 可执行的下一步 */}
-                  {state.boss ? <BossVerdictPanel verdict={state.boss} className="mt-4" /> : null}
-
-              <RealityChecklist
-                items={checklist.items}
-                hash={checklist.hash}
-                className="mt-4"
-              />
-
-              {/*
-                四维结算（方案 §9）：结算的不是「走了几幕」，而是
-                「你对这个决定的理解深度」。没有证据网格时不显示 ——
-                没有证据的局不该给「证据覆盖」打分。
-              */}
-              {clarity ? <ClarityRadar score={clarity} className="mt-4" /> : null}
-
-              {/*
-                赛博契约（方案 §7.2）：把建议变成可回收的承诺。
-                勾下之后七天后回来问结果，结果会回灌下一局的约束建议。
-              */}
-              <CommitPicker
-                className="mt-4"
-                authenticated={state.memory !== null}
-                committed={committedMap}
-                pendingId={committingId}
-                candidates={checklist.items.map((item) => ({
-                  id: item.id,
-                  action: item.action,
-                  timeBox: item.timeBox,
-                  signal: item.verifySignal,
-                  pathId: judgment?.critical?.pathId ?? null,
-                }))}
-                onSubmit={handleCommit}
-                onRemove={handleUncommit}
-              />
-                </div>
-              </details>
-              ) : null}
-            </div>
-          </div>
-        ) : state.dmLoading ? (
-          <div className="px-3 pb-4 sm:px-5">
-            <div className="mx-auto w-full max-w-[920px]">
-              <NeuralLoader phase={loadingPhase} />
-            </div>
-          </div>
-        ) : (
-          <div>
-            <DialogueBox
-              speakerId={state.speaker}
-              text={state.dialogueText}
-              mood={state.mood}
-              danger={state.phase === 'checking' || state.mood === 'panic'}
-              unstable={state.stats.san < 30 && state.phase !== 'outcome'}
-              canAdvance={state.phase === 'story' || state.phase === 'outcome'}
-              onAdvance={() =>
-                dispatch({ type: state.phase === 'outcome' ? 'ADVANCE_ACT' : 'ADVANCE_BEAT' })
-              }
-              hint={state.phase === 'outcome' ? '继续下一幕' : '点击继续'}
-              source={<SourceBadge source={currentTurnSource} />}
-            >
-            {state.phase === 'choices' ? (
-              usesTerminalEnding ? (
-                /* legacy：最后一幕隐藏普通选项，改用终端 —— 结局取决于玩家自己写下的方案 */
-                <BossTerminal
-                  question={`${currentTurn.title}：${currentTurn.storyText ?? ''}`.slice(0, 160)}
-                  minLength={BOSS_ANSWER_MIN}
-                  maxLength={BOSS_ANSWER_MAX}
-                  submitting={bossSubmitting}
-                  error={bossError}
-                  onSubmit={handleBossSubmit}
-                  onSkip={handleBossSkip}
-                />
-              ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {currentTurn.choices.map((choice) => (
-                    <ChoiceCard
-                      key={choice.id}
-                      choice={choice}
-                      onSelect={handleSelect}
-                      onOpenExperienceSource={setSourceChoice}
-                    />
-                  ))}
-                </div>
-              )
-            ) : null}
-
-            {state.phase === 'outcome' ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="font-mono text-[11px] text-slate-400">
-                  <span
-                    className={
-                      state.lastCheck?.outcome === 'failure' ? 'text-rose-300' : 'text-amber-300'
-                    }
-                  >
-                    {state.outcomeTitle}
-                  </span>
-                  {state.lastCheck?.critical === 'critical-success' ? ' · 天然 20' : ''}
-                  {state.lastCheck?.critical === 'critical-failure' ? ' · 天然 1' : ''}
-                  <span className="mx-2 text-slate-600">|</span>
-                  {state.outcomeDetail}
-                </p>
-
-                {/* 判卷分解：把「为什么是这个结局」摊开，避免黑箱判卷感（旧机制） */}
-                {state.boss && !isSessionMode ? (
-                  <BossVerdictPanel verdict={state.boss} className="w-full" />
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'ADVANCE_ACT' })}
-                  className="btn-primary"
-                >
-                  继续下一幕
-                  <span aria-hidden="true">▼</span>
-                </button>
-              </div>
-            ) : null}
-
-            {state.phase === 'critical' && !isSessionMode ? (
-              <div className="rounded-2xl border border-relic-danger/45 bg-relic-danger/[0.07] p-4">
-                <p className="font-mono text-[11px] tracking-widest text-rose-400">SAN CRITICAL</p>
-                <h3 className="mt-1 text-lg font-black text-rose-300">心智即将归零</h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
-                  再撑不住就真的结束了。刘看山还能帮你喊一次人——消耗 30 点羁绊，强行锁血到 SAN 20。
-                </p>
-
-                <div className="mt-3.5 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'RESCUE' })}
-                    disabled={state.stats.bond < 30}
-                    className="arcade-btn bg-relic-danger text-white disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    消耗 30 羁绊呼叫救场
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'GIVE_UP' })}
-                    className="btn-ghost"
-                  >
-                    接受暴毙
-                  </button>
-                </div>
-              </div>
-            ) : null}
-            </DialogueBox>
-
-            {/* 世界线折叠：选择生效后短暂展示「走过的一条 + 未走的幽灵线」 */}
-            {state.fold && (state.phase === 'outcome' || state.phase === 'checking' || state.phase === 'critical') ? (
-              <div className="px-3 pb-3 sm:px-5">
-                <WorldlineFold
-                  act={state.fold.act}
-                  chosen={{ id: state.fold.chosenId, text: state.fold.chosenText }}
-                  ghosts={state.fold.ghosts}
-                  className="mx-auto w-full max-w-[920px]"
-                />
-              </div>
-            ) : null}
-          </div>
-        )}
-      </div>
-
-      {isSessionMode ? (
-        <Drawer
-          open={experienceOpen}
-          title="借来的经验"
-          subtitle="别人的真实经历，不是数值加成"
-          onClose={() => setExperienceOpen(false)}
-        >
-          <ExperienceCardPanel cards={sessionExperienceCards} titles={sessionCardTitles} />
-        </Drawer>
-      ) : null}
-
-      {/* 抽屉：命途 / 遗物（旧机制，新主链不进入） */}
-      {!isSessionMode ? (
-      <Drawer
-        open={fateOpen}
-        title="命途"
-        subtitle="你走过的每一个岔路，都在这张图上"
-        onClose={() => setFateOpen(false)}
-      >
-        <FateTree
-          graph={graph}
-          totalTurns={state.totalActs}
-          onSelectNode={state.phase === 'choices' ? handleSelectNode : undefined}
-        />
-      </Drawer>
-
-      ) : null}
-
-      {!isSessionMode ? (
-      <Drawer
-        open={inventoryOpen}
-        title="知乎遗物"
-        subtitle="三个槽位，装得下的比你想象中少"
-        onClose={() => setInventoryOpen(false)}
-      >
-        <InventoryBar
-          inventory={state.inventory}
-          onUseRelic={(relicId) => dispatch({ type: 'USE_RELIC', relicId })}
-          disabled={state.phase !== 'choices' && state.phase !== 'story'}
-        />
-
-        {rescueAvailable ? (
-          <button
-            type="button"
-            onClick={() => {
-              setInventoryOpen(false);
-              dispatch({ type: 'RESCUE' });
-            }}
-            className="mt-4 w-full rounded-xl border border-relic-danger/55 bg-relic-danger/12 px-3 py-2.5 text-xs font-bold text-rose-200 transition-colors duration-150 hover:bg-relic-danger/22"
-          >
-            消耗 30 羁绊 · 呼叫知乎大 V 救场
-          </button>
-        ) : null}
-      </Drawer>
-      ) : null}
-
-      {/*
-        证据网格抽屉：AI 自由推演时，这里能看到「每一个数值的出处」。
-        方案 §5 的落点 —— 知乎不再是终局清单里的装饰，而是当前这一幕的依据。
-      */}
-      <Drawer
-        open={meshOpen}
-        title="证据网格"
-        subtitle="这些数值不是 AI 写的，是真人经历算出来的"
-        onClose={() => setMeshOpen(false)}
-      >
-        {mesh ? (
-          <div className="flex flex-col gap-4">
-            {/* 运行模式：路演时只用这三个灯证明「不是现场粘 Key」 */}
-            <EngineStatusBar health={health} compact />
-
-            {/*
-              v3 §6：本幕的命运遭遇。
-              放在四轴上方是有意的 —— 玩家先看到「我遇到了什么」，
-              再看到「因此我的条件变成了什么」。
-            */}
-            <EventCard drawn={currentEvent} />
-
-            {/* 常驻四轴（v2 §5.3 / §16）：让玩家 30 秒内看懂自己被什么约束着 */}
-            <AxisHUD
-              constraints={constraints}
-              requirements={axisRequirements}
-              pressureLabel={actPressureLabel(runAct)}
-            />
-
-            <EvidenceMeshView
-              mesh={mesh}
-              constraints={constraints}
-              onTraceCard={() => {
-                // 展开过前人经历 = 玩家真的看过证据，进入四维结算的「证据覆盖」
-              }}
-              onPickPath={(pathId) => {
-                setExploredPathIds((current) =>
-                  current.includes(pathId) ? current : [...current, pathId],
-                );
-              }}
-            />
-
-            <section className="panel p-3.5">
-              <h3 className="text-sm font-semibold text-slate-200">你的条件</h3>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">
-                这些不是难度旋钮，是你真实的处境。拖动它们，上面的裁决会立刻重算 —— 不需要联网。
-              </p>
-              <div className="mt-3">
-                <AxisSlider
-                  constraints={constraints}
-                  onChange={setConstraints}
-                  requirements={axisRequirements}
-                />
-              </div>
-            </section>
-
-            {judgment?.critical ? (
-              <CriticalPointCard
-                point={judgment.critical}
-                pathLabel={
-                  mesh.paths.find((path) => path.pathId === judgment.critical?.pathId)?.label ?? '这条路'
-                }
-              />
-            ) : null}
-
-            {/*
-              双牌对比入口：对比是「决策场景」，放到独立页面，
-              让玩家注意力落在「哪条路翻转了」而不是叙事上。
-              这里给出一句摘要，让玩家知道值得点进去。
-            */}
-            <section className="panel p-3.5">
-              <h3 className="text-sm font-semibold text-slate-200">换个条件会怎样</h3>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                {sandwich && sandwich.divergentPathIds.length > 0
-                  ? `在你的条件宽裕 / 紧张两组设定下，${sandwich.divergentPathIds.length} 条路线的结论会翻转。`
-                  : '当前两组设定下结论一致 —— 说明你的约束还没卡到这些路的边界上。'}
-              </p>
-              <Link
-                href={`/compare?goal=${encodeURIComponent(effectiveGoal)}`}
-                className="btn-primary mt-3 inline-flex text-xs"
-              >
-                去双牌对比
-              </Link>
-            </section>
-          </div>
-        ) : (
-          <p className="text-[11px] leading-relaxed text-slate-500">
-            正在检索站内经历。如果一直没有出现，说明这次没有拿到可归档的样本 ——
-            证据网格只在有真实内容时给结论，不会编。
-          </p>
-        )}
-      </Drawer>
-
-      {/* 演出层 */}
-      {!isSessionMode ? (
-      <DiceModal
-        open={state.phase === 'checking' && state.lastCheck !== null}
-        result={state.lastCheck}
-        onConfirm={() => dispatch({ type: 'RESOLVE_DICE' })}
-      />
-      ) : null}
-
-      {/*
-        P0-9 的来源弹层：把「这条选择来自哪段真实经历」摊开。
-        片段按 `sourceFactIds` 从本局蓝图里现取 —— **不需要新 API**。
-      */}
-      <ExperienceSourceModal
-        open={sourceChoice !== null}
-        onClose={() => setSourceChoice(null)}
-        facts={experienceFactsFor(sourceChoice, state.worldBlueprint)}
-        differences={differencesFor(state.worldBlueprint)}
-      />
-
-      <SceneTransition
-        kind={state.transition?.kind ?? null}
-        label={state.transition?.label}
-        triggerKey={state.transition?.key ?? 0}
-        onDone={() => dispatch({ type: 'CLEAR_TRANSITION' })}
-      />
-
-      {state.phase === 'ended' ? (
-        <div className="pointer-events-none fixed bottom-3 left-1/2 z-30 -translate-x-1/2">
-          <Link
-            href="/"
-            className="pointer-events-auto rounded-full border border-white/12 bg-ink-900/85 px-4 py-2 text-[11px] text-slate-300 backdrop-blur transition-colors duration-150 hover:border-zhihu-500/50 hover:text-white"
-          >
-            返回命运发令台
-          </Link>
-        </div>
-      ) : null}
     </main>
   );
 }

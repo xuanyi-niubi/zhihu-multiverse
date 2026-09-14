@@ -9,9 +9,9 @@ import type { ClarificationNeed, ProblemFrame } from '@/features/experience/doma
  * 问题是它**不看用户已经说过什么** —— 用户写了「怕影响课程」，
  * 系统还是会把「哪种损失你不愿意接受」问一遍。
  *
- * ## 迁移原则：不删旧的
+ * ## 与 `decision-session/clarify.ts` 的分工
  *
- * `decision-session/clarify.ts` 保留，`clarifyQuestions()` 降级为 fallback。
+ * 那边的 `clarifyQuestions()` 仍然保留，作为**兜底**（没有 frame 时使用）。
  * 本模块只**增加**一层：按 frame 里「确实缺什么」生成 0～2 个问题。
  *
  * ## 最重要的一条验收

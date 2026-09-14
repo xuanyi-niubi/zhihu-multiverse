@@ -39,7 +39,7 @@ export function Undeveloped({
   return (
     <span
       data-unknown-label={label}
-      className={['ds-undeveloped', inline ? 'ds-undeveloped--inline' : '', className]
+      className={['sil-undev', inline ? 'sil-undev--inline' : '', className]
         .filter(Boolean)
         .join(' ')}
     >

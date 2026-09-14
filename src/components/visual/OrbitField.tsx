@@ -93,9 +93,9 @@ function accentOf(index: number, total: number, accent: OrbitAccent): 'zhihu' | 
 }
 
 const STROKE_OF: Readonly<Record<'zhihu' | 'path' | 'counter', string>> = {
-  zhihu: 'var(--obs-zhihu)',
-  path: 'var(--obs-path)',
-  counter: 'var(--obs-counter)',
+  zhihu: 'var(--sil-zhihu)',
+  path: 'var(--sil-alternate)',
+  counter: 'var(--sil-counter)',
 };
 
 export function OrbitField({
@@ -124,10 +124,10 @@ export function OrbitField({
   return (
     <div
       aria-hidden="true"
-      className={['obs-orbit', near ? 'obs-orbit--near' : '', className].filter(Boolean).join(' ')}
+      className={['sil-orbit', near ? 'sil-orbit--near' : '', className].filter(Boolean).join(' ')}
     >
-      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" className="obs-orbit__svg">
-        <g className={drift ? 'obs-orbit__drift' : undefined}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" className="sil-orbit__svg">
+        <g className={drift ? 'sil-orbit__drift' : undefined}>
           {orbits.map((orbit) => (
             <path
               key={orbit.index}
@@ -136,10 +136,10 @@ export function OrbitField({
               // 时 strokeWidth 会被放大十几倍，变成「土星环」而不是人生轨道（§12）。
               vectorEffect="non-scaling-stroke"
               className={[
-                'obs-orbit__path',
-                orbit.tone === 'counter' ? 'obs-orbit__path--amber' : '',
+                'sil-orbit__path',
+                orbit.tone === 'counter' ? 'sil-orbit__path--counter' : '',
                 // §14：只有「附近」的轨道参与变亮
-                orbit.index % 3 === 0 ? 'obs-orbit__path--near' : 'obs-orbit__path--far',
+                orbit.index % 3 === 0 ? 'sil-orbit__path--near' : 'sil-orbit__path--far',
               ]
                 .filter(Boolean)
                 .join(' ')}

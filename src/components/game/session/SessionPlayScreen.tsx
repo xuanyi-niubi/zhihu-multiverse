@@ -93,11 +93,11 @@ function ErrorState({
   readonly onBackToQuestion?: () => void;
 }) {
   return (
-    <section className="session-error obs-glass obs-brackets mt-10 px-5 py-6" role="alert">
-      <p className="text-[17px] font-semibold leading-relaxed" style={{ color: 'var(--obs-text-0)' }}>
+    <section className="session-error sil-panel sil-brackets mt-10 px-5 py-6" role="alert">
+      <p className="text-[17px] font-semibold leading-relaxed" style={{ color: 'var(--sil-ink-100)' }}>
         {message}
       </p>
-      <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--obs-text-2)' }}>
+      <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
         {AI_UNAVAILABLE.hint}
       </p>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -111,7 +111,7 @@ function ErrorState({
             type="button"
             onClick={onBackToQuestion}
             className="min-h-11 border px-5 text-[14px] font-semibold transition-opacity duration-200 hover:opacity-80 sm:max-w-[240px]"
-            style={{ borderColor: 'var(--obs-hairline)', color: 'var(--obs-text-1)' }}
+            style={{ borderColor: 'var(--sil-rule)', color: 'var(--sil-ink-200)' }}
           >
             返回修改问题
           </button>
@@ -210,9 +210,21 @@ export function SessionPlayScreen({
 
   return (
     <main
-      className={['session-stage obs-shell', view.phase === 'ended' ? 'obs-shell--still' : '']
-        .filter(Boolean)
-        .join(' ')}
+      /*
+        这里曾经是三元的：`view.phase === 'ended' ? 'sil-viewport' : ''`。
+        两个分支输出同一个类名，所以条件**恒真**，终局态没有任何视觉差异。
+
+        它的来历是旧体系里的 `obs-shell--still`（终局压暗），迁移时把
+        `obs-shell` 换成了 `sil-viewport`，而没有注意到 `--still` 的规则
+        从未搬过来 —— 于是留下一个恒真 ternary，看起来"有处理终局"，
+        实际上什么都没做。
+
+        终局态的表达现在有两处，都在别处：
+          - `data-atmosphere` 属性（由 actAtmosphereOf 计算）
+          - `view.phase === 'ended'` 的分支渲染（幕末收尾区块）
+        所以这里只需要基类，不需要三元。
+      */
+      className="session-stage sil-viewport"
       data-act={actKey}
       data-atmosphere={atmosphere}
     >
@@ -228,7 +240,7 @@ export function SessionPlayScreen({
 
       <div className="relative mx-auto w-full max-w-[720px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))]">
         {/* 每一幕开始时，一条极细的扫描线扫过 —— 幕与幕之间有一个明确的「换场」 */}
-        <span key={`sweep-${actKey}`} aria-hidden="true" className="obs-act-sweep" />
+        <span key={`sweep-${actKey}`} aria-hidden="true" className="sil-act-sweep" />
 
         <SessionActHeader act={view.act} className="pt-5">
           <SessionExperienceDock
@@ -242,7 +254,7 @@ export function SessionPlayScreen({
             type="button"
             onClick={onQuit}
             className="min-h-11 text-[11px] transition-opacity duration-200 hover:opacity-80"
-            style={{ color: 'var(--obs-text-2)' }}
+            style={{ color: 'var(--sil-ink-300)' }}
           >
             换一个问题
           </button>
@@ -254,14 +266,14 @@ export function SessionPlayScreen({
           终局不显示：那一刻屏幕上只该有问题（§二十二）。
         */}
         {view.phase === 'ended' ? null : (
-          <div className="gd-hud mt-3" aria-label="本局状态">
-            <span className="gd-hud__act">
+          <div className="sil-hud mt-3" aria-label="本局状态">
+            <span className="sil-hud__act">
               ACT {String(view.act.display).padStart(2, '0')} / {String(view.act.total).padStart(2, '0')}
             </span>
-            <span className={gained ? 'gd-hud__cards gd-hud__cards--pulse' : 'gd-hud__cards'}>
+            <span className={gained ? 'sil-hud__cards sil-hud__cards--pulse' : 'sil-hud__cards'}>
               ◈ 经验卡 ×{view.experiences.length}
             </span>
-            <span className="gd-hud__unknown">? 未知 ×{unknown ? 1 : 0}</span>
+            <span className="sil-hud__unknown">? 未知 ×{unknown ? 1 : 0}</span>
           </div>
         )}
 
@@ -269,11 +281,11 @@ export function SessionPlayScreen({
           <ErrorState message={view.error} onRetry={onRetry} onBackToQuestion={onBackToQuestion} />
         ) : isEmptyPlaceholder ? (
           <section className="mt-16 flex flex-col items-center gap-3" aria-live="polite">
-            <p className="obs-kicker">WORLD COMPILING</p>
-            <p className="text-[15px] font-semibold" style={{ color: 'var(--obs-text-1)' }}>
+            <p className="sil-label">WORLD COMPILING</p>
+            <p className="text-[15px] font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
               {loadingCopyOf(view.loadingPhase)}
             </p>
-            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--obs-text-2)' }}>
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               我们只会说现在真的在等什么 —— 没有假进度条。
             </p>
           </section>
@@ -293,12 +305,12 @@ export function SessionPlayScreen({
                     虚影模式 —— 去饱和 + 降透明度，视觉上先感到不对，再读到内容。
                     原先立在旁边的线稿剪影（信号源）已随整体下架，这里只留 ghost 实体。
                   */}
-                  <span className="gd-guide gd-guide--ghost">
-                    <span className="gd-guide__base">
+                  <span className="sil-cast sil-cast--ghost">
+                    <span className="sil-cast__base">
                       <KanshanSprite
                         characterId="ghost"
                         action="sway"
-                        className="gd-guide__sprite gd-guide__sprite--sm"
+                        className="sil-cast__sprite sil-cast__sprite--sm"
                         alt=""
                       />
                     </span>
@@ -307,8 +319,8 @@ export function SessionPlayScreen({
                     <p
                       className="text-[15px] font-bold"
                       style={{
-                        color: 'var(--obs-counter-soft)',
-                        animation: 'fragment-materialize 520ms var(--obs-ease) both',
+                        color: 'var(--sil-counter-soft)',
+                        animation: 'fragment-materialize 520ms var(--sil-ease) both',
                       }}
                     >
                       等等。
@@ -316,9 +328,9 @@ export function SessionPlayScreen({
                     <p
                       className="mt-1 text-[13px] leading-relaxed"
                       style={{
-                        color: 'var(--obs-counter-soft)',
+                        color: 'var(--sil-counter-soft)',
                         opacity: 0.8,
-                        animation: 'fragment-materialize 560ms var(--obs-ease) both',
+                        animation: 'fragment-materialize 560ms var(--sil-ease) both',
                         animationDelay: '560ms',
                       }}
                     >
@@ -356,7 +368,7 @@ export function SessionPlayScreen({
 
             {/* 检定中：不显示骰面，只说明结果不由玩家决定 */}
             {checking ? (
-              <p className="mt-6 animate-pulse text-[12px]" style={{ color: 'var(--obs-text-2)' }}>
+              <p className="mt-6 animate-pulse text-[12px]" style={{ color: 'var(--sil-ink-300)' }}>
                 {loadingCopyOf('resolving-choice')}
               </p>
             ) : null}
@@ -394,12 +406,12 @@ export function SessionPlayScreen({
             {view.phase === 'reflection' ? (
               <>
                 <section className="session-reflection mt-6">
-                  <p className="text-[14px] font-semibold" style={{ color: 'var(--obs-text-1)' }}>
+                  <p className="text-[14px] font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
                     {view.outcome?.title || '这一刻过去了'}
                   </p>
                   <p
                     className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed"
-                    style={{ color: 'var(--obs-text-1)' }}
+                    style={{ color: 'var(--sil-ink-200)' }}
                   >
                     {view.outcome?.detail ?? ''}
                   </p>
@@ -427,8 +439,8 @@ export function SessionPlayScreen({
         )}
 
         {/* 仪表脚注：观象厅里永远显示你现在在回答哪个问题 —— 它是一台仪器 */}
-        <div className="obs-instrument-bar">
-          <span className="obs-instrument-bar__key">Coordinate</span>
+        <div className="sil-coordinate">
+          <span className="sil-coordinate__key">Coordinate</span>
           <span className="min-w-0 flex-1 truncate" title={view.question}>
             {view.question}
           </span>
@@ -449,14 +461,14 @@ export function SessionPlayScreen({
       */}
       {gained ? (
         <div
-          className={['gd-card-gain', gainLeaving ? 'gd-card-gain--leaving' : '']
+          className={['sil-cardgain', gainLeaving ? 'sil-cardgain--leaving' : '']
             .filter(Boolean)
             .join(' ')}
           role="status"
         >
-          <span className="gd-card-gain__kicker">Borrowed Experience</span>
-          <span className="gd-card-gain__title">{gained.title}</span>
-          <span className="gd-card-gain__line">借来的经验 +1 · 它可能会在某一幕打开一条新路。</span>
+          <span className="sil-cardgain__kicker">Borrowed Experience</span>
+          <span className="sil-cardgain__title">{gained.title}</span>
+          <span className="sil-cardgain__line">借来的经验 +1 · 它可能会在某一幕打开一条新路。</span>
         </div>
       ) : null}
     </main>

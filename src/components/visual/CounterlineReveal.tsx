@@ -64,7 +64,7 @@ export function CounterlineReveal({
         <span
           aria-hidden="true"
           className="h-px flex-1 bg-counter/60"
-          style={{ animation: 'arc-counter-in 760ms var(--arc-ease) both' }}
+          style={{ animation: 'sil-counter-in 760ms var(--sil-ease) both' }}
         />
       </div>
 
@@ -77,7 +77,7 @@ export function CounterlineReveal({
         </div>
         <div
           className="mt-3 border-l-0 border-white/10 pl-0 sm:mt-0 sm:border-l sm:pl-4"
-          style={{ animation: 'arc-counter-in 860ms var(--arc-ease) both', animationDelay: '120ms' }}
+          style={{ animation: 'sil-counter-in 860ms var(--sil-ease) both', animationDelay: '120ms' }}
         >
           <p className="font-mono text-[10px] tracking-[0.22em] text-counter-deep">结果完全相反的人</p>
           <p className="mt-1 text-[13px] font-semibold leading-relaxed text-counter-soft">
@@ -94,7 +94,7 @@ export function CounterlineReveal({
               <li
                 key={`${row.kind}-${index}`}
                 className="flex items-start gap-2.5"
-                style={{ animation: 'arc-path-emerge 480ms var(--arc-ease) both', animationDelay: `${index * 120}ms` }}
+                style={{ animation: 'sil-path-emerge 480ms var(--sil-ease) both', animationDelay: `${index * 120}ms` }}
               >
                 <span
                   className={`mt-px shrink-0 rounded-full border px-2 py-0.5 font-mono text-[9px] tracking-wider ${meta.className}`}

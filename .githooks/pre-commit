@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# 提交前闸门：密钥不得入库。
+#
+# 启用方式（每台克隆只需跑一次）：
+#   git config core.hooksPath .githooks
+#
+# ## 为什么用 `core.hooksPath` 而不是往 .git/hooks 里放文件
+#
+# `.git/hooks/` 不进版本控制，所以每个新克隆都得手工再放一次 ——
+# 而"手工再放一次"这件事，在忙的时候一定会忘。
+# `.githooks/` 随仓库走，配一次就永久生效。
+#
+# ## 为什么钩子本身只做转交
+#
+# 真正的检查逻辑在 `scripts/check-secrets.mjs`：它可以用
+# `node scripts/check-secrets.mjs` 单独跑，也能被 CI 调用。
+# 钩子里写逻辑的话，出问题时要同时改两处。
+#
+# ## 为什么失败必须退出非 0
+#
+# 钩子返回非 0 会中止提交。这里绝不能"警告但放行"——
+# 密钥一旦进入历史，清理成本远高于重写一次提交。
+
+set -e
+
+if ! command -v node >/dev/null 2>&1; then
+  # node 不在 PATH 时不做检查，但要明确说出来，避免"以为检查过了"
+  echo "[pre-commit] 警告：PATH 里没有 node，跳过密钥检查。" >&2
+  exit 0
+fi
+
+if [ ! -f scripts/check-secrets.mjs ]; then
+  echo "[pre-commit] 警告：找不到 scripts/check-secrets.mjs，跳过检查。" >&2
+  exit 0
+fi
+
+echo "[pre-commit] 检查密钥…"
+if node scripts/check-secrets.mjs; then
+  exit 0
+fi
+
+echo "" >&2
+echo "[pre-commit] 已阻止提交：仓库里出现了疑似密钥。" >&2
+echo "             确认是占位符请加进 scripts/check-secrets.mjs 的 ALLOWLIST；" >&2
+echo "             若是真值，请先轮换密钥再提交。" >&2
+echo "             确实要绕过：git commit --no-verify（不建议）" >&2
+exit 1

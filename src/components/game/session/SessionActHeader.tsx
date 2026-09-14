@@ -43,37 +43,37 @@ export function SessionActHeader({ act, children, className = '' }: SessionActHe
   return (
     <div className={['session-act-header-block', className].filter(Boolean).join(' ')} data-act-index={act.index}>
       <header className="session-act-header">
-        <span className="obs-kicker">
+        <span className="sil-label">
           {act.heading.roman} · {act.heading.number}
         </span>
         {children ? <div className="flex items-center gap-4">{children}</div> : null}
       </header>
 
       {/*
-        幕标题随换幕显影（GAME-DESIGN §4.7）：扫描线（obs-act-sweep）扫过的同时，
+        幕标题随换幕显影（GAME-DESIGN §4.7）：扫描线（sil-act-sweep）扫过的同时，
         标题块用 fragment-materialize 重新显影一次 —— key 按幕号切换触发重挂载，
         同一幕内的重渲染不会重播。零新增 keyframes。
       */}
       <div
         key={`act-heading-${act.display}`}
         className="mt-5"
-        style={{ animation: 'fragment-materialize 560ms var(--obs-ease) both' }}
+        style={{ animation: 'fragment-materialize 560ms var(--sil-ease) both' }}
       >
         <div className="flex items-baseline justify-between gap-3">
-          <h1 className="ds-h1 text-[22px] sm:text-[28px]">{act.heading.label}</h1>
+          <h1 className="sil-title sil-title--act text-[22px] sm:text-[28px]">{act.heading.label}</h1>
           {/* 幕进度：三条刻度，走过的暗亮、当前的一条发青蓝光 */}
-          <span className="obs-act-progress" aria-label={`第 ${act.display} 幕，共 ${act.total} 幕`}>
+          <span className="sil-acthead__progress" aria-label={`第 ${act.display} 幕，共 ${act.total} 幕`}>
             {Array.from({ length: Math.max(1, act.total) }, (_, index) => {
               const step = index + 1;
               return (
                 <span
                   key={`act-seg-${step}`}
                   className={[
-                    'obs-act-progress__seg',
+                    'sil-acthead__index',
                     step === act.display
-                      ? 'obs-act-progress__seg--on'
+                      ? 'sil-acthead__index--on'
                       : step < act.display
-                        ? 'obs-act-progress__seg--done'
+                        ? 'sil-acthead__index--done'
                         : '',
                   ]
                     .filter(Boolean)
@@ -81,7 +81,7 @@ export function SessionActHeader({ act, children, className = '' }: SessionActHe
                 />
               );
             })}
-            <span className="obs-act-progress__label">
+            <span className="sil-acthead__index-label">
               {String(act.display).padStart(2, '0')} / {String(act.total).padStart(2, '0')}
             </span>
           </span>

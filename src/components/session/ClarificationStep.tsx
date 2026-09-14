@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { ClarifyQuestion } from '@/features/decision-session/clarify';
 
 /**
- * 澄清：**一题一屏**（产品化方案 §15 / §46；观象厅外观 04_AGENT §17 / §18）。
+ * 澄清：**一题一屏**（产品化方案 §15 / §46）。
  *
  * ## 为什么是一题一屏
  *
@@ -28,10 +28,11 @@ import type { ClarifyQuestion } from '@/features/decision-session/clarify';
  * 2. **不造第二题**：只有服务端真的返回了第二题才显示 —— 原则是
  *    「能不问就不问」，而服务端只会在答案会改变检索 / 世界 / 实验时才问。
  *
- * ## 外观（04_AGENT）
+ * ## 本次的移动端修正
  *
- * 观测玻璃 + 发丝线 + 极细刻度；选项是「刻度上的一个可选项」，
- * 不是街机按钮。这里只改外观，不碰提交逻辑。
+ * 选项按钮旧版是 `min-h-11`（44px）但**没有 flex 换行时的最小宽度约束**，
+ * 长选项文字在 360px 屏上会被压成两行且高度不齐。现在：
+ * 选项在窄屏占满整行（`w-full sm:w-auto`），并统一到 44px 的触摸高度。
  */
 
 export interface ClarificationStepProps {
@@ -66,8 +67,8 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
   }
 
   return (
-    <section className="mt-4">
-      <p className="text-[13px] leading-relaxed text-[color:var(--obs-text-1)]">
+    <section className="mt-8">
+      <p className="sil-prose text-[14px]">
         {questions.length > 1
           ? `我还差一点信息。一共 ${questions.length} 个问题，都可以跳过。`
           : '我还差一点信息。可以跳过。'}
@@ -76,20 +77,20 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
       <div
         key={question.id}
         className={[
-          'obs-glass mt-4 px-4 py-4 transition-opacity duration-200',
-          leaving ? 'opacity-0' : 'fade-in opacity-100',
+          'sil-panel mt-4 px-4 py-5 transition-opacity duration-200 sm:px-5',
+          leaving ? 'opacity-0' : 'opacity-100',
         ].join(' ')}
       >
-        <p className="text-[16px] font-semibold leading-relaxed text-[color:var(--obs-text-0)]">
+        <p className="text-[17px] font-semibold leading-relaxed text-[color:var(--sil-ink-100)]">
           {question.question}
         </p>
         {question.hint ? (
-          <p className="mt-1.5 text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+          <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
             {question.hint}
           </p>
         ) : null}
 
-        <div className="mt-3.5 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
           {question.options?.map((option) => {
             const active = answers[question.id] === option.id;
             return (
@@ -105,10 +106,10 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
                   }))
                 }
                 className={[
-                  'min-h-11 border px-3.5 py-2 text-[13px] transition-[border-color,background-color,color] duration-200',
+                  'min-h-11 w-full rounded-[3px] border px-4 py-2.5 text-left text-[14px] transition-[border-color,background-color,color] duration-200 sm:w-auto sm:text-center',
                   active
-                    ? 'border-[color:rgb(var(--obs-rgb-path)/0.6)] bg-[color:rgb(var(--obs-rgb-path)/0.12)] text-[color:var(--obs-text-0)]'
-                    : 'border-[color:rgb(var(--obs-rgb-text-0)/0.14)] bg-[color:rgb(var(--obs-rgb-text-0)/0.02)] text-[color:var(--obs-text-1)] hover:border-[color:rgb(var(--obs-rgb-text-0)/0.3)]',
+                    ? 'border-[color:color-mix(in_srgb,var(--sil-alternate)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-alternate)_12%,transparent)] text-[color:var(--sil-ink-100)]'
+                    : 'border-[color:var(--sil-rule)] bg-[color:rgb(242_244_248_/_0.02)] text-[color:var(--sil-ink-200)] hover:border-[color:var(--sil-rule-strong)]',
                 ].join(' ')}
               >
                 {option.label}
@@ -118,19 +119,17 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="obs-kicker">
+      <div className="mt-5 flex items-center justify-between gap-3">
+        <span className="sil-label sil-num">
           {questions.length > 1 ? `${index + 1} / ${questions.length}` : ''}
         </span>
         <button
           type="button"
           disabled={busy}
           onClick={goNext}
-          className="session-choice max-w-[220px] justify-center disabled:opacity-50"
+          className="sil-btn min-w-[132px]"
         >
-          <span className="session-choice__title">
-            {busy ? '正在整理…' : isLast ? '继续' : '下一题'}
-          </span>
+          {busy ? '正在整理…' : isLast ? '继续' : '下一题'}
         </button>
       </div>
     </section>

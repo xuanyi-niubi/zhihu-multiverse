@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
@@ -6,6 +7,11 @@ import { worldContextForTurn, unlockForTurn } from '@/features/game-world/dmCont
 import { NO_RELIABLE_EXPERIENCE } from '@/features/run/errorCopy';
 
 import type { WorldBlueprint } from '@/features/game-world/domain';
+
+/** 去掉注释后再扫描：源码注释里会**解释** legacy 为什么被删，那不是残留。 */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
 
 /**
  * Play 幕次索引与蓝图幕次对齐（P0-1）。
@@ -179,13 +185,55 @@ describe('Session 幕数绑定蓝图（P0-2）', () => {
 describe('新主链的死路防护', () => {
   it('play 页在会话模式下把 critical 收束到终局，而不是停在空界面', () => {
     const source = readFileSync(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
+    /*
+      旧契约钉的是 `dispatch({ type: 'GIVE_UP' })` —— 那时「救场」还是
+      reducer 里的一等动作。救场面板删除后，`GIVE_UP` 的语义也不再准确：
+      它不是「认输」，而是「这一局到此为止」。
+
+      所以现在派发 `END_SESSION`，契约随之更新为**当前真实发生的收束**。
+      纪律本身没变：SAN 归零绝不能把玩家留在一个没有出口的界面。
+    */
     expect(source).toContain("if (isSessionMode && state.phase === 'critical')");
-    expect(source).toContain("dispatch({ type: 'GIVE_UP' })");
+    expect(source).toContain("dispatch({ type: 'END_SESSION' })");
   });
 
-  it('救场与临界面板只在 legacy 路径渲染', () => {
-    const source = readFileSync(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
-    expect(source).toContain("state.phase === 'critical' && !isSessionMode");
+  it('整屏只剩新主链：legacy 的救场 / Boss / 骰子面板已彻底删除', () => {
+    /*
+      这条纪律原来是「救场与临界面板只在 legacy 路径渲染」——
+      即 legacy 整屏还在，只是新主链不渲染它。
+
+      现在 legacy 整屏已被物理删除（用户要求弃用代码直接删，不留注释/开关），
+      所以契约升级为更强的一条：**这些面板连代码都不存在了**。
+      这比原来的断言更难被破坏 —— 想复活它们必须先重新写一遍。
+    */
+    const source = stripComments(
+      readFileSync(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8'),
+    );
+    for (const gone of [
+      'BossTerminal',
+      'DiceModal',
+      'FateTree',
+      'GameHud',
+      'InventoryBar',
+      'EvidenceMeshView',
+      'ClarityRadar',
+      'AxisSlider',
+      'RESOLVE_BOSS',
+      'USE_RELIC',
+      'RESCUE',
+    ]) {
+      expect(source, `legacy 残留：${gone}`).not.toContain(gone);
+    }
+    // 而这些组件文件本身也不该还在磁盘上
+    for (const file of [
+      'src/components/GameHud.tsx',
+      'src/components/BossTerminal.tsx',
+      'src/components/DiceModal.tsx',
+      'src/components/FateTree.tsx',
+      'src/components/InventoryBar.tsx',
+    ]) {
+      expect(existsSync(new URL(`../${file}`, import.meta.url)), file).toBe(false);
+    }
   });
 });
 
@@ -208,12 +256,18 @@ describe('Session 编译体验', () => {
   });
 
   it('✓ 只给真的找到的那一类（找不到就如实写没找到）', () => {
+    /*
+      这层纪律原由 `components/session/WorldCompiling.tsx` 承担；
+      该组件后来被 `components/visual/WorldForge.tsx` 取代（同一份 §18 契约，
+      且 WorldForge 是当前 session 页真正渲染的那一个），旧文件已随死代码清理删除。
+      断言因此迁移到存活实现，纪律本身不变。
+    */
     const source = readFileSync(
-      new URL('../src/components/session/WorldCompiling.tsx', import.meta.url),
+      new URL('../src/components/visual/WorldForge.tsx', import.meta.url),
       'utf8',
     );
     expect(source).toContain('这一类暂时没找到');
-    expect(source).toContain('hit ? \'✓\' : \'—\'');
+    expect(source).toContain("hit ? '◆' : '—'");
   });
 
   it('编译阶段只有真实档：没有百分比，也没有假的中间检索态', () => {

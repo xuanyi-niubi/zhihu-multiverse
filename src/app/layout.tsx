@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import AppearanceBootstrap from '@/components/AppearanceBootstrap';
 
 import './globals.css';
+import './silver.css';
 
 /**
  * 站点根地址：只为生成分享卡（`opengraph-image.png`）的**绝对 URL** 用。
@@ -34,49 +35,52 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#04050A',
+  themeColor: '#06070b',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  /*
+    移动端安全区：iPhone 的 Home Indicator 会盖住底部操作条，
+    这里让页面自己声明支持，具体留白由各组件的 env(safe-area-inset-*) 负责。
+  */
+  viewportFit: 'cover',
 };
 
 /**
  * 根布局。
  *
- * 背景由四层固定定位的装饰层叠加而成（底色 / 顶部光晕 / 网格 / 扫描线），
- * 全部 pointer-events-none 且位于 -z-10，不影响任何交互命中。
+ * ## 背景为什么改了
+ *
+ * 旧版用四层固定装饰叠加：底色 / 顶部光晕（animate-halo-pulse）/ 网格
+ * / 扫描线。其中「霓虹光晕 + 网格 + 扫描线动画」是 AI 生成页面最强的三个
+ * 视觉指纹；而且 `animate-halo-pulse` 是一个永久运行的动画 ——
+ * 它让整页永远在动，恰恰是「看起来廉价」的来源。
+ *
+ * 现在由 `.sil-darkroom` 一个类承担全部材质：底色渐变 + 相纸颗粒 +
+ * 镜头晕影，**全部静态**。页面因此安静下来，内容成为唯一会动的东西。
+ *
+ * ## 字体为什么改了
+ *
+ * 旧版从 `fonts.googleapis.com` 外链三套字体（含两套 CJK 全量）。
+ * 国内移动网络访问 Google 会超时，首屏被阻塞数秒，且失败时字体回落到
+ * 默认宋体，观感崩坏。现在：
+ *
+ * - 拉丁等宽 **自托管**（`/fonts/`，约 65KB）；
+ * - 中文交给系统字体栈（iOS 苹方 / Android Noto CJK / Windows 雅黑）——
+ *   它们质量极高且零请求。
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" className="h-full">
-      <body className="min-h-full">
+      <head>
+        {/* 自托管等宽字体：preload 让它在首屏就位，且不阻塞渲染 */}
+        <link rel="preload" href="/fonts/jetbrains-mono.css" as="style" />
+        <link rel="stylesheet" href="/fonts/jetbrains-mono.css" />
+      </head>
+      <body className="sil-darkroom sil-viewport min-h-full">
         {/* 设置页的「减少动画」：把用户偏好落到 <html data-reduce-motion>，全站生效 */}
         <AppearanceBootstrap />
-        {/* DESIGN.md §3：中文衬线体承担叙事质感，加载失败时回落到系统宋体/苹方 */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
-        />
-
-        <div className="relative flex min-h-screen flex-col overflow-x-hidden">
-          <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-ink-900" />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-10 animate-halo-pulse bg-radial-halo"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-10 bg-grid-fate opacity-[0.35]"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-10 bg-scanline opacity-[0.12]"
-          />
-          {/* 平行人生档案馆：1.5%～3% 的极轻 film grain（报告 §28） */}
-          <div aria-hidden="true" className="arc-grain" />
-
-          {children}
-        </div>
+        {children}
       </body>
     </html>
   );

@@ -52,8 +52,8 @@ function Block({
   readonly children: React.ReactNode;
 }) {
   return (
-    <section className="relative border-t pt-4" style={{ borderColor: 'var(--obs-hairline)' }}>
-      <p className="obs-kicker">
+    <section className="relative border-t pt-4" style={{ borderColor: 'var(--sil-rule)' }}>
+      <p className="sil-label">
         {String(index).padStart(2, '0')} · {label}
       </p>
       <div className="mt-2">{children}</div>
@@ -152,19 +152,19 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
           只用官方 GIF 实体：认下支线前 idle，认下后的 2.8s 换成 dribble 运球态
           —— 彩蛋只出现这一次。原先非认下态那枚线稿图章已随整体下架。 */}
       <div className="flex items-start gap-4">
-        <span className="gd-guide shrink-0">
-          <KanshanSprite characterId="kanshan" action={cheering ? 'dribble' : 'idle'} className="gd-guide__sprite gd-guide__sprite--sm" alt="刘看山" />
+        <span className="sil-cast shrink-0">
+          <KanshanSprite characterId="kanshan" action={cheering ? 'dribble' : 'idle'} className="sil-cast__sprite sil-cast__sprite--sm" alt="刘看山" />
         </span>
         <div className="min-w-0 flex-1">
           <p
             className="text-[13px] font-semibold leading-relaxed"
-            style={{ color: 'var(--obs-text-1)' }}
+            style={{ color: 'var(--sil-ink-200)' }}
           >
             他们的路你已经看到了。
           </p>
           <p
             className="mt-1 text-[15px] font-black leading-relaxed"
-            style={{ color: 'var(--obs-text-0)' }}
+            style={{ color: 'var(--sil-ink-100)' }}
           >
             现在，走你自己的。
           </p>
@@ -173,7 +173,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
 
       {/* 1 + 2：原问题（小号）→ 新问题（Hero）。 */}
       <div className="mt-8">
-        <h2 className="text-[30px] font-black leading-none tracking-tight" style={{ color: 'var(--obs-text-0)' }}>
+        <h2 className="text-[30px] font-black leading-none tracking-tight" style={{ color: 'var(--sil-ink-100)' }}>
           问题。
         </h2>
         <SentenceReforge
@@ -192,9 +192,9 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
                 <li
                   key={action}
                   className="flex gap-2 text-[12px] leading-relaxed"
-                  style={{ color: 'var(--obs-path-soft)' }}
+                  style={{ color: 'var(--sil-alternate-soft)' }}
                 >
-                  <span aria-hidden="true" style={{ color: 'var(--obs-path)' }}>
+                  <span aria-hidden="true" style={{ color: 'var(--sil-alternate)' }}>
                     ◆
                   </span>
                   <span>{action}</span>
@@ -202,7 +202,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               ))}
             </ul>
           ) : (
-            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--obs-text-2)' }}>
+            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               这一局没有出现原本不存在的做法 —— 我们不把普通选项算成「成长」。
             </p>
           )}
@@ -210,16 +210,16 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
           {view.steps.length > 0 ? (
             <details className="mt-3">
               <summary className="min-h-11 cursor-pointer">
-                <span className="obs-kicker">这一局你经历过什么</span>
+                <span className="sil-label">这一局你经历过什么</span>
               </summary>
               <ol className="mt-2 flex flex-col gap-1">
                 {view.steps.map((step, index) => (
                   <li
                     key={`${step}-${index}`}
                     className="flex gap-2 text-[12px] leading-relaxed"
-                    style={{ color: 'var(--obs-text-1)' }}
+                    style={{ color: 'var(--sil-ink-200)' }}
                   >
-                    <span aria-hidden="true" style={{ color: 'var(--obs-text-2)' }}>
+                    <span aria-hidden="true" style={{ color: 'var(--sil-ink-300)' }}>
                       {index + 1}
                     </span>
                     <span>{step}</span>
@@ -236,16 +236,16 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
             <ul className="flex flex-col gap-2.5">
               {view.experiences.map((item) => (
                 <li key={item.id} className="flex flex-col gap-0.5">
-                  <span className="text-[12px] font-semibold" style={{ color: 'var(--obs-text-1)' }}>
+                  <span className="text-[12px] font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
                     {item.title}
                   </span>
                   {item.summary ? (
-                    <span className="text-[11px] leading-relaxed" style={{ color: 'var(--obs-text-1)' }}>
+                    <span className="text-[11px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
                       「{item.summary}」
                     </span>
                   ) : null}
                   <span className="flex items-center gap-2">
-                    <span className="obs-kicker">{item.author}</span>
+                    <span className="sil-label">{item.author}</span>
                     {item.sourceUrl ? (
                       <a href={item.sourceUrl} target="_blank" rel="noreferrer noopener" className="source-link">
                         查看知乎原回答 ↗
@@ -256,7 +256,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               ))}
             </ul>
           ) : (
-            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--obs-text-2)' }}>
+            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               这一局没有引用到任何真实经历 —— 我们不为了填满这一栏编一段。
             </p>
           )}
@@ -264,15 +264,15 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
           {view.highlights.length > 0 ? (
             <ul
               className="mt-3 flex flex-col gap-1 border-t pt-2.5"
-              style={{ borderColor: 'var(--obs-hairline)' }}
+              style={{ borderColor: 'var(--sil-rule)' }}
             >
               {view.highlights.map((item) => (
                 <li
                   key={item}
                   className="flex gap-2 text-[12px] leading-relaxed"
-                  style={{ color: 'var(--obs-text-1)' }}
+                  style={{ color: 'var(--sil-ink-200)' }}
                 >
-                  <span aria-hidden="true" style={{ color: 'var(--obs-text-2)' }}>
+                  <span aria-hidden="true" style={{ color: 'var(--sil-ink-300)' }}>
                     ·
                   </span>
                   <span>{item}</span>
@@ -295,7 +295,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               broughtBack={copied}
             />
           ) : (
-            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--obs-text-2)' }}>
+            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               这一局还没有设计出现实实验 —— 我们不凭空给一个「未来 7 天」的计划。
             </p>
           )}
@@ -309,11 +309,11 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
       */}
       {toast ? (
         <div
-          className={['gd-toast', toastLeaving ? 'gd-toast--leaving' : ''].filter(Boolean).join(' ')}
+          className={['sil-toast', toastLeaving ? 'sil-toast--leaving' : ''].filter(Boolean).join(' ')}
           role="status"
         >
-          <span className="gd-toast__name">{toast.name}</span>
-          <span className="gd-toast__line">{toast.line}</span>
+          <span className="sil-toast__name">{toast.name}</span>
+          <span className="sil-toast__line">{toast.line}</span>
         </div>
       ) : null}
     </section>

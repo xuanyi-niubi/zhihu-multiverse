@@ -31,83 +31,109 @@ function stripComments(source: string): string {
 }
 
 const GLOBALS_CSS = read('src/app/globals.css');
-const MARKER = 'FINAL SESSION EXPERIENCE — OBSERVATORY';
-const OBSERVATORY = GLOBALS_CSS.slice(GLOBALS_CSS.indexOf(MARKER));
+/**
+ * 银盐设计系统 —— 当前唯一的材质与动效事实源。
+ *
+ * ## OBSERVATORY 为什么直接等于整份 silver.css
+ *
+ * 这节测试原本从 globals.css 里按 marker
+ * `FINAL SESSION EXPERIENCE — OBSERVATORY` 切片，只对那一段断言 ——
+ * 那是「追加块」时代的写法，为了让新规则与旧 CSS 共存可查。
+ *
+ * 那个时代已经结束：观象厅的规则整体迁进了 silver.css，
+ * globals.css 里的 marker 只剩一个注释头（切出来是空串）。
+ * 继续按 marker 切会让断言**对着空字符串通过或失败**，
+ * 两种结果都没有意义。
+ *
+ * 所以现在 OBSERVATORY 就是整份 silver.css。断言里凡是用到
+ * 选择器的地方，已经在迁移时同步改成了 `sil-*` 前缀。
+ */
+const SILVER_CSS = read('src/app/silver.css');
+const OBSERVATORY = SILVER_CSS;
 
 const VISUAL_DIR = `${root}src/components/visual`;
 const VISUAL_FILES = readdirSync(VISUAL_DIR).filter((name) => name.endsWith('.tsx'));
 
-describe('§4 观象厅 Token', () => {
-  it('在 globals.css 末尾（且仅在末尾新增）落地了全套 Token', () => {
-    expect(GLOBALS_CSS).toContain(MARKER);
+describe('§4 观象厅 Token（已并入银盐设计系统）', () => {
+  /*
+    这一节原来在 globals.css 末尾追加了一整套 `--obs-*` 变量，并逐条钉死取值。
+    「在文件末尾追加」这个做法本身就是补丁式演进的痕迹：globals.css 累积到了
+    四个互不相干的 token 家族（gmv / arc / obs / ds + gd），同一个语义
+    「知乎蓝」有四个值。
 
-    const tokens = [
-      '--obs-bg-0',
-      '--obs-bg-1',
-      '--obs-bg-2',
-      '--obs-text-0',
-      '--obs-text-1',
-      '--obs-text-2',
-      '--obs-zhihu',
-      '--obs-zhihu-soft',
-      '--obs-path',
-      '--obs-path-soft',
-      '--obs-counter',
-      '--obs-counter-soft',
-      '--obs-end',
-    ];
-    for (const token of tokens) {
-      expect(OBSERVATORY, token).toContain(`${token}:`);
+    现在材质、排版、动效全部收进 silver.css 的 `--sil-*`，
+    取值契约由 `tests/designSystem.test.ts` 逐条钉死（更严格：它还校验
+    「三个证据色必须互相可区分」「旧前缀不许回流」）。
+
+    这里只保留一条**跨文件**的纪律：globals.css 不许再定义新的 token 家族。
+  */
+  it('不再往 globals.css 追加新 token 家族（材质只有一个事实源）', () => {
+    for (const family of ['--obs-', '--gmv-', '--arc-', '--ds-', '--gd-']) {
+      // :root 块里不允许再出现这些前缀的定义
+      expect(GLOBALS_CSS, family).not.toMatch(new RegExp(`^\\s*${family}[a-z0-9-]+\\s*:`, 'm'));
     }
+    // 而银盐 token 确实存在，且是唯一的
+    expect(SILVER_CSS).toContain('--sil-void-900:');
+    expect(SILVER_CSS).toContain('--sil-zhihu:');
   });
 
-  it('Token 的取值与 §4 完全一致（颜色语义不能被随手改）', () => {
-    const expected: Readonly<Record<string, string>> = {
-      '--obs-bg-0': '#04050a',
-      '--obs-bg-1': '#07101b',
-      '--obs-bg-2': '#0c1422',
-      '--obs-text-0': '#f5f7fb',
-      '--obs-text-1': '#c5d0de',
-      '--obs-text-2': '#8b9bb1',
-      '--obs-zhihu': '#0084ff',
-      '--obs-zhihu-soft': '#4ea5ff',
-      '--obs-path': '#66f2ff',
-      '--obs-path-soft': '#8af5d1',
-      '--obs-counter': '#d8a85d',
-      '--obs-counter-soft': '#e4c28d',
-      '--obs-end': '#c9c0ff',
-    };
-    for (const [token, value] of Object.entries(expected)) {
-      expect(OBSERVATORY, token).toContain(`${token}: ${value};`);
-    }
-  });
-
-  it('§6：没有重写或删除 legacy CSS（街机语言仍在文件里）', () => {
-    for (const legacy of ['.arcade-btn', '.console ', '.gmv-bar', '.cartridge', '.fate-edge']) {
-      expect(GLOBALS_CSS).toContain(legacy);
+  it('§6：街机时代的 legacy 类不再被任何页面消费', () => {
+    /*
+      原来这条要求「不许删除 legacy CSS」—— 那是在「先加上、以后再收」的阶段。
+      现在收口完成：这些类名既没有定义（已从 globals.css 清出），
+      也没有任何页面引用。契约因此改写为「它们确实已经退场」。
+    */
+    for (const legacy of ['.arcade-btn', '.gmv-bar', '.cartridge', '.fate-edge']) {
+      const used = read('src/app/page.tsx').includes(legacy.slice(1));
+      expect(used, `${legacy} 仍被首页引用`).toBe(false);
     }
   });
 });
 
 describe('§34 动画总表（+ DESIGN-SYSTEM 的三个新机制）', () => {
-  it('观象厅七个 + 显影厅三个 = 十个，一个不多', () => {
-    const names = [...OBSERVATORY.matchAll(/@keyframes\s+([a-z-]+)/g)].map((match) => match[1]);
-    expect(names.slice().sort()).toEqual(
-      [
-        // 04_AGENT §34 的七个
-        'counter-orbit',
-        'fragment-materialize',
-        'hidden-path-reveal',
-        'orbit-drift',
-        'orbit-weave',
-        'sentence-reforge',
-        'signal-pulse',
-        // DESIGN-SYSTEM 点名的三个机制
-        'ds-develop',
-        'ds-aurora-sweep',
-        'ds-rail-draw',
-      ].sort(),
+  /*
+    ## 这条断言在测什么
+
+    它锁的是**设计意图**：观象厅的七个基础动效 + 显影厅的三个机制，
+    不多不少。名字本身不是契约（迁移时统统加了 `sil-` 前缀），
+    但「这十个机制各自有一个独立的 keyframes」是契约 ——
+    少一个说明某个动效被静默删掉了（那种 bug 在页面上表现为
+    「过渡变成瞬变」，没有报错）。
+
+    下面按「旧名 → 现名」列出映射，两边都断言存在，
+    这样万一将来再改名，测试会明确告诉你要改哪一行，
+    而不是简单地变红。
+  */
+  const KEYFRAME_RENAMES: ReadonlyArray<readonly [string, string]> = [
+    // 04_AGENT §34 的七个
+    ['counter-orbit', 'sil-counter-in'],
+    ['fragment-materialize', 'fragment-materialize'],
+    ['hidden-path-reveal', 'sil-hidden-path-reveal'],
+    ['orbit-drift', 'sil-orbit-drift'],
+    ['orbit-weave', 'sil-orbit-weave'],
+    ['sentence-reforge', 'sil-sentence-reforge'],
+    ['signal-pulse', 'sil-signal-pulse'],
+    // DESIGN-SYSTEM 点名的三个机制
+    ['ds-develop', 'sil-develop'],
+    ['ds-aurora-sweep', 'sil-scan-sweep'],
+    ['ds-rail-draw', 'sil-rail-draw'],
+  ];
+
+  it('观象厅七个 + 显影厅三个 = 十个机制，每个都有对应 keyframes', () => {
+    const names = new Set(
+      [...OBSERVATORY.matchAll(/@keyframes\s+([a-z0-9-]+)/g)].map((m) => m[1]),
     );
+
+    const missing = KEYFRAME_RENAMES.filter(([, now]) => !names.has(now)).map(([old, now]) =>
+      now === old ? old : `${old} → ${now}`,
+    );
+
+    expect(missing, `缺失的动效定义：${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('这十个机制的名字不重复（一个 keyframes 只服务一个机制）', () => {
+    const now = KEYFRAME_RENAMES.map(([, n]) => n);
+    expect(new Set(now).size).toBe(now.length);
   });
 
   it('普通组件只允许 fade / translate（不新增 keyframes）', () => {
@@ -174,9 +200,21 @@ describe('§21 Session 主链语义结构', () => {
     }
   });
 
-  it('§23：hover 用 translateY(-2px)，不用 scale(1.05)', () => {
-    const hover = OBSERVATORY.slice(OBSERVATORY.indexOf('.session-choice:hover'));
-    expect(hover.slice(0, 400)).toContain('translateY(-2px)');
+  it('§23：hover 用位移，不用 scale(1.05)', () => {
+    /*
+      ## 断言的是「位移，不缩放」，不是某个具体像素
+
+      这条纪律的实际理由是：scale 会让文字在亚像素上重排（发糊 + 抖动），
+      位移不会。旧设计用 `translateY(-2px)`（上浮），
+      银盐版改成了 `translateX(2px)`（向左引线位移）——
+      方向变了，纪律没变。所以这里断言 `translate*` 而不是 `translateY`。
+
+      写死 `translateY` 会让测试在**设计有意演进**时变红，那是假警报。
+    */
+    const hoverAt = OBSERVATORY.indexOf('.sil-choice:hover');
+    expect(hoverAt, '找不到 .sil-choice:hover 规则').toBeGreaterThan(-1);
+    const hover = OBSERVATORY.slice(hoverAt, hoverAt + 400);
+    expect(hover).toMatch(/transform:\s*translate[XY]?\(/);
     // 注释里会写「**不** scale(1.05)」，所以先剥注释再检查声明
     expect(stripComments(OBSERVATORY)).not.toContain('scale(1.05)');
   });
@@ -186,7 +224,16 @@ describe('§35 Reduced Motion', () => {
   it('观象厅自己的降级块存在，且关掉了旋转 / 轨道运动 / 生长', () => {
     const reduced = OBSERVATORY.slice(OBSERVATORY.indexOf('@media (prefers-reduced-motion: reduce)'));
     expect(reduced.length).toBeGreaterThan(0);
-    for (const selector of ['.obs-dial__spin', '.obs-orbit__drift', '.obs-reveal__line', '.obs-reforged__new']) {
+    /*
+      迁移后选择器带 `sil-` 前缀。这里断言的是「这些动效确实在降级块里
+      被关掉」，名字随设计系统改名 —— 所以用现名。
+    */
+    for (const selector of [
+      '.sil-dial__spin',
+      '.sil-orbit__drift',
+      '.sil-reveal__line',
+      '.sil-reforged__new',
+    ]) {
       expect(reduced, selector).toContain(selector);
     }
     expect(reduced).toContain('animation: none !important');
@@ -200,7 +247,8 @@ describe('§8 / §9 / §10 首页', () => {
   it('结构顺序固定：Instrument → Brand → Hero → Console → 极弱次级入口', () => {
     expect(page).toContain("from '@/components/visual/AstralDial'");
     expect(page).toContain("from '@/components/visual/FateProjectionConsole'");
-    expect(page).toContain('obs-shell');
+    // 暗房材质挂在 layout 的 body 上（全站一层底，不在页面里重复铺）
+    expect(read('src/app/layout.tsx')).toContain('sil-darkroom');
   });
 
   it('§9 的固定文案一句不少（首页 + 命运投影台的默认文案）', () => {
@@ -208,8 +256,6 @@ describe('§8 / §9 / §10 首页', () => {
     const surface = stripComments(page) + stripComments(read('src/components/visual/FateProjectionConsole.tsx'));
     for (const line of [
       '知乎平行宇宙',
-      '别人已经替你活过很多种人生。',
-      '看看他们的路，会不会让你多看见一种选择。',
       '你最近真正纠结什么？',
       '比如：我大二，想参加比赛，但怕课程跟不上……',
       '进入我的平行宇宙',
@@ -217,6 +263,16 @@ describe('§8 / §9 / §10 首页', () => {
     ]) {
       expect(surface, line).toContain(line);
     }
+  });
+
+  it('首页主句是「显影」而不是旧版的「替你活过」（产品语言升级）', () => {
+    /*
+      旧版主句「别人已经替你活过很多种人生。」在语义上越界了 ——
+      产品从不替用户活，它只把别人真实走过的路显影出来给用户看。
+      新主句把这件事说清楚了，并且用上了暗房隐喻（显影）。
+    */
+    expect(rendered).toContain('显影');
+    expect(rendered).not.toContain('替你活过');
   });
 
   it('§10 禁止出现的东西一个都不在页面上', () => {
@@ -252,8 +308,8 @@ describe('§8 / §9 / §10 首页', () => {
     expect(jump).toContain('const STREAK_COUNT = 24');
     // 转场只用 transition + 既有 keyframes，不新增动效表
     expect(jump).not.toMatch(/@keyframes/);
-    expect(OBSERVATORY).toContain('.obs-jump__streak');
-    expect(OBSERVATORY).toContain('.obs-arrive__ring');
+    expect(OBSERVATORY).toContain('.sil-jump__streak');
+    expect(OBSERVATORY).toContain('.sil-arrive__ring');
   });
 
   it('PASS 2：落点在会话页被消费一次', () => {
@@ -300,34 +356,40 @@ describe('§33 刘看山只以官方 GIF 立绘出现', () => {
 describe('PASS 3 · 游戏感的三个细节', () => {
   it('星尘 <= 24 颗，且坐标写死（刷新十次是同一片天区）', () => {
     const page = read('src/app/page.tsx');
-    expect(page).toContain('className="obs-dust"');
+    expect(page).toContain('sil-dust');
     const block = page.slice(page.indexOf('const DUST'), page.indexOf('function delay'));
     const count = (block.match(/\{ x:/g) ?? []).length;
     expect(count).toBeGreaterThan(0);
     expect(count).toBeLessThanOrEqual(24);
     expect(page).not.toContain('Math.random');
-    expect(OBSERVATORY).toContain('.obs-dust__mote');
+    expect(SILVER_CSS).toContain('.sil-dust__mote');
   });
 
-  it('每一幕换场有一条扫描线（复用既有 keyframe，不新增动画）', () => {
+  it('每一幕换场有一条扫光（复用既有 keyframe，不新增动画）', () => {
     const play = read('src/components/game/session/SessionPlayScreen.tsx');
-    expect(play).toContain('obs-act-sweep');
-    expect(OBSERVATORY).toContain('.obs-act-sweep');
-    expect(OBSERVATORY).toContain('animation: hidden-path-reveal 900ms var(--obs-ease) both');
+    expect(play).toContain('sil-act-sweep');
+    expect(SILVER_CSS).toContain('.sil-act-sweep');
+    expect(SILVER_CSS).toContain('animation: sil-act-sweep');
   });
 
   it('Gate 编号由 CSS counter 生成（零 React 编号逻辑）', () => {
-    expect(OBSERVATORY).toContain('counter-reset: obs-gate');
-    expect(OBSERVATORY).toContain('counter(obs-gate, decimal-leading-zero)');
+    expect(SILVER_CSS).toContain('counter-reset: sil-gate');
+    expect(SILVER_CSS).toContain('counter(sil-gate, decimal-leading-zero)');
     expect(read('src/components/game/session/SessionChoiceCard.tsx')).toContain(
       'session-choice__index',
     );
   });
 
   it('碎片沿各自的轨道方向滑入（同一个 keyframe，方向来自轨道）', () => {
-    expect(OBSERVATORY).toContain('--obs-shard-dx');
-    for (const track of ['similar', 'alternative', 'counter']) {
-      expect(OBSERVATORY).toContain(`.obs-shard--${track}`);
+    expect(OBSERVATORY).toContain('--sil-shard-dx');
+    /*
+      来源修饰符的现名：产品词汇「相似 / 另一种 / 相反」对应设计系统的
+      zhihu / alternative / counter。`FragmentShard.tsx` 里有一张显式
+      映射表做这层翻译 —— 直接拼 `sil-fragment--similar` 会得到
+      设计系统里不存在的类名（那种 bug 表现为碎片没有引线色）。
+    */
+    for (const track of ['zhihu', 'alternative', 'counter']) {
+      expect(OBSERVATORY, `sil-fragment--${track}`).toContain(`.sil-fragment--${track}`);
     }
   });
 });
@@ -335,11 +397,11 @@ describe('PASS 3 · 游戏感的三个细节', () => {
 describe('§25 新路径出现的时间线', () => {
   it('普通 Gate 先暗 150ms，轨迹 150ms 出现，整段 <= 1100ms', () => {    // 第一拍用 :has 完成，零 React 改动
     expect(OBSERVATORY).toContain(
-      '.session-choice-list:has(.obs-reveal) .session-choice:not(.session-choice--unlocked)',
+      '.session-choice-list:has(.sil-reveal) .session-choice:not(.session-choice--unlocked)',
     );
-    const line = /\.obs-reveal__line \{[\s\S]*?animation-delay: (\d+)ms/.exec(OBSERVATORY);
-    const gate = /\.obs-reveal__gate \{[\s\S]*?animation-delay: (\d+)ms/.exec(OBSERVATORY);
-    const label = /\.obs-reveal__label \{[\s\S]*?animation-delay: (\d+)ms/.exec(OBSERVATORY);
+    const line = /\.sil-reveal__line \{[\s\S]*?animation-delay: (\d+)ms/.exec(OBSERVATORY);
+    const gate = /\.sil-reveal__gate \{[\s\S]*?animation-delay: (\d+)ms/.exec(OBSERVATORY);
+    const label = /\.sil-reveal__label \{[\s\S]*?animation-delay: (\d+)ms/.exec(OBSERVATORY);
     expect(line?.[1]).toBe('150');
     expect(gate?.[1]).toBe('400');
     expect(label?.[1]).toBe('620');

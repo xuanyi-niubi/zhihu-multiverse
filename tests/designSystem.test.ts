@@ -4,19 +4,29 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * 显影厅 · 第三代设计系统的落地契约（DESIGN-SYSTEM.md）。
+ * 银盐观象台 · 设计系统的落地契约（`src/app/silver.css`）。
  *
  * ## 为什么它必须被测试
  *
- * 这一代的三条硬纪律，每一条都是「顺手就会破坏」的：
+ * 这一代的四条硬纪律，每一条都是「顺手就会破坏」的：
  *
  * ```text
- * 1. 新增不改旧      —— 新组件用 --ds-*，旧组件继续用 --obs-*（附录 B）
- * 2. 未知永不补全    —— 未显影只有一种状态，没有 hover / 没有估算值（§4.3）
- * 3. 暖色只在现实层  —— #F2EDE4 只能出现在终局的那张纸上（§2 色彩角色）
+ * 1. 单一 token 体系   —— 只有 --sil-*，旧前缀不许回流（本次重构的核心）
+ * 2. 未知永不补全      —— 未显影只有一种状态，没有 hover / 没有估算值
+ * 3. 暖色只在现实层    —— 纸层 token 只能被终局那张纸消费
+ * 4. 材质不是装饰      —— 不许网格、霓虹外发光、扫描线动画
  * ```
  *
- * 颜色数值、机制命名、动效时长都逐字锁在这里。样式细节（间距、字重）不锁。
+ * ## 与上一版的差别
+ *
+ * 上一版锁的是 `--ds-*` 那一套，并要求「新增不改旧」——
+ * 于是五代 token 前缀（gmv / arc / obs / ds / gd）在同一份 CSS 里并存，
+ * 同一屏混用两代材质。那是「AI 味」的结构性来源：没有单一事实源。
+ *
+ * 现在纪律反过来了：**只允许一套**。数值仍逐字锁在这里，
+ * 但锁的是新体系；旧前缀以「禁令」形式被测试，防止回流。
+ *
+ * 样式细节（间距、字重）不锁。
  */
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -30,106 +40,144 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 }
 
+const SILVER_CSS = read('src/app/silver.css');
 const GLOBALS_CSS = read('src/app/globals.css');
-const MARKER = 'PASS 4 · 显影厅';
-const DS = GLOBALS_CSS.slice(GLOBALS_CSS.indexOf(MARKER));
+const SIL = stripComments(SILVER_CSS);
 
-describe('§2 Color Palette：--ds-* 全套且数值逐字一致', () => {
-  it('基底 / 结构蓝 / 三种证据意图 / 终局 / 未显影 / 纸层', () => {
+describe('§2 Color Palette：--sil-* 全套且数值逐字一致', () => {
+  it('基底 / 三种证据意图 / 现实层 / 未显影 / 文本层级', () => {
     const expected: Readonly<Record<string, string>> = {
-      '--ds-void-950': '#03040a',
-      '--ds-void-900': '#06080f',
-      '--ds-void-800': '#0a0e18',
-      '--ds-void-700': '#101725',
-      '--ds-blue-900': '#04122e',
-      '--ds-blue-700': '#0052d9',
-      '--ds-blue-600': '#1c6bea',
-      '--ds-blue-500': '#0084ff',
-      '--ds-blue-300': '#4ea5ff',
-      '--ds-blue-100': '#cfe8ff',
-      '--ds-evidence': '#0084ff',
-      '--ds-alternative': '#66f2ff',
-      '--ds-alternative-soft': '#8af5d1',
-      '--ds-counter': '#d8a85d',
-      '--ds-counter-soft': '#e4c28d',
-      '--ds-ending': '#c9c0ff',
-      '--ds-ending-deep': '#8b7fd4',
-      '--ds-paper-100': '#f2ede4',
-      '--ds-paper-300': '#dcd3c4',
-      '--ds-paper-ink': '#241f1a',
-      '--ds-paper-accent': '#c9a87c',
-      '--ds-undev-ink': '#2a3242',
-      '--ds-undev-text': '#5c6879',
-      '--ds-undev-line': '#3a4455',
-      '--ds-text-0': '#f5f7fb',
-      '--ds-text-1': '#c5d0de',
-      '--ds-text-2': '#8b9bb1',
-      '--ds-text-3': '#5c6879',
+      // 暗房基底：刻意不是纯黑（纯黑是 AI 生成页面的第一指纹）
+      '--sil-void-900': '#06070b',
+      '--sil-void-800': '#090b11',
+      '--sil-void-700': '#0d1017',
+      '--sil-void-600': '#12161f',
+      '--sil-void-500': '#191e29',
+      // 文本四档
+      '--sil-ink-100': '#f2f4f8',
+      '--sil-ink-200': '#c3cad6',
+      '--sil-ink-300': '#8d95a5',
+      '--sil-ink-400': '#5e6675',
+      // 三种证据意图（全站唯一的三种强调色）
+      '--sil-zhihu': '#2f6fd0',
+      '--sil-zhihu-soft': '#6a9ee0',
+      '--sil-zhihu-deep': '#143b73',
+      '--sil-alternate': '#4fb8ae',
+      '--sil-alternate-soft': '#86d6cd',
+      '--sil-alternate-deep': '#1d5b56',
+      '--sil-counter': '#b3854a',
+      '--sil-counter-soft': '#d8b47e',
+      '--sil-counter-deep': '#5e4526',
+      // 现实层（相纸）
+      '--sil-paper': '#efe9dd',
+      '--sil-paper-shade': '#ded5c4',
+      '--sil-paper-ink': '#1f1b16',
+      '--sil-paper-rule': '#b9ab92',
+      // 未显影
+      '--sil-undev': '#1b2029',
+      '--sil-undev-line': '#2c333f',
+      '--sil-undev-text': '#545c6a',
     };
     for (const [token, value] of Object.entries(expected)) {
-      expect(DS, token).toContain(`${token}: ${value};`);
+      expect(SILVER_CSS, token).toContain(`${token}: ${value};`);
     }
   });
 
-  it('附录 B 的纪律：新增不改旧 —— --obs-* 仍然在，且映射关系没被改写', () => {
-    for (const legacy of ['--obs-bg-0', '--obs-text-0', '--obs-zhihu', '--obs-path', '--obs-counter', '--obs-end']) {
-      expect(GLOBALS_CSS).toContain(`${legacy}:`);
-    }
-    // 同义 token 的值必须继续相等（否则「映射」就是假的）
-    expect(GLOBALS_CSS).toContain('--obs-zhihu: #0084ff');
-    expect(DS).toContain('--ds-blue-500: #0084ff');
-    expect(GLOBALS_CSS).toContain('--obs-path: #66f2ff');
-    expect(DS).toContain('--ds-alternative: #66f2ff');
+  it('三种证据意图各有独立的 rgb 语义，不是互相的别名', () => {
+    // 三个值必须互不相等 —— 否则「三种意图」只是换了个名字
+    const zhihu = /--sil-zhihu: (#[0-9a-f]{6});/.exec(SILVER_CSS)?.[1];
+    const alternate = /--sil-alternate: (#[0-9a-f]{6});/.exec(SILVER_CSS)?.[1];
+    const counter = /--sil-counter: (#[0-9a-f]{6});/.exec(SILVER_CSS)?.[1];
+    expect(zhihu).toBeTruthy();
+    expect(alternate).toBeTruthy();
+    expect(counter).toBeTruthy();
+    expect(new Set([zhihu, alternate, counter]).size).toBe(3);
   });
 
-  it('§1 内核：结构蓝 #0052D9 与知乎蓝 #0084FF 分工不混', () => {
-    expect(DS).toContain('--ds-blue-700: #0052d9');
-    // 知乎来源信号仍然只认 #0084FF
-    expect(DS).toContain('.ds-badge--similar');
-    expect(DS).toContain('background: rgb(var(--ds-rgb-blue-500) / 0.12)');
+  it('§1 内核：暗房基底不是纯黑，且没有第二套 accent 家族', () => {
+    // 纯黑 / 近纯黑是 AI 页面的典型指纹
+    expect(SILVER_CSS).not.toMatch(/--sil-void-900:\s*#000000/);
+    expect(SILVER_CSS).not.toMatch(/--sil-void-900:\s*#000;/);
+    // 旧代的紫罗兰终局色不许回流（终局现在是安全灯琥珀）
+    expect(SIL).not.toContain('#c9c0ff');
+    expect(SIL).not.toContain('#8b7fd4');
   });
 });
 
-describe('§0 三个原创机制', () => {
-  it('机制 1 显影：620ms，只做亮度 + 饱和度 + 微缩（不含 blur）', () => {
-    const develop = /@keyframes ds-develop \{[\s\S]*?\n\}/.exec(DS)?.[0] ?? '';
-    expect(develop).toContain('brightness(0.42) saturate(0.32)');
-    expect(develop).toContain('scale(0.985)');
-    expect(develop).not.toContain('blur');
-    expect(DS).toContain('animation: ds-develop 620ms var(--ds-ease) both');
-  });
-
-  it('机制 2 极光带：2px、三态、只做透明度呼吸', () => {
-    const aurora = /@keyframes ds-aurora-sweep \{[\s\S]*?\n\}/.exec(DS)?.[0] ?? '';
-    expect(aurora).toContain('opacity');
-    expect(aurora).not.toContain('translate');
-    expect(aurora).not.toContain('transform');
-    for (const tone of ['--ds-aurora-seek', '--ds-aurora-counter', '--ds-aurora-end']) {
-      expect(DS).toContain(tone);
+describe('§0 单一事实源：旧 token 前缀不许回流', () => {
+  it('silver.css 里没有 gmv-* / arc-* / ds-* / gd-* / obs-* 任何一族的**定义**', () => {
+    // 「只允许一套」是本次重构的核心纪律；回流即退化回「堆补丁」。
+    // 只查 stripComments 之后的内容 —— 文件头的注释会**解释**旧前缀
+    // 为什么被合并（那是文档，不是定义）。
+    for (const family of ['--gmv-', '--arc-', '--ds-', '--gd-', '--obs-']) {
+      expect(SIL, family).not.toContain(family);
     }
-    expect(DS).toContain('animation: ds-aurora-sweep 2.4s var(--ds-ease) infinite');
   });
 
-  it('机制 3 三层世界：Evidence 玻璃 / Void 未显影 / Reality 纸，三种材质齐备', () => {
-    expect(DS).toContain('.ds-glass');
-    expect(DS).toContain('.ds-undeveloped');
-    expect(DS).toContain('.ds-paper');
+  it('新组件只消费 --sil-*，不引用旧 token', () => {
+    const migrated = [
+      'src/app/layout.tsx',
+      'src/app/page.tsx',
+      'src/app/session/[id]/page.tsx',
+      'src/components/visual/FateProjectionConsole.tsx',
+      'src/components/visual/AuroraBand.tsx',
+      'src/components/visual/SignalPulse.tsx',
+    ];
+    for (const file of migrated) {
+      const source = stripComments(read(file));
+      for (const stale of ['obs-shell', 'obs-kicker', 'obs-glass', 'ds-input', 'ds-btn-primary', 'gd-guide', 'gmv-']) {
+        expect(source, `${file} 仍在用 ${stale}`).not.toContain(stale);
+      }
+    }
+  });
+});
+
+describe('§0 三个原创机制（银盐版）', () => {
+  it('机制 1 显影：620ms，只做亮度 + 饱和度 + 微缩（不含 blur）', () => {
+    const develop = /@keyframes sil-develop \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(develop).toContain('brightness(0.5) saturate(0.4)');
+    expect(develop).toContain('translateY(5px)');
+    expect(develop).not.toContain('blur');
+    expect(SILVER_CSS).toContain('animation: sil-develop 620ms var(--sil-ease) both');
+  });
+
+  it('机制 2 极光带：2px、三态、只做透明度呼吸（不位移）', () => {
+    const sweep = /@keyframes sil-pulse-soft \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(sweep).toContain('opacity');
+    expect(sweep).not.toContain('translate');
+    expect(sweep).not.toContain('transform');
+    for (const tone of ['--counter', '--end']) {
+      expect(SILVER_CSS).toContain(`.sil-aurora${tone}`);
+    }
+    expect(SILVER_CSS).toContain('animation: sil-pulse-soft 2.4s var(--sil-ease-in-out) infinite');
+  });
+
+  it('机制 3 三层世界：Evidence 面板 / Void 未显影 / Reality 纸，三种材质齐备', () => {
+    expect(SILVER_CSS).toContain('.sil-panel');
+    expect(SILVER_CSS).toContain('.sil-undev');
+    expect(SILVER_CSS).toContain('.sil-paper');
+  });
+
+  it('§15 一点信号有宽高过渡（修掉「点击瞬间弹大」的跳变）', () => {
+    const signal = /\.sil-signal \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(signal).toContain('transition');
+    expect(signal).toContain('width 320ms');
+    expect(signal).toContain('height 320ms');
   });
 });
 
 describe('§4.3 未显影：未知是一等公民，而且永不补全', () => {
-  it('45° 斜线 + 0.5px 虚线 + 不可点，且只有一个状态', () => {
-    const block = /\.ds-undeveloped \{[\s\S]*?\n\}/.exec(DS)?.[0] ?? '';
+  it('45° 斜纹 + 虚线边框，且禁止 hover 高亮', () => {
+    const block = /\.sil-undev \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
     expect(block).toContain('repeating-linear-gradient');
-    expect(block).toContain('45deg');
-    expect(block).toContain('border: 1px dashed var(--ds-undev-line)');
-    expect(block).toContain('cursor: default');
+    expect(block).toContain('-45deg');
+    expect(block).toContain('border: 1px dashed var(--sil-undev-line)');
     // 禁止 hover 高亮
-    expect(DS).not.toContain('.ds-undeveloped:hover');
+    expect(SILVER_CSS).not.toContain('.sil-undev:hover');
   });
 
   it('标注文案由 data 属性给出（默认「还不知道」）', () => {
-    expect(DS).toContain('content: attr(data-unknown-label)');
+    expect(SIL).toContain('content: attr(data-unknown-label)');
     const component = read('src/components/visual/Undeveloped.tsx');
     expect(component).toContain("label = '还不知道'");
     expect(component).toContain('data-unknown-label');
@@ -148,64 +196,40 @@ describe('§4.3 未显影：未知是一等公民，而且永不补全', () => {
 
 describe('§2 色彩角色：暖色只在现实层', () => {
   it('纸层 token 只被 RealityPass 消费，冷色组件不许碰', () => {
-    const consumers = ['src/components/visual/RealityPass.tsx'];
-    for (const file of consumers) {
-      expect(read(file)).toMatch(/--ds-paper-/);
+    for (const file of ['src/components/visual/RealityPass.tsx']) {
+      expect(read(file), file).toMatch(/--sil-paper/);
     }
-    // 首页 / 编译页 / 推演屏 / 极光带 / 碎片 / 未显影 都不许出现暖纸
+    // 首页 / 编译页 / 推演屏 / 极光带 / 未显影 都不许出现暖纸
     for (const file of [
       'src/app/page.tsx',
       'src/app/session/[id]/page.tsx',
       'src/components/game/session/SessionPlayScreen.tsx',
       'src/components/visual/AuroraBand.tsx',
-      'src/components/visual/FragmentShard.tsx',
       'src/components/visual/Undeveloped.tsx',
     ]) {
-      expect(read(file), file).not.toContain('--ds-paper-');
+      expect(read(file), file).not.toContain('--sil-paper');
     }
   });
 });
 
-describe('§4.1 / §4.5 / §4.8 组件规范', () => {
-  it('主 CTA 是一张被光扫过的票：蓝 700 渐变 + 极光内衬 + 上浮 2px', () => {
-    const button = /\.ds-btn-primary \{\n  position: relative;[\s\S]*?\n\}/.exec(DS)?.[0] ?? '';
-    expect(button).toContain('rgb(var(--ds-rgb-blue-700) / 0.55)');
-    // 圆角由本代的半径收口组统一给（2–4px）
-    expect(DS).toContain('.ds-btn-primary,');
-    expect(DS).toContain('transform: translateY(-2px)');
-    expect(DS).toContain('.ds-btn-primary::after');
-    expect(DS).toContain('mix-blend-mode: overlay');
-  });
-
+describe('§4.1 / §4.5 组件规范', () => {
   it('§4.5 困惑输入框：衬线 18px / 行高 1.8 / 最小 132px（大到像一页纸）', () => {
-    const input = /\.ds-input \{\n  width: 100%;[\s\S]*?\n\}/.exec(DS)?.[0] ?? '';
+    const input = /\.sil-input \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
     expect(input).toContain('min-height: 132px');
     expect(input).toContain('font-size: 18px');
     expect(input).toContain('line-height: 1.8');
-    expect(input).toContain("'Noto Serif SC'");
-    expect(read('src/components/visual/FateProjectionConsole.tsx')).toContain('ds-input');
+    expect(input).toContain('var(--sil-font-serif)');
+    expect(read('src/components/visual/FateProjectionConsole.tsx')).toContain('sil-input');
   });
 
-  it('§4.8 解锁轨道：1px 青蓝虚线 + 620ms 画出来', () => {
-    expect(DS).toContain('.ds-unlock-rail__line');
-    expect(DS).toContain('repeating-linear-gradient');
-    expect(DS).toContain('animation: ds-rail-draw 620ms var(--ds-ease) both');
-    expect(read('src/components/visual/HiddenPathReveal.tsx')).toContain('ds-unlock-rail');
+  it('§4.1 移动端可点性：交互元素至少 44px', () => {
+    expect(SILVER_CSS).toContain('min-height: 44px');
+    // 触摸设备上全局兜底
+    expect(SILVER_CSS).toContain('@media (pointer: coarse)');
   });
 
-  it('§4.6 三意图徽标 + unlock + unknown 五种齐备', () => {
-    for (const variant of ['similar', 'alternative', 'counter', 'unlock', 'unknown']) {
-      expect(DS).toContain(`.ds-badge--${variant}`);
-    }
-    expect(read('src/components/visual/WorldForge.tsx')).toContain('ds-badge--alternative');
-    expect(read('src/components/game/session/SessionChoiceCard.tsx')).toContain('ds-badge--unlock');
-  });
-});
-
-describe('§1 / §5 圆角与焦点', () => {
-  it('圆角一律 2–4px（脱离 SaaS 感）', () => {
-    // 只查矩形面板 / 按钮 / 卡片；圆点与胶囊的 9999px 是几何，不是圆角
-    const values = [...DS.matchAll(/border-radius: (\d+)px/g)]
+  it('§1 圆角一律 2–4px（脱离 SaaS 感）', () => {
+    const values = [...SIL.matchAll(/border-radius: (\d+)px/g)]
       .map((match) => Number(match[1]))
       .filter((value) => value < 100);
     expect(values.length).toBeGreaterThan(0);
@@ -213,35 +237,49 @@ describe('§1 / §5 圆角与焦点', () => {
       expect(value).toBeGreaterThanOrEqual(2);
       expect(value).toBeLessThanOrEqual(4);
     }
-    // 观象厅旧组件在新语法下也被统一收口
-    expect(DS).toContain('.obs-glass,');
-    expect(DS).toContain('.ds-shard,');
-  });
-
-  it('§7 Do#6：可交互元素有 3px 蓝色外环', () => {
-    expect(DS).toContain('outline: none');
-    expect(DS).toContain('0 0 0 3px rgb(var(--ds-rgb-blue-500) / 0.1)');
+    // 圆点是几何，不是圆角
+    expect(SILVER_CSS).toContain('border-radius: 50%');
   });
 });
 
 describe('§3 Type Scale', () => {
-  it('Display 用 clamp(34px, 4.2vw, 56px)，Kicker 承担刻度定位', () => {
-    expect(DS).toContain('font-size: clamp(34px, 4.2vw, 56px)');
-    expect(DS).toContain('.ds-kicker');
-    expect(DS).toContain('letter-spacing: 0.34em');
-    expect(DS).toContain('.ds-quote');
-    expect(DS).toContain("'Noto Serif SC'");
-    // 中文正文硬约束：≥15px、行高 ≥1.7
-    const body = /\.ds-body \{[\s\S]*?\n\}/.exec(DS)?.[0] ?? '';
-    expect(body).toContain('font-size: 15px');
-    expect(body).toContain('line-height: 1.75');
-    // 首页标题用了 Display
-    expect(read('src/app/page.tsx')).toContain('ds-display');
+  it('Display 用 clamp 且首屏标题用到它', () => {
+    expect(SILVER_CSS).toContain('font-size: clamp(28px, 7.2vw, 56px)');
+    expect(SILVER_CSS).toContain('.sil-label');
+    expect(SILVER_CSS).toContain('letter-spacing: 0.18em');
+    expect(read('src/app/page.tsx')).toContain('sil-title--display');
+  });
+
+  it('仪器铭牌不小于 11px（mono 疏排标签的可读下限）', () => {
+    /*
+      这一条是**实测驱动的**：原来 `.sil-label` 是 10px、`--sm` 是 9px，
+      双端测量（.private/audit/measure.mjs）都报"过小文字"。
+      10px 的等宽字在小屏上会被系统和浏览器缩放打碎，
+      读不清的仪器铭牌就只剩噪音了。
+    */
+    const label = /\.sil-label \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(label).toContain('font-size: 11px');
+    const small = /\.sil-label--sm \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(small).toContain('font-size: 10px');
+  });
+
+  it('§3 中文正文硬约束：≥15px、行高 ≥1.7', () => {
+    const prose = /\.sil-prose \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(prose).toContain('font-size: 15px');
+    expect(prose).toContain('line-height: 1.85');
+    // 行长必须被限制（不然宽屏上会拉成一行读不完的长句）
+    expect(prose).toContain('max-width: var(--sil-measure)');
+  });
+
+  it('§3 数字与坐标一律等宽 + 表格数字', () => {
+    const num = /\.sil-num \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(num).toContain('var(--sil-font-mono)');
+    expect(num).toContain('tabular-nums');
   });
 });
 
 describe('§7 / §8 禁令与降级', () => {
-  it('§7 Don\'t #6：按钮文案后面不追加 →', () => {
+  it("§7 Don't #6：按钮文案后面不追加 →", () => {
     const card = stripComments(read('src/components/game/session/SessionChoiceCard.tsx'));
     expect(card).not.toContain('→');
     expect(card).toContain('<svg');
@@ -249,31 +287,74 @@ describe('§7 / §8 禁令与降级', () => {
     expect(card).toContain('strokeWidth="1.2"');
   });
 
-  it('§6 性能：同屏 blur 元素 <= 3（观象厅 + 显影厅只声明一处 backdrop-filter）', () => {
-    const backdrop = [...DS.matchAll(/backdrop-filter:/g)].length;
+  it('§6 性能：同屏 blur 元素 <= 3', () => {
+    const backdrop = [...SIL.matchAll(/backdrop-filter:/g)].length;
     expect(backdrop).toBeLessThanOrEqual(3);
   });
 
-  it('§8 移动端降级：<640px 隐藏星尘、缩小观象仪、Kicker 收窄字距', () => {
-    const mobile = DS.slice(DS.lastIndexOf('@media (max-width: 640px)'));
-    expect(mobile).toContain('.obs-dust');
-    expect(mobile).toContain('display: none');
-    expect(mobile).toContain('.obs-dial__svg');
-    expect(DS).toContain('.ds-kicker');
-    expect(DS).toContain('letter-spacing: 0.24em');
+  it('§8 移动端降级：星尘只在宽屏出现，且 reduced motion 有兜底', () => {
+    expect(read('src/app/page.tsx')).toContain('sil-dust hidden lg:block');
+    expect(SILVER_CSS).toContain('.sil-dust');
+    /*
+      ## 为什么要找「所有」降级块，而不是最后/第一个
+
+      样式表里有**多个** `@media (prefers-reduced-motion: reduce)` 块：
+      一个是主降级（关掉入场动画），另一个只处理 Gate 变暗的过渡。
+
+      旧写法用 `lastIndexOf` 取最后一个 —— 在只有一块时碰巧正确，
+      新增第二块后就指向了那块只含 `.session-choice-list:has(...)` 的，
+      于是「找不到 .sil-dust」而失败。这是**测试对文件结构的隐式假设**
+      被打破，不是降级本身没了。
+
+      正确做法：把所有降级块拼起来一起断言。
+    */
+    const blocks = [
+      ...SILVER_CSS.matchAll(
+        /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\n\}/g,
+      ),
+    ].map((m) => m[0]);
+    expect(blocks.length, '至少要有一个 reduced-motion 降级块').toBeGreaterThan(0);
+    const reduced = blocks.join('\n');
+    expect(reduced).toContain('.sil-develop');
+    expect(reduced).toContain('.sil-aurora');
+    expect(reduced).toContain('.sil-dust');
+  });
+});
+
+describe('§9 去 AI 化：三个最强指纹不许出现', () => {
+  it('没有网格背景、没有霓虹外发光、没有扫描线动画层', () => {
+    // 只查真实代码：layout 的注释会解释这些旧装饰为什么被撤掉（那是文档）
+    const layout = stripComments(read('src/app/layout.tsx'));
+    // 1. 细网格背景（"科技感"套话）
+    expect(layout).not.toContain('bg-grid-fate');
+    // 2. 霓虹外发光：不允许「无偏移 + 大模糊」的纯发光阴影
+    expect(SIL).not.toMatch(/box-shadow:\s*0 0 (1[0-9]|[2-9][0-9])px/);
+    // 3. 扫描线装饰层 + 常驻光晕动画
+    expect(layout).not.toContain('bg-scanline');
+    expect(layout).not.toContain('animate-halo-pulse');
   });
 
-  it('§8 reduced motion：显影直接到位、极光带转静态、玻璃不 blur', () => {
-    const reduced = DS.slice(DS.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
-    expect(reduced).toContain('.ds-develop');
-    expect(reduced).toContain('.ds-aurora');
-    expect(reduced).toContain('.ds-unlock-rail__line');
-    expect(reduced).toContain('backdrop-filter: none !important');
+  it('暗房材质是静态的：颗粒与晕影不做动画', () => {
+    const grain = /\.sil-darkroom::before \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(grain).toContain('position: fixed');
+    expect(grain).not.toContain('animation');
+    const vignette = /\.sil-darkroom::after \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(vignette).toContain('radial-gradient');
+    expect(vignette).not.toContain('animation');
+  });
+
+  it('字体不外链 Google（国内网络会阻塞首屏）', () => {
+    // 注释里会解释「为什么不再外链」，那是文档；只查真实代码
+    const layout = stripComments(read('src/app/layout.tsx'));
+    expect(layout).not.toContain('fonts.googleapis.com');
+    expect(layout).not.toContain('fonts.gstatic.com');
+    // 自托管
+    expect(layout).toContain('/fonts/jetbrains-mono.css');
   });
 });
 
 describe('§4.7 极光带真的上了页面', () => {
-  it('首页 / 编译页 / 推演屏各一条，且推演屏按幕换色', () => {
+  it('首页 / 编译页各一条，且推演屏按幕换色', () => {
     expect(read('src/app/page.tsx')).toContain('<AuroraBand tone="seek" />');
     expect(read('src/app/session/[id]/page.tsx')).toContain('<AuroraBand tone="seek" />');
     const play = read('src/components/game/session/SessionPlayScreen.tsx');

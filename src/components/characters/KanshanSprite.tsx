@@ -5,16 +5,36 @@ import * as React from 'react';
 import type { Expression } from '@/types/narrative';
 
 /**
- * 角色动态立绘（GIF）。
+ * 角色动态立绘（动画 WebP）。
  *
- * 素材来源：知乎官方刘看山动态包（`/kanshan/{action}.gif`）+ 同源画风的
- * 配角包（`/kanshan/{id}_{action}.gif`，6 角色 × 4 动作）。
+ * 素材来源：知乎官方刘看山动态包 + 同源画风的配角包（6 角色 × 4 动作）。
  * 全员共用「白色 3D 黏土北极狐 + 红围巾」母版，靠服装配饰区分身份，
  * 因此和官方刘看山同框不出戏。
  *
  * 按比赛规则，刘看山形象在赛事期间可用，赛后商用需另行取得授权。
  *
- * 说明：GIF 无法用 CSS 暂停，`prefers-reduced-motion` 下不做降级——
+ * ## 为什么是 .webp 而不是 .gif
+ *
+ * 原始 GIF 每个约 950KB–1.9MB，30 个文件合计 **37.6MB**。首页只显示一个
+ * 引导员立绘（`idle`），却要下 951KB —— 手机上这是「首屏能不能打开」的问题。
+ *
+ * 转成有损动画 WebP 后：
+ *
+ * ```text
+ * 951KB  →  321KB   （首页那张，省 66%）
+ * 37.6MB →  13.1MB  （全部 30 张，省 66%）
+ * 质量   →  PSNR 44.4dB（合成到真实暗房底色后测得，>40dB 即看不出差别）
+ * ```
+ *
+ * 另外顺带解决了 GIF 的 **1bit alpha** 问题：GIF 只有「全透明/全不透明」，
+ * 抠图边是硬切；WebP 支持 8bit alpha，边缘是渐隐的。转换脚本还会按多帧
+ * alpha 并集裁掉画布空白（`idle` 的实际内容只有 187×265，不是 320×320），
+ * 于是 CSS 的 width/height 真正等于「角色有多大」。
+ *
+ * 生成方式：GIF 母版 → 动画 WebP（FFmpeg），原 GIF 仍保留在
+ * `public/kanshan/*.gif` 作为母版，不在运行时加载。
+ *
+ * 说明：动图无法用 CSS 暂停，`prefers-reduced-motion` 下不做降级 ——
  * 素材只有动图，没有对应的静态帧。拿到静态图后可在此补降级分支。
  */
 
@@ -62,19 +82,44 @@ export function actionForExpression(expression: Expression): KanshanAction {
  */
 export const SPRITE_VERSION = '2';
 
+/**
+ * 素材目录与扩展名。
+ *
+ * 从 GIF 换成动画 WebP 是一次**体积级别的修正**（37.6MB → 13.1MB），
+ * 不是风格偏好。
+ *
+ * ## 为什么 WebP 放在 `webp/` 子目录而不是同级
+ *
+ * 同一目录下 `idle.gif` 与 `idle.webp` 只差扩展名，肉眼极易看错；
+ * 更实际的是，同目录混放会让「哪些是原版母版、哪些是派生物」失去区分，
+ * 而母版必须保留 —— 转换参数（quality / 裁剪框 / 目标尺寸）改了要能重新生成。
+ *
+ * 现在边界很清楚：
+ *
+ * ```text
+ * /kanshan/*.gif        原版母版（不参与运行时加载）
+ * /kanshan/webp/*.webp  派生物（页面实际加载的）
+ * ```
+ *
+ * 做成常量是因为组件里有两处拼路径，散落字符串一定会漏改一处
+ * （那种 bug 的表现是「某些角色不显示」）。
+ */
+const SPRITE_DIR = '/kanshan/webp';
+const SPRITE_EXT = 'webp';
+
 /** 解析出实际可用的素材路径：不支持的动作回落到 idle。 */
 export function spriteSrc(characterId: string, action: KanshanAction): string {
   const supported = ACTIONS_BY_CHARACTER[characterId];
 
   if (!supported) {
-    return '/kanshan/idle.gif';
+    return `${SPRITE_DIR}/idle.${SPRITE_EXT}`;
   }
 
   const resolved = supported.includes(action) ? action : 'idle';
 
   return characterId === 'kanshan'
-    ? `/kanshan/${resolved}.gif`
-    : `/kanshan/${characterId}_${resolved}.gif`;
+    ? `${SPRITE_DIR}/${resolved}.${SPRITE_EXT}`
+    : `${SPRITE_DIR}/${characterId}_${resolved}.${SPRITE_EXT}`;
 }
 
 export interface KanshanSpriteProps {
@@ -83,6 +128,18 @@ export interface KanshanSpriteProps {
   readonly expression?: Expression;
   readonly alt?: string;
   readonly className?: string;
+  /**
+   * 是否自带台座（接触阴影 + 相纸弧）。
+   *
+   * 默认 `true`。台座是「融入暗房」的关键：素材是透明背景的白色黏土立绘，
+   * 没有落点时会像贴纸浮在近黑背景上。见 `silver.css` 的 `.sil-cast`
+   * 一节（那里解释了四个病因与解法）。
+   *
+   * 只有在**父级已经画好台座**的场合才需要关掉，否则会出现两层阴影。
+   */
+  readonly grounded?: boolean;
+  /** 虚影态：第三幕反例揭示时用，去饱和 + 降透明。 */
+  readonly ghost?: boolean;
 }
 
 export function KanshanSprite({
@@ -91,18 +148,54 @@ export function KanshanSprite({
   expression,
   alt,
   className,
+  grounded = true,
+  ghost = false,
 }: KanshanSpriteProps) {
   const resolved = action ?? (expression ? actionForExpression(expression) : 'idle');
 
-  return (
+  const image = (
     <img
       src={`${spriteSrc(characterId, resolved)}?v=${SPRITE_VERSION}`}
       alt={alt ?? ''}
       draggable={false}
-      className={['pointer-events-none select-none object-contain object-bottom', className]
+      /*
+        尺寸类（h-full / w-full / gd-guide__sprite 等）由**外层**承担，
+        这里只保留「填满外层」的约束。原因是台座（.sil-cast__ground）
+        是外层的兄弟节点，它的定位依赖外层盒子；若尺寸只给 img，
+        外层会塌成 0 宽高，台座就画在错误的位置上。
+      */
+      className={[
+        grounded ? 'sil-cast__sprite' : '',
+        'pointer-events-none h-full w-full select-none object-contain object-bottom',
+      ]
         .filter(Boolean)
         .join(' ')}
     />
+  );
+
+  if (!grounded) {
+    // 不带台座时，尺寸类仍要落在 img 上
+    return (
+      <img
+        src={`${spriteSrc(characterId, resolved)}?v=${SPRITE_VERSION}`}
+        alt={alt ?? ''}
+        draggable={false}
+        className={['pointer-events-none select-none object-contain object-bottom', className]
+          .filter(Boolean)
+          .join(' ')}
+      />
+    );
+  }
+
+  return (
+    <span
+      className={['sil-cast', ghost ? 'sil-cast--ghost' : '', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {image}
+      <span aria-hidden="true" className="sil-cast__ground" />
+    </span>
   );
 }
 

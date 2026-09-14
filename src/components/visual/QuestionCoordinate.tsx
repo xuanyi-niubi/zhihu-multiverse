@@ -56,17 +56,17 @@ export function QuestionCoordinate({
   return (
     <div className={['relative', className].filter(Boolean).join(' ')}>
       <div
-        className="arc-coordinate relative overflow-hidden rounded-2xl border border-white/12 bg-archive-850/70 p-4"
+        className="sil-coordinate-frame relative overflow-hidden rounded-2xl border border-white/12 bg-archive-850/70 p-4"
         style={
           collapsing
-            ? { animation: 'arc-collapse 620ms var(--arc-ease) both', transformOrigin: '50% 50%' }
+            ? { animation: 'sil-collapse 620ms var(--sil-ease) both', transformOrigin: '50% 50%' }
             : undefined
         }
       >
         {/* 聚焦扫描线：缓慢掠过，不刺眼（报告 §5） */}
         {focused && !collapsing ? (
           <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-2/5">
-            <span className="arc-scan block h-full w-full bg-gradient-to-r from-transparent via-zhihu-400/12 to-transparent" />
+            <span className="sil-scan block h-full w-full bg-gradient-to-r from-transparent via-zhihu-400/12 to-transparent" />
           </span>
         ) : null}
 
@@ -119,7 +119,7 @@ export function QuestionCoordinate({
           className="absolute left-0 right-0 top-1/2 mx-auto block h-px max-w-[280px] bg-zhihu-300"
           style={{
             boxShadow: '0 0 18px 3px rgba(0,132,255,0.6)',
-            animation: 'arc-beam-in 620ms var(--arc-ease) both',
+            animation: 'sil-beam-in 620ms var(--sil-ease) both',
           }}
         />
       ) : null}

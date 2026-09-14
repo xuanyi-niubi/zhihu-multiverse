@@ -73,21 +73,21 @@ export function UniverseJump({ active, question, className = '' }: UniverseJumpP
     <div
       aria-hidden="true"
       data-phase={phase}
-      className={['obs-jump', className].filter(Boolean).join(' ')}
+      className={['sil-jump', className].filter(Boolean).join(' ')}
     >
-      <span className="obs-jump__veil" />
+      <span className="sil-jump__veil" />
 
-      <div className="obs-jump__tunnel">
+      <div className="sil-jump__tunnel">
         {Array.from({ length: RING_COUNT }, (_, index) => (
           <span
             key={`ring-${index}`}
-            className="obs-jump__ring"
+            className="sil-jump__ring"
             style={{
               transitionDelay: `${index * 46}ms`,
               borderColor:
                 index % 2 === 0
-                  ? 'rgb(var(--obs-rgb-path) / 0.5)'
-                  : 'rgb(var(--obs-rgb-zhihu) / 0.42)',
+                  ? 'rgb(var(--sil-rgb-alternate) / 0.5)'
+                  : 'rgb(var(--sil-rgb-zhihu) / 0.42)',
             }}
           />
         ))}
@@ -95,23 +95,23 @@ export function UniverseJump({ active, question, className = '' }: UniverseJumpP
         {Array.from({ length: STREAK_COUNT }, (_, index) => (
           <span
             key={`streak-${index}`}
-            className="obs-jump__streak"
+            className="sil-jump__streak"
             style={
               {
-                '--obs-streak-angle': `${(360 / STREAK_COUNT) * index}deg`,
+                '--sil-streak-angle': `${(360 / STREAK_COUNT) * index}deg`,
                 transitionDelay: `${(index % 6) * 28}ms`,
               } as React.CSSProperties
             }
           />
         ))}
 
-        <span className="obs-jump__core" />
+        <span className="sil-jump__core" />
       </div>
 
-      <div className="obs-jump__text">
-        <p className="obs-kicker">Entering the multiverse</p>
-        <p className="obs-jump__question">{question}</p>
-        <p className="obs-jump__note">正在去找真正走过这条路的人</p>
+      <div className="sil-jump__text">
+        <p className="sil-label">Entering the multiverse</p>
+        <p className="sil-jump__question">{question}</p>
+        <p className="sil-jump__note">正在去找真正走过这条路的人</p>
       </div>
     </div>
   );
@@ -130,10 +130,10 @@ export function ArrivalFlash({ className = '' }: { readonly className?: string }
     <div
       aria-hidden="true"
       data-phase={settled ? 'settled' : 'arriving'}
-      className={['obs-arrive', className].filter(Boolean).join(' ')}
+      className={['sil-arrive', className].filter(Boolean).join(' ')}
     >
-      <span className="obs-arrive__flash" />
-      <span className="obs-arrive__ring" />
+      <span className="sil-arrive__flash" />
+      <span className="sil-arrive__ring" />
     </div>
   );
 }

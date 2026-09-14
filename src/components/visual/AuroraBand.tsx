@@ -37,9 +37,9 @@ export function AuroraBand({ tone = 'seek', variant = 'fixed', className = '' }:
       aria-hidden="true"
       data-aurora-tone={tone}
       className={[
-        'ds-aurora',
-        tone === 'seek' ? '' : `ds-aurora--${tone}`,
-        variant === 'fixed' ? 'ds-aurora--fixed' : '',
+        'sil-aurora',
+        tone === 'seek' ? '' : `sil-aurora--${tone}`,
+        variant === 'fixed' ? 'sil-aurora--fixed' : '',
         className,
       ]
         .filter(Boolean)

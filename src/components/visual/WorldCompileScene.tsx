@@ -66,7 +66,7 @@ export function WorldCompileScene({ tracks, phase, className = '' }: WorldCompil
         aria-label="三条真实经历轨道正在汇聚成这一局的世界"
       >
         <defs>
-          <radialGradient id="arc-hub-glow" cx="50%" cy="50%" r="50%">
+          <radialGradient id="sil-hub-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="rgba(207,232,255,0.9)" />
             <stop offset="100%" stopColor="rgba(207,232,255,0)" />
           </radialGradient>
@@ -132,8 +132,8 @@ export function WorldCompileScene({ tracks, phase, className = '' }: WorldCompil
                       transformOrigin: `${x}px ${y}px`,
                       animation:
                         count === null
-                          ? 'arc-node-pulse 2.2s ease-in-out infinite'
-                          : 'arc-node-pulse 3.4s ease-in-out infinite',
+                          ? 'sil-node-pulse 2.2s ease-in-out infinite'
+                          : 'sil-node-pulse 3.4s ease-in-out infinite',
                       animationDelay: `${index * 220}ms`,
                     }}
                   />
@@ -152,7 +152,7 @@ export function WorldCompileScene({ tracks, phase, className = '' }: WorldCompil
                   strokeDasharray={1}
                   style={{
                     strokeDashoffset: 0,
-                    animation: 'arc-link-draw 900ms var(--arc-ease) both',
+                    animation: 'sil-link-draw 900ms var(--sil-ease) both',
                   }}
                 />
               ) : null}
@@ -161,7 +161,7 @@ export function WorldCompileScene({ tracks, phase, className = '' }: WorldCompil
         })}
 
         {/* 汇点：这些人生被折叠进这一局 */}
-        <circle cx={HUB_X} cy={HUB_Y} r={46} fill="url(#arc-hub-glow)" opacity={settled ? 0.5 : 0.24} />
+        <circle cx={HUB_X} cy={HUB_Y} r={46} fill="url(#sil-hub-glow)" opacity={settled ? 0.5 : 0.24} />
         <circle
           cx={HUB_X}
           cy={HUB_Y}
@@ -169,7 +169,7 @@ export function WorldCompileScene({ tracks, phase, className = '' }: WorldCompil
           fill="#CFE8FF"
           style={
             assembling
-              ? { animation: 'arc-node-pulse 2.6s ease-in-out infinite' }
+              ? { animation: 'sil-node-pulse 2.6s ease-in-out infinite' }
               : undefined
           }
         />
@@ -181,7 +181,7 @@ export function WorldCompileScene({ tracks, phase, className = '' }: WorldCompil
             fill="none"
             stroke="rgba(207,232,255,0.5)"
             strokeWidth="1"
-            style={{ animation: 'arc-node-pulse 3.2s ease-in-out infinite' }}
+            style={{ animation: 'sil-node-pulse 3.2s ease-in-out infinite' }}
           />
         ) : null}
       </svg>

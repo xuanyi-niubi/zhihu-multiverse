@@ -110,7 +110,7 @@ function renderFacts(facts: readonly ExperienceFact[]): React.ReactNode {
   return (
     <ul className="flex flex-col gap-1">
       {facts.map((fact) => (
-        <li key={fact.id} className="text-[13px] leading-relaxed text-[color:var(--obs-text-1)]">
+        <li key={fact.id} className="text-[13px] leading-relaxed text-[color:var(--sil-ink-200)]">
           {fact.exactQuote}
         </li>
       ))}
@@ -132,25 +132,25 @@ function ExperienceReliquary({
   const [open, setOpen] = React.useState(defaultOpen);
 
   return (
-    <article className="obs-reliquary relative overflow-hidden">
+    <article className="sil-panel relative overflow-hidden">
       {/* 少量 dust：深色晶体里的三点微尘 */}
-      <span aria-hidden="true" className="obs-reliquary__dust" />
+      <span aria-hidden="true" className="sil-panel__dust" />
 
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="relative flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors duration-300 hover:bg-[color:rgb(var(--obs-rgb-text-0)/0.03)]"
+        className="relative flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors duration-300 hover:bg-[color:rgb(var(--sil-rgb-ink-100)/0.03)]"
       >
         <span className="min-w-0">
-          <span className="obs-kicker block">
+          <span className="sil-label block">
             Real Life / Zhihu · {String(index).padStart(3, '0')}
           </span>
-          <span className="mt-2 block text-[15px] font-bold leading-snug text-[color:var(--obs-text-0)]">
+          <span className="mt-2 block text-[15px] font-bold leading-snug text-[color:var(--sil-ink-100)]">
             {title}
           </span>
         </span>
-        <span className="mt-1 shrink-0 text-[10px] tracking-[0.2em] text-[color:var(--obs-text-2)]">
+        <span className="mt-1 shrink-0 text-[10px] tracking-[0.2em] text-[color:var(--sil-ink-300)]">
           {open ? '收起' : '读取'}
         </span>
       </button>
@@ -158,8 +158,8 @@ function ExperienceReliquary({
       {/* §27 展开：opacity + translate，没有 3D flip */}
       {open ? (
         <div
-          className="relative border-t border-[color:rgb(var(--obs-rgb-text-0)/0.08)] px-4 pb-4 pt-3.5"
-          style={{ animation: 'fragment-materialize 460ms var(--obs-ease) both' }}
+          className="relative border-t border-[color:rgb(var(--sil-rgb-ink-100)/0.08)] px-4 pb-4 pt-3.5"
+          style={{ animation: 'fragment-materialize 460ms var(--sil-ease) both' }}
         >
           <div className="flex flex-col gap-3">
             {BLOCKS.map((block, blockIndex) =>
@@ -168,26 +168,26 @@ function ExperienceReliquary({
                   key={block.key}
                   className="flex flex-col gap-1"
                   style={{
-                    animation: 'fragment-materialize 420ms var(--obs-ease) both',
+                    animation: 'fragment-materialize 420ms var(--sil-ease) both',
                     animationDelay: `${blockIndex * 80}ms`,
                   }}
                 >
-                  <span className="obs-kicker">{block.label}</span>
+                  <span className="sil-label">{block.label}</span>
                   {renderFacts(card[block.key])}
                 </div>
               ) : null,
             )}
 
             {card.differences && card.differences.length > 0 ? (
-              <div className="border border-[color:rgb(var(--obs-rgb-counter)/0.28)] bg-[color:rgb(var(--obs-rgb-counter)/0.05)] px-3 py-2.5">
-                <span className="obs-kicker text-[color:var(--obs-counter-soft)]">
+              <div className="border border-[color:rgb(var(--sil-rgb-counter)/0.28)] bg-[color:rgb(var(--sil-rgb-counter)/0.05)] px-3 py-2.5">
+                <span className="sil-label text-[color:var(--sil-counter-soft)]">
                   这条经验不能直接照搬
                 </span>
                 <ul className="mt-1.5 flex flex-col gap-1">
                   {card.differences.slice(0, 3).map((difference) => (
                     <li
                       key={difference.variable}
-                      className="text-[12px] leading-relaxed text-[color:var(--obs-counter-soft)]"
+                      className="text-[12px] leading-relaxed text-[color:var(--sil-counter-soft)]"
                     >
                       {difference.variable}
                       {difference.experienceValue ? `：他 ${difference.experienceValue}` : ''}
@@ -199,8 +199,8 @@ function ExperienceReliquary({
             ) : null}
           </div>
 
-          <footer className="mt-3.5 flex items-center justify-between gap-3 border-t border-[color:rgb(var(--obs-rgb-text-0)/0.08)] pt-2.5">
-            <span className="obs-kicker">
+          <footer className="mt-3.5 flex items-center justify-between gap-3 border-t border-[color:rgb(var(--sil-rgb-ink-100)/0.08)] pt-2.5">
+            <span className="sil-label">
               来源 · {card.author}
             </span>
             {card.sourceUrl ? (
@@ -208,7 +208,7 @@ function ExperienceReliquary({
                 href={card.sourceUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-[11px] font-semibold text-[color:var(--obs-zhihu-soft)] transition-opacity duration-200 hover:opacity-80"
+                className="text-[11px] font-semibold text-[color:var(--sil-zhihu-soft)] transition-opacity duration-200 hover:opacity-80"
               >
                 查看知乎原回答 ↗
               </a>
@@ -223,7 +223,7 @@ function ExperienceReliquary({
 export function ExperienceCardPanel({ cards, titles, className = '' }: ExperienceCardPanelProps) {
   if (cards.length === 0) {
     return (
-      <p className="text-[12px] leading-relaxed text-[color:var(--obs-text-2)]">
+      <p className="text-[12px] leading-relaxed text-[color:var(--sil-ink-300)]">
         这一局还没有借到经验 —— 我们不会为了填满列表编一张卡。
       </p>
     );
@@ -241,7 +241,7 @@ export function ExperienceCardPanel({ cards, titles, className = '' }: Experienc
         />
       ))}
 
-      <p className="text-[10px] leading-relaxed text-[color:var(--obs-text-2)]">
+      <p className="text-[10px] leading-relaxed text-[color:var(--sil-ink-300)]">
         晶体上的每一句都是原文逐字片段，没有改写、没有概括。它说明有人这样做过，
         不说明这样做会得到什么结果 —— 那需要你自己去验证。
       </p>

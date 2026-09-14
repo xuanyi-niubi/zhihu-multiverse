@@ -45,17 +45,17 @@ export interface KanshanProps {
 }
 
 const TONE_VAR: Readonly<Record<KanshanTone, string>> = {
-  path: '--obs-path',
-  zhihu: '--obs-zhihu',
-  counter: '--obs-counter',
-  end: '--obs-end',
+  path: '--sil-alternate',
+  zhihu: '--sil-zhihu',
+  counter: '--sil-counter',
+  end: '--sil-counter',
 };
 
 const TONE_SOFT_VAR: Readonly<Record<KanshanTone, string>> = {
-  path: '--obs-path-soft',
-  zhihu: '--obs-zhihu-soft',
-  counter: '--obs-counter-soft',
-  end: '--obs-end',
+  path: '--sil-alternate-soft',
+  zhihu: '--sil-zhihu-soft',
+  counter: '--sil-counter-soft',
+  end: '--sil-counter',
 };
 
 /** 剪影的几何：一只坐着的北极狐。所有形态共用，只是描边/节点不同。 */
@@ -103,7 +103,7 @@ export function Kanshan({
 
   return (
     <span
-      className={['obs-kanshan', `obs-kanshan--${variant}`, className].filter(Boolean).join(' ')}
+      className={['sil-guide', `sil-guide--${variant}`, className].filter(Boolean).join(' ')}
       style={{ width: dimension, height: dimension }}
       role={label ? 'img' : undefined}
       aria-label={label}
@@ -111,12 +111,12 @@ export function Kanshan({
     >
       {variant === 'projection' ? (
         <>
-          <span aria-hidden="true" className="obs-kanshan__cone" />
-          <span aria-hidden="true" className="obs-kanshan__pad" />
+          <span aria-hidden="true" className="sil-guide__cone" />
+          <span aria-hidden="true" className="sil-guide__pad" />
         </>
       ) : null}
 
-      <svg viewBox="0 0 96 96" className="obs-kanshan__svg" style={{ width: '100%', height: '100%' }}>
+      <svg viewBox="0 0 96 96" className="sil-guide__svg" style={{ width: '100%', height: '100%' }}>
         {/* 底座准线：小型投影站在一条刻度线上 */}
         {variant === 'projection' ? (
           <line

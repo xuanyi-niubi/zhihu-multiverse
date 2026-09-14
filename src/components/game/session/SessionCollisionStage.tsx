@@ -25,8 +25,8 @@ import type { SessionCollisionView } from '@/components/game/session/types';
  *
  * ## 结构与视觉的分工
  *
- * 结构化 class 归这里（`.session-collision` + Agent 04 的
- * `.obs-collision__grid` / `.obs-reliquary` / `.obs-axis`），
+ * 结构化 class 归这里（`.session-collision` + silver 体系的
+ * `.sil-coordinate` / `.sil-panel` / `.sil-coordinate__key`），
  * 材质、光、轨道动画归视觉线程。移动端上下堆叠，中央轴只在桌面出现（§二十九）。
  */
 export interface SessionCollisionStageProps {
@@ -47,23 +47,23 @@ function CaseBlock({
   const isCounter = side === 'counter';
   return (
     <article
-      className={`obs-reliquary relative overflow-hidden px-4 py-3.5 ${
-        isCounter ? 'obs-reliquary--counter' : ''
+      className={`sil-panel relative overflow-hidden px-4 py-3.5 ${
+        isCounter ? 'sil-panel--counter' : ''
       }`}
     >
-      {isCounter ? <span aria-hidden="true" className="obs-reliquary__dust" /> : null}
-      <p className={`obs-kicker ${isCounter ? 'text-[color:var(--obs-counter)]' : ''}`}>
+      {isCounter ? <span aria-hidden="true" className="sil-panel__dust" /> : null}
+      <p className={`sil-label ${isCounter ? 'text-[color:var(--sil-counter)]' : ''}`}>
         {isCounter ? '结果不同的人' : '走这条路的人'}
       </p>
       <p
         className="mt-2 text-[13px] font-semibold leading-relaxed"
-        style={{ color: isCounter ? 'var(--obs-counter-soft)' : 'var(--obs-text-1)' }}
+        style={{ color: isCounter ? 'var(--sil-counter-soft)' : 'var(--sil-ink-200)' }}
       >
         {label}
       </p>
       <ul className="mt-2.5 flex flex-col gap-1.5">
         {quotes.map((quote) => (
-          <li key={quote} className="text-[12px] leading-relaxed" style={{ color: 'var(--obs-text-1)' }}>
+          <li key={quote} className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
             「{quote}」
           </li>
         ))}
@@ -82,21 +82,21 @@ export function SessionCollisionStage({
       className={['session-collision-wrap mt-6', className].filter(Boolean).join(' ')}
       aria-label="两段真实经历的冲突"
     >
-      <p className="obs-kicker">COLLISION</p>
-      <p className="mt-2 text-[13px] leading-relaxed" style={{ color: 'var(--obs-text-1)' }}>
+      <p className="sil-label">COLLISION</p>
+      <p className="mt-2 text-[13px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
         两个人的经验互相矛盾 —— 这里没有标准答案。
       </p>
 
       {/* §29：桌面 左遗物 / 中央极细轴 / 右遗物；移动端上下 */}
-      <div className="session-collision obs-collision__grid mt-4">
+      <div className="session-collision sil-coordinate mt-4">
         <CaseBlock side="primary" label={view.primary.label} quotes={view.primary.quotes} />
-        <span aria-hidden="true" className="obs-axis" />
+        <span aria-hidden="true" className="sil-coordinate__key" />
         <CaseBlock side="counter" label={view.counter.label} quotes={view.counter.quotes} />
       </div>
 
       {view.focuses.length > 0 ? (
         <div className="mt-5">
-          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--obs-text-1)' }}>
+          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
             你更想继续观察哪一个变量？
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
@@ -109,17 +109,17 @@ export function SessionCollisionStage({
                   aria-pressed={active}
                   disabled={onSelectFocus === undefined}
                   onClick={() => onSelectFocus?.(focus.id)}
-                  className="ds-badge min-h-11 px-4 text-[12px] transition-colors duration-200 disabled:opacity-60"
+                  className="sil-mark min-h-11 px-4 text-[12px] transition-colors duration-200 disabled:opacity-60"
                   style={
                     active
                       ? {
-                          borderColor: 'rgb(var(--ds-rgb-counter) / 0.6)',
-                          background: 'rgb(var(--ds-rgb-counter) / 0.12)',
-                          color: 'var(--ds-counter-soft)',
+                          borderColor: 'rgb(var(--sil-rgb-counter) / 0.6)',
+                          background: 'rgb(var(--sil-rgb-counter) / 0.12)',
+                          color: 'var(--sil-counter-soft)',
                         }
                       : {
-                          borderColor: 'var(--ds-hairline)',
-                          color: 'var(--ds-text-1)',
+                          borderColor: 'var(--sil-rule)',
+                          color: 'var(--sil-ink-200)',
                         }
                   }
                 >
@@ -128,7 +128,7 @@ export function SessionCollisionStage({
               );
             })}
           </div>
-          <p className="mt-2.5 text-[10px] leading-relaxed" style={{ color: 'var(--obs-text-2)' }}>
+          <p className="mt-2.5 text-[10px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
             这只是你接下来想重点观察的东西 —— 不是结论，也不改变任何数值。
           </p>
         </div>

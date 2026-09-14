@@ -27,8 +27,8 @@ export function Portrait({ character, expression, speaking = false, className }:
   const resolvedExpression = expression ?? character.defaultExpression;
 
   const wrapperClass = [
-    'gmv-portrait flex h-full w-full items-end justify-center',
-    speaking ? 'gmv-portrait--speaking' : '',
+    'flex h-full w-full items-end justify-center',
+    speaking ? 'sil-cast--speaking' : '',
     className,
   ]
     .filter(Boolean)

@@ -84,17 +84,17 @@ const TRACKS: readonly { readonly id: ForgeStageId; readonly d: string; readonly
   {
     id: 'similar-person',
     d: 'M -6 26 C 22 26, 30 50, 50 50',
-    tone: 'var(--obs-zhihu)',
+    tone: 'var(--sil-zhihu)',
   },
   {
     id: 'alternative',
     d: 'M -6 74 C 22 74, 30 50, 50 50',
-    tone: 'var(--obs-path)',
+    tone: 'var(--sil-alternate)',
   },
   {
     id: 'counterexample',
     d: 'M 106 50 C 78 50, 70 50, 50 50',
-    tone: 'var(--obs-counter)',
+    tone: 'var(--sil-counter)',
   },
 ];
 
@@ -125,8 +125,8 @@ export function WorldForge({
     <section
       aria-live="polite"
       className={[
-        'obs-forge obs-glass obs-brackets relative overflow-hidden px-5 py-7 sm:px-8 sm:py-9',
-        `obs-forge--${phase}`,
+        'sil-forge sil-panel sil-brackets relative overflow-hidden px-5 py-7 sm:px-8 sm:py-9',
+        `sil-forge--${phase}`,
         className,
       ]
         .filter(Boolean)
@@ -134,49 +134,49 @@ export function WorldForge({
       data-forge-phase={phase}
     >
       {/* 外围：三条人生轨道（§17）。收束时它们是同一个组。 */}
-      <span aria-hidden="true" className="obs-forge__ring" />
+      <span aria-hidden="true" className="sil-forge__ring" />
       <svg
         aria-hidden="true"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
-        className="obs-forge__weave pointer-events-none absolute inset-0 h-full w-full"
+        className="sil-forge__weave pointer-events-none absolute inset-0 h-full w-full"
       >
         {TRACKS.map((track) => (
           <path
             key={track.id}
             d={track.d}
             vectorEffect="non-scaling-stroke"
-            className="obs-forge__track"
+            className="sil-forge__track"
             style={{ stroke: track.tone, strokeWidth: 0.9, opacity: 0.5 }}
           />
         ))}
       </svg>
 
       <div className="relative">
-        <p className="obs-kicker">The World Forge</p>
+        <p className="sil-label">The World Forge</p>
 
         {/* 外围是哪三条轨道，直接写在仪器上（§17），用统一的三意图徽标（DS §4.6） */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="ds-badge ds-badge--similar">Similar orbit · 与你相似</span>
-          <span className="ds-badge ds-badge--alternative">Alternative orbit · 另一种走法</span>
-          <span className="ds-badge ds-badge--counter">Counter orbit · 相反结果</span>
+          <span className="sil-mark sil-mark--zhihu">Similar orbit · 与你相似</span>
+          <span className="sil-mark sil-mark--alternate">Alternative orbit · 另一种走法</span>
+          <span className="sil-mark sil-mark--counter">Counter orbit · 相反结果</span>
         </div>
 
         {/* 中央：用户问题 */}
-        <h1 className="obs-forge__question mt-4 text-[20px] font-semibold leading-relaxed text-[color:var(--obs-text-0)] sm:text-[24px]">
+        <h1 className="sil-forge__question mt-4 text-[20px] font-semibold leading-relaxed text-[color:var(--sil-ink-100)] sm:text-[24px]">
           {question}
         </h1>
 
         <p
           className={[
-            'obs-forge__caption mt-3 text-[13px] leading-relaxed text-[color:var(--obs-text-1)]',
-            ready ? 'obs-forge__ready text-[color:var(--obs-text-0)]' : '',
+            'sil-forge__caption mt-3 text-[13px] leading-relaxed text-[color:var(--sil-ink-200)]',
+            ready ? 'sil-forge__ready text-[color:var(--sil-ink-100)]' : '',
           ]
             .filter(Boolean)
             .join(' ')}
         >
           {FORGE_PHASE_TEXT[phase]}
-          {ready ? <span className="ml-2 text-[color:var(--obs-text-2)]">· {foundTotal} 段真实经历</span> : null}
+          {ready ? <span className="ml-2 text-[color:var(--sil-ink-300)]">· {foundTotal} 段真实经历</span> : null}
         </p>
 
         {/* 三条轨道的此刻：只写真实状态（§18） */}
@@ -189,13 +189,13 @@ export function WorldForge({
                   aria-hidden="true"
                   className={
                     hit
-                      ? 'text-[color:var(--obs-path-soft)]'
-                      : 'text-[color:var(--obs-text-2)]'
+                      ? 'text-[color:var(--sil-alternate-soft)]'
+                      : 'text-[color:var(--sil-ink-300)]'
                   }
                 >
                   {stage.found === null ? '·' : hit ? '◆' : '—'}
                 </span>
-                <span className="text-[13px] leading-relaxed text-[color:var(--obs-text-1)]">
+                <span className="text-[13px] leading-relaxed text-[color:var(--sil-ink-200)]">
                   {FORGE_STAGE_TEXT[stage.id]}
                 </span>
                 {/* 找不到就是找不到：用未显影语法，不补一条、不假装 */}
@@ -204,7 +204,7 @@ export function WorldForge({
                     不会编一条补上
                   </Undeveloped>
                 ) : (
-                  <span className="ds-nano ml-auto text-right">{stageCaption(phase, stage)}</span>
+                  <span className="sil-label sil-label--sm ml-auto text-right">{stageCaption(phase, stage)}</span>
                 )}
               </li>
             );

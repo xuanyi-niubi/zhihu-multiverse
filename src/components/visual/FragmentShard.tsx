@@ -31,6 +31,21 @@ export const FRAGMENT_CATEGORY_LABEL: Readonly<Record<FragmentCategory, string>>
   counter: '相反结果',
 };
 
+/**
+ * 轨道 → silver 修饰符。
+ *
+ * 这三条轨道在产品语言里叫「相似 / 另一种 / 相反」，而在设计系统里
+ * 对应的强调色叫「知乎蓝 / 解锁青 / 代价棕」。两边词汇不同，所以需要一个
+ * 显式映射表 —— 直接拼 `sil-fragment--${category}` 会得到
+ * `sil-fragment--similar` 这种**设计系统里不存在的类名**，
+ * 表现是这三条轨道看起来一模一样（都不上色），不报错。
+ */
+const FRAGMENT_MODIFIER: Readonly<Record<FragmentCategory, string>> = {
+  similar: 'zhihu',
+  alternative: 'alternate',
+  counter: 'counter',
+};
+
 export type FragmentState = 'pending' | 'materialized';
 
 export interface FragmentShardProps {
@@ -59,10 +74,10 @@ export function FragmentShard({
   return (
     <article
       className={[
-        'ds-shard',
-        `ds-shard--${category}`,
+        'sil-fragment',
+        `sil-fragment--${FRAGMENT_MODIFIER[category]}`,
         // 显影（DESIGN-SYSTEM §0 机制 1）：碎片是「从暗房里浮出来」的
-        materialized ? 'ds-develop' : 'opacity-0',
+        materialized ? 'sil-develop' : 'opacity-0',
         className,
       ]
         .filter(Boolean)
@@ -71,9 +86,9 @@ export function FragmentShard({
       data-fragment-state={state}
       style={style}
     >
-      <p className="ds-shard__quote">{quote}</p>
-      <p className="ds-shard__meta">
-        <span className={`ds-badge ds-badge--${category}`}>
+      <p className="sil-fragment__quote">{quote}</p>
+      <p className="sil-fragment__meta">
+        <span className={`sil-mark sil-mark--${FRAGMENT_MODIFIER[category]}`}>
           {FRAGMENT_CATEGORY_LABEL[category]}
         </span>
         <span className="truncate">{sourceLabel}</span>

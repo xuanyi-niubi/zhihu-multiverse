@@ -112,13 +112,13 @@ export function WorldlineField({
         style={{ transform: 'translate3d(var(--wl-px, 0px), var(--wl-py, 0px), 0)' }}
       >
         <defs>
-          <linearGradient id="arc-wl-grad" x1="0" y1="0" x2="1" y2="0">
+          <linearGradient id="sil-worldline-grad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="rgba(133,194,255,0)" />
             <stop offset="22%" stopColor="rgba(133,194,255,0.9)" />
             <stop offset="78%" stopColor="rgba(90,174,255,0.9)" />
             <stop offset="100%" stopColor="rgba(133,194,255,0)" />
           </linearGradient>
-          <filter id="arc-wl-blur" x="-10%" y="-40%" width="120%" height="180%">
+          <filter id="sil-worldline-blur" x="-10%" y="-40%" width="120%" height="180%">
             <feGaussianBlur stdDeviation="1.6" />
           </filter>
         </defs>
@@ -133,23 +133,23 @@ export function WorldlineField({
                 transformBox: 'view-box',
                 transformOrigin: '50% 50%',
                 transform: `translateY(${converge ? offset : 0}px)`,
-                transition: 'transform 1100ms var(--arc-ease), opacity 1100ms var(--arc-ease)',
+                transition: 'transform 1100ms var(--sil-ease), opacity 1100ms var(--sil-ease)',
                 opacity: converge ? Math.min(1, line.opacity + 0.3) : lit ? Math.min(1, line.opacity + 0.12) : line.opacity,
               }}
             >
               <g
                 style={{
-                  animation: `arc-drift ${line.durationMs}ms var(--arc-ease) infinite`,
+                  animation: `sil-drift ${line.durationMs}ms var(--sil-ease) infinite`,
                   animationDelay: `${line.delayMs}ms`,
                 }}
               >
                 <path
                   d={line.d}
                   fill="none"
-                  stroke="url(#arc-wl-grad)"
+                  stroke="url(#sil-worldline-grad)"
                   strokeWidth={lit ? 1.5 : 1.1}
                   strokeLinecap="round"
-                  filter="url(#arc-wl-blur)"
+                  filter="url(#sil-worldline-blur)"
                 />
               </g>
             </g>
