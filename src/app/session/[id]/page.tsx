@@ -11,6 +11,7 @@ import {
 } from '@/components/session/SessionSourceDialog';
 import { AuroraBand } from '@/components/visual/AuroraBand';
 import { ArrivalFlash } from '@/components/visual/UniverseJump';
+import { ExperienceReveal } from '@/components/visual/ExperienceReveal';
 import { WorldForge, type ForgePhase, type ForgeShard, type ForgeStage } from '@/components/visual/WorldForge';
 import { KanshanSprite } from '@/components/characters/KanshanSprite';
 
@@ -533,7 +534,8 @@ export default function SessionPage() {
             question={view.question}
             stages={stages}
             phase={phase}
-            fragments={shards}
+            /* 显影阶段一次只聚焦一段经历；完整碎片由 ExperienceReveal 在后续按需展开。 */
+            fragments={worldReady ? [] : shards}
             /* 碎片可点：完整逐字原文 + 回知乎原回答（`sourceUrl` 就在这里落地） */
             onSelectFragment={(fragmentId) => setSelectedFragmentId(fragmentId)}
             selectedFragmentId={selectedFragmentId}
@@ -586,21 +588,11 @@ export default function SessionPage() {
                   </p>
                 </div>
               ) : (
-                <Link
-                  href={`/play?session=${encodeURIComponent(id)}`}
-                  data-destination="play-session"
-                  className="sil-btn mx-auto flex w-full max-w-[360px]"
-                  onClick={(event) => {
-                    // 中键 / 新开标签保留原生跳转：只有左键单击才走客户端推送
-                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-                      return;
-                    }
-                    event.preventDefault();
-                    enterWorld();
-                  }}
-                >
-                  进入我的平行宇宙
-                </Link>
+                <ExperienceReveal
+                  fragments={shards}
+                  onInspect={(fragmentId) => setSelectedFragmentId(fragmentId)}
+                  onEnterWorld={enterWorld}
+                />
               )}
             </div>
           ) : compileFailed ? (
