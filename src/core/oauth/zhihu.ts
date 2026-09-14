@@ -678,7 +678,7 @@ export async function fetchProfile(
   const root = isRecord(payload) ? payload : {};
   const data = isRecord(root.data) ? root.data : null;
   const legacyData = isRecord(root.Data) ? root.Data : null;
-  const source = [
+  const sources = [
     data?.user,
     data?.User,
     legacyData?.user,
@@ -688,17 +688,19 @@ export async function fetchProfile(
     data,
     legacyData,
     root,
-  ].find((candidate): candidate is Record<string, unknown> => isRecord(candidate));
+  ].filter((candidate): candidate is Record<string, unknown> => isRecord(candidate));
 
-  if (!source) {
+  if (sources.length === 0) {
     return null;
   }
 
   const pick = (...keys: string[]): string | null => {
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
+    for (const source of sources) {
+      for (const key of keys) {
+        const value = source[key];
+        if (typeof value === 'string' && value.trim().length > 0) {
+          return value.trim();
+        }
       }
     }
     return null;
