@@ -8,7 +8,7 @@ permissions:
 
 concurrency:
   group: deploy-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -33,22 +33,10 @@ jobs:
       - name: Checkout release source
         uses: actions/checkout@v4
 
-      - name: Build release archive
-        run: |
-          set -Eeuo pipefail
-          tar \
-            --exclude="./.git" \
-            --exclude="./node_modules" \
-            --exclude="./.next" \
-            --exclude="./.env" \
-            --exclude="./.env.local" \
-            --exclude="./.env.production" \
-            -czf "/tmp/zhihu-multiverse-${GITHUB_SHA}.tar.gz" .
-
-      - name: Install SSH client
+      - name: Install SSH and rsync clients
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends sshpass
+          sudo apt-get install -y --no-install-recommends sshpass rsync
 
       - name: Trust current server host key
         env:
@@ -60,20 +48,7 @@ jobs:
           ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
-      - name: Upload release over SSH
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          set -Eeuo pipefail
-          export SSHPASS="$VPS_PASSWORD"
-          sshpass -e scp -P "$VPS_PORT" \
-            "/tmp/zhihu-multiverse-${GITHUB_SHA}.tar.gz" \
-            "$VPS_USER@$VPS_HOST:/tmp/zhihu-multiverse-${GITHUB_SHA}.tar.gz"
-
-      - name: Activate release on VPS
+      - name: Prepare incremental release on VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
@@ -87,36 +62,80 @@ jobs:
           set -Eeuo pipefail
 
           container="zhihu-multiverse"
-          archive="/tmp/zhihu-multiverse-${RELEASE_SHA}.tar.gz"
           current_dir="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')"
-          compose_project="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project" }}')"
-          release_dir="/opt/zhihu-multiverse-releases/${RELEASE_SHA}"
+          release_root="/opt/zhihu-multiverse-releases"
+          release_dir="$release_root/$RELEASE_SHA"
 
-          if [ -z "$current_dir" ] || [ ! -d "$current_dir" ]; then
-            echo "无法从现有容器识别 Docker Compose 项目目录。"
-            exit 1
+          # --delete 只允许作用于这个专用发布目录，绝不直接改当前运行目录。
+          case "$current_dir" in
+            /opt/zhihu-multiverse|/opt/zhihu-multiverse-*|/opt/zhihu-multiverse-releases/*) ;;
+            *)
+              echo "拒绝使用未授权的项目目录：$current_dir"
+              exit 1
+              ;;
+          esac
+
+          if ! command -v rsync >/dev/null 2>&1; then
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends rsync
           fi
 
-          if [ -z "$compose_project" ]; then
-            echo "无法识别现有 Docker Compose 项目名称。"
-            exit 1
+          mkdir -p "$release_root"
+          if [ -e "$release_dir" ]; then
+            rm -rf -- "$release_dir"
           fi
-
-          if [ ! -f "$archive" ]; then
-            echo "服务器未收到发布包：$archive"
-            exit 1
-          fi
-
           mkdir -p "$release_dir"
-          tar -xzf "$archive" -C "$release_dir"
-          rm -f "$archive"
 
-          # 运行时配置不进入发布包，只从当前健康部署迁移到新版本。
-          for env_file in .env .env.local .env.production; do
-            if [ -f "$current_dir/$env_file" ]; then
-              install -m 600 "$current_dir/$env_file" "$release_dir/$env_file"
-            fi
-          done
+          # 先用硬链接复制当前版本，几乎不占额外空间；随后只接收变化文件。
+          rsync -a --link-dest="$current_dir" \
+            --exclude="/.git/" \
+            --exclude="/node_modules/" \
+            --exclude="/.next/" \
+            --exclude="/data/" \
+            "$current_dir/" "$release_dir/"
+          REMOTE
+
+      - name: Sync changed files over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          export SSHPASS="$VPS_PASSWORD"
+          release_dir="/opt/zhihu-multiverse-releases/$GITHUB_SHA"
+          sshpass -e rsync -azc --delete-delay \
+            --exclude="/.git/" \
+            --exclude="/node_modules/" \
+            --exclude="/.next/" \
+            --exclude="/data/" \
+            --exclude="/.env" \
+            --exclude="/.env.local" \
+            --exclude="/.env.production" \
+            -e "ssh -p $VPS_PORT" \
+            ./ "$VPS_USER@$VPS_HOST:$release_dir/"
+
+      - name: Build and activate release
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          export SSHPASS="$VPS_PASSWORD"
+          sshpass -e ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "RELEASE_SHA='$GITHUB_SHA' bash -se" <<'REMOTE'
+          set -Eeuo pipefail
+
+          container="zhihu-multiverse"
+          release_dir="/opt/zhihu-multiverse-releases/$RELEASE_SHA"
+          compose_project="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project" }}')"
+
+          test -n "$compose_project"
+          test -f "$release_dir/docker-compose.yml"
+          test -f "$release_dir/.env.production"
 
           cd "$release_dir"
           docker compose -p "$compose_project" up -d --build
