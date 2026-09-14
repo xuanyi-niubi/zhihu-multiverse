@@ -192,7 +192,50 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
         />
       </div>
 
-      <div className="mt-8 flex flex-col gap-5">
+      {view.realityPass ? (
+        <>
+          {/*
+            终局不能从「新问题」直接跳到行动。这里不让 AI 另写一段结论，
+            而只摆出本局真实发生过的两类依据：真的解锁过的行动、真的引用过的人。
+            因果链完整，但不会把最终那张纸埋进长回顾里。
+          */}
+          <section className="mt-8 border-t pt-4" style={{ borderColor: 'var(--sil-rule)' }}>
+            <p className="sil-label">这张现实支线从哪里来</p>
+            <div className="mt-3 flex flex-col gap-2.5">
+              {view.unlockedActions.length > 0 ? (
+                <p className="text-[13px] leading-relaxed" style={{ color: 'var(--sil-alternate-soft)' }}>
+                  <span className="mr-2" style={{ color: 'var(--sil-alternate)' }} aria-hidden="true">◆</span>
+                  本局多看见的行动：{view.unlockedActions.slice(0, 2).join('；')}
+                </p>
+              ) : null}
+              {view.experiences.length > 0 ? (
+                <p className="text-[13px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
+                  <span className="mr-2" style={{ color: 'var(--sil-zhihu-soft)' }} aria-hidden="true">·</span>
+                  这条路来自 {view.experiences.slice(0, 2).map((item) => item.author).join('、')} 的真实经历。
+                </p>
+              ) : null}
+              <p className="text-[13px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+                有些答案仍然只能回到现实里验证，所以这一局没有替你下结论。
+              </p>
+            </div>
+          </section>
+
+          <RealityPass
+            className="mt-6"
+            timebox={view.realityPass.timebox}
+            action={view.realityPass.action}
+            observation={view.realityPass.successSignal}
+            artifact={view.realityPass.artifact}
+            stopSignal={view.realityPass.stopSignal}
+            identity={reportIdentity}
+            onBringBack={() => void onCopy()}
+            broughtBack={copied}
+          />
+        </>
+      ) : null}
+
+      <div className="mt-9 flex flex-col gap-5">
+        <p className="sil-label">回看这一次推演</p>
         {/* 3. 本局多看见的行动 */}
         <Block index={3} label="本局多看见的行动">
           {view.unlockedActions.length > 0 ? (
@@ -291,25 +334,14 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
           ) : null}
         </Block>
 
-        {/* 5. Reality Pass */}
-        <Block index={5} label="Reality Pass">
-          {view.realityPass ? (
-            <RealityPass
-              timebox={view.realityPass.timebox}
-              action={view.realityPass.action}
-              observation={view.realityPass.successSignal}
-              artifact={view.realityPass.artifact}
-              stopSignal={view.realityPass.stopSignal}
-              identity={reportIdentity}
-              onBringBack={() => void onCopy()}
-              broughtBack={copied}
-            />
-          ) : (
-            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+        {!view.realityPass ? (
+          <section className="border-t pt-4" style={{ borderColor: 'var(--sil-rule)' }}>
+            <p className="sil-label">还没有现实支线</p>
+            <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               这一局还没有设计出现实实验 —— 我们不凭空给一个「未来 7 天」的计划。
             </p>
-          )}
-        </Block>
+          </section>
+        ) : null}
       </div>
 
       {/*
