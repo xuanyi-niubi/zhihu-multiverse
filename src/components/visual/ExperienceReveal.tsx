@@ -148,7 +148,10 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
                 <span className="text-[12px] text-[color:var(--sil-ink-300)]">{representative.sourceLabel}</span>
                 <button
                   type="button"
-                  onClick={() => onInspect(representative.id)}
+                  onClick={() => {
+                    setPaused(true);
+                    onInspect(representative.id);
+                  }}
                   className="min-h-11 text-[12px] underline decoration-dotted underline-offset-4 transition-colors hover:text-[color:var(--sil-ink-100)]"
                   style={{ color: chapter.tone }}
                 >
