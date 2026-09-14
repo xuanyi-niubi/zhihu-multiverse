@@ -38,11 +38,21 @@ import { AxisHUD } from '@/components/AxisHUD';
 import { EventCard } from '@/components/EventCard';
 import { ExperienceSourceModal } from '@/components/game/ExperienceSourceModal';
 import { SessionEndgame } from '@/components/game/SessionEndgame';
+import { SessionPlayScreen } from '@/components/game/session/SessionPlayScreen';
 import {
-  SessionPlayScreen,
-  type SessionActObjective,
-  type SessionPlayView,
-} from '@/components/game/SessionPlayScreen';
+  SESSION_ERROR_MESSAGE,
+  actObjectiveAt,
+  choiceViewsOf,
+  displayActNumber,
+  experienceSummariesOf,
+  loadingPhaseOf,
+  sessionEncounterViewOf,
+  sessionEndgameViewOf,
+  sessionPlaceholderView,
+  sessionPlayViewOf,
+  storyViewOf,
+} from '@/components/game/session/viewModel';
+import type { SessionPlayView } from '@/components/game/session/types';
 import { ExperienceCardPanel, cardDataFrom } from '@/components/game/ExperienceCardPanel';
 import { WorldlineRail, worldlineStateOf } from '@/components/worldline/Worldline';
 import { CommitPicker, type CommitCandidate } from '@/components/CommitPicker';
@@ -102,6 +112,7 @@ import {
 import { fetchDmTurn, fetchProfile, fetchRunReport } from '@/core/dmClient';
 import { unlockForTurn, worldContextForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
 import { realityQuestViewOf } from '@/features/game-world/questView';
+import { cardTitlesFrom } from '@/features/game-world/cardTitles';
 import type { WorldBlueprint } from '@/features/game-world/domain';
 import type { ExperienceFact } from '@/features/experience/domain';
 
@@ -252,6 +263,14 @@ type RunAction =
   | { type: 'USE_RELIC'; relicId: string }
   | { type: 'RESCUE' }
   | { type: 'GIVE_UP' }
+  /**
+   * 新主链专用：把这一局直接收束到终局（§十八 / §二十三）。
+   *
+   * 「现实信息不足」时玩家唯一的出口是「继续到终局」——不是重投骰、不是
+   * 付资源、也不是猜一个答案。这个 action 只存在于 Session 模式的路径上；
+   * legacy 从不派发它，所以旧行为一行未变。
+   */
+  | { type: 'END_SESSION' }
   | { type: 'LOAD_AI_TURN'; turn: ScenarioTurn; source: DmSource; turnIndex: number; profile: PlayerProfile | null }
   | { type: 'SET_PROFILE'; profile: PlayerProfile; analysis: string | null }
   | { type: 'MEMORY_ECHO'; line: string }
@@ -862,6 +881,30 @@ function runReducer(state: RunState, action: RunAction): RunState {
       };
     }
 
+    case 'END_SESSION': {
+      /**
+       * 已经把玩家送回现实（终局屏），不再演下一幕。
+       *
+       * 三件事一起写，因为它们必须一致：
+       *
+       * 1. `phase: 'ended'` —— 屏幕切到终局；
+       * 2. `status: 'OVER_SUCCESS'` —— 「现实信息不足」**不是**失败。
+       *    若不动 status，写回记忆时会被记成 `OVER_SAN_DEPLETED`
+       *    （「心智归零」）——那等于拿旧 RPG 的判死逻辑给新主链收尾；
+       * 3. 一句诚实的收束文案，供记忆记录使用（终局屏自己不用它）。
+       */
+      if (state.phase === 'ended') {
+        return state;
+      }
+      return {
+        ...state,
+        phase: 'ended',
+        status: 'OVER_SUCCESS',
+        outcomeTitle: '这一局到此为止',
+        outcomeDetail: '剩下的问题只能回到现实中验证 —— 这不是失败。',
+      };
+    }
+
     case 'ADVANCE_ACT': {
       if (state.phase !== 'outcome') {
         return state;
@@ -1157,6 +1200,56 @@ function differencesFor(blueprint: WorldBlueprint | null | undefined) {
   }
   return out;
 }
+
+/**
+ * 第三幕反例分屏数据（报告 §20-§21）。
+ *
+ * 只取两条真实走法之间的差异，映射成「相同 / 不同 / 未知」三档。
+ * 没有任何可对照的差异时返回 null —— 页面就不显示分屏，
+ * 不为了「这一幕该有分屏」而凑一组不存在的数据。
+ */
+function counterFrameFor(blueprint: WorldBlueprint | null | undefined): {
+  previousLabel: string;
+  counterLabel: string;
+  rows: readonly { kind: 'same' | 'different' | 'unknown'; text: string }[];
+} | null {
+  if (!blueprint || blueprint.paths.length < 1) {
+    return null;
+  }
+  const paths = blueprint.paths;
+  const previous = paths[0];
+  const counter = paths.find((path) => path.opposingFactIds.length > 0) ?? paths[1];
+  if (!counter || counter.id === previous.id) {
+    return null;
+  }
+
+  const seen = new Set<string>();
+  const rows: { kind: 'same' | 'different' | 'unknown'; text: string }[] = [];
+  for (const path of [previous, counter]) {
+    for (const diff of path.differencesFromUser) {
+      if (seen.has(diff.variable) || rows.length >= 3) {
+        continue;
+      }
+      seen.add(diff.variable);
+      rows.push({
+        kind: diff.relation,
+        text:
+          diff.relation === 'same'
+            ? `${diff.variable}：和你一样`
+            : diff.relation === 'unknown'
+              ? `${diff.variable}：还不知道`
+              : `${diff.variable}：他 ${diff.experienceValue ?? '—'} / 你 ${diff.userValue ?? '—'}`,
+      });
+    }
+  }
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return { previousLabel: previous.label, counterLabel: counter.label, rows };
+}
+
 function ChoiceCard({
   choice,
   onSelect,
@@ -1359,6 +1452,13 @@ function PlayScreen() {
   const [sessionLoadFailed, setSessionLoadFailed] = React.useState(false);
   /** 已使用过的经验解锁（P0-H）：同一解锁一局只出现一次。 */
   const [usedUnlockIds, setUsedUnlockIds] = React.useState<readonly string[]>([]);
+  /**
+   * 冲突分屏里玩家选过的「接下来重点观察的变量」（§十七）。
+   *
+   * 它**只是观察焦点**：不参与任何判定、不改变任何数值、不产生因果结论。
+   * 放在页面状态里是因为它属于本局的过程记录，而不是屏幕的瞬时 UI 状态。
+   */
+  const [sessionFocusVariables, setSessionFocusVariables] = React.useState<readonly string[]>([]);
 
   /** Session 模式下的玩家目标：来自会话的问题，而不是 URL 参数。 */
   const effectiveGoal = sessionView?.question ?? goalParam;
@@ -1478,6 +1578,7 @@ function PlayScreen() {
       try {
         const response = await fetch(`/api/sessions/${sessionParam}`, { signal: controller.signal });
         if (!response.ok) {
+          console.error(`[session] 会话加载失败：HTTP ${response.status}`);
           setSessionLoadFailed(true);
           return;
         }
@@ -1485,6 +1586,7 @@ function PlayScreen() {
         const data = payload?.data;
         const blueprint = data?.worldBlueprint as WorldBlueprint | undefined;
         if (!blueprint || typeof data?.id !== 'string' || typeof data?.question !== 'string') {
+          console.error('[session] 会话响应缺少 worldBlueprint / id / question');
           setSessionLoadFailed(true);
           return;
         }
@@ -1513,7 +1615,12 @@ function PlayScreen() {
         if (view.profile) {
           dispatch({ type: 'SET_PROFILE', profile: view.profile, analysis: view.profileAnalysis });
         }
-      } catch {
+      } catch (error) {
+        /*
+          技术细节只进 console，不进 UI（§二十五）：玩家看到的是
+          「这次世界没有成功生成。」与两个可点的出口。
+        */
+        console.error('[session] 世界蓝图加载失败', error);
         if (!controller.signal.aborted) {
           setSessionLoadFailed(true);
         }
@@ -1824,6 +1931,18 @@ function PlayScreen() {
       )
       .slice(0, 6)
       .map((experienceCase) => cardDataFrom(experienceCase, differences));
+  }, [sessionView?.worldBlueprint]);
+
+  /**
+   * 经验卡的行动式抬头（§24）：直接复用解锁项已经拿到的 label，
+   * 不新增模型调用；找不到对应解锁的卡不给标题。
+   */
+  const sessionCardTitles = React.useMemo(() => {
+    const blueprint = sessionView?.worldBlueprint;
+    if (!blueprint) {
+      return {};
+    }
+    return cardTitlesFrom(blueprint.unlocks, blueprint.experienceCases ?? []);
   }, [sessionView?.worldBlueprint]);
 
   /**
@@ -2294,13 +2413,23 @@ function PlayScreen() {
   const isFinalAct = currentTurn.turnIndex >= state.totalActs;
 
   /**
-   * 是否跑在**新主链**（?session= 且世界蓝图已到位）。
+   * 是否跑在**新主链**。
    *
-   * 刻意不用 `state.scenarioId === AI_DM_SCENARIO_ID` 判定：legacy 的
-   * `/play?scenario=ai-dm&goal=` 用的是同一个 scenarioId，用它会把旧路径
-   * 一起改掉。蓝图存在与否才是新主链的可靠标志。
+   * 判据是 URL 上的 `?session=` —— 而不是「蓝图是否已到位」。
+   *
+   * 为什么必须改：蓝图到位**之前**有两个状态需要新主链自己表达：
+   *
+   * ```text
+   * 世界还在编译   → 语义 loading（§二十六）
+   * 世界没生成出来 → 「这次世界没有成功生成。」+ 重试 / 返回修改问题（§二十五）
+   * ```
+   *
+   * 旧写法用蓝图当判据，于是这两种状态都会「悄悄退回旧 RPG 整屏」——
+   * 玩家会在加载失败时突然看到属性条、骰子和 Boss。那不是降级，是串台。
+   *
+   * legacy 路径（`/play?goal=` 等）不带 `session` 参数，因此**一行未变**。
    */
-  const isSessionMode = Boolean(sessionView?.worldBlueprint);
+  const isSessionMode = sessionParam.length > 0;
 
   /**
    * 新主链里 SAN 归零**不会**把玩家卡住。
@@ -2425,58 +2554,111 @@ function PlayScreen() {
   }, [isEnded, scenario.turns.length, state.log, state.sanHistory, state.status, state.turnIndex]);
 
   /**
-   * 新主链的推演屏视图模型（方案 §32 / §47）。
+   * 新主链的推演屏视图模型（Agent 03 §七）。
    *
-   * 把 reducer 状态**翻译**成 SessionPlayScreen 要的窄接口：屏幕组件不碰
-   * reducer、不碰旧 UI，只负责渲染这一幕。翻译放在页面里是刻意的 ——
-   * 这样 legacy 与新主链共用同一个 reducer 与同一套动作。
+   * 把 reducer 状态**翻译**成 `SessionPlayView` 的窄接口：屏幕组件不碰
+   * reducer、不碰旧 UI，只负责渲染这一幕。翻译住在
+   * `components/game/session/viewModel.ts`（纯函数、可测），
+   * 页面只负责把状态喂进去 —— 这样 legacy 与新主链共用同一个 reducer
+   * 与同一套动作，而「新主链该长什么样」这件事可以被测试钉死。
+   *
+   * 这里还负责两件以前没人管的事（§二十五 / §二十六）：
+   *
+   * ```text
+   * 蓝图还没到   → 语义 loading，而不是退回旧 RPG 整屏
+   * 蓝图没生成出来 → 统一失败态 + 两个出口
+   * ```
    */
   const sessionPlayView: SessionPlayView | null = React.useMemo(() => {
-    if (!isSessionMode || !sessionView) {
+    if (!isSessionMode) {
       return null;
     }
-    const blueprint = sessionView.worldBlueprint;
-    const blueprintIndex = Math.max(0, state.turnIndex - 1);
-    const actSpec = blueprint.acts[blueprintIndex] ?? blueprint.acts[blueprint.acts.length - 1];
-    const objective = (actSpec?.objective ?? 'meet-counterexample') as SessionActObjective;
 
-    return {
+    /** 语义 loading（§二十六）：屏幕要知道「在等什么」才能说人话。 */
+    const loadingPhase = loadingPhaseOf({
+      waitingForSession: sessionView === null && !sessionLoadFailed,
+      generatingScene: state.dmLoading,
+      resolvingChoice: state.phase === 'checking',
+      /**
+       * 来源弹层的片段从蓝图里现取（无网络请求）；只有当 reducer 侧
+       * 蓝图镜像还没落地时才真的在等。
+       */
+      loadingExperience: sourceChoice !== null && state.worldBlueprint === null,
+    });
+
+    /**
+     * 蓝图未就绪：要么在编译，要么没生成出来。两者都必须在**没有**
+     * story / choices 的树上渲染，否则失败时只能悄悄退回旧路径。
+     */
+    if (!sessionView?.worldBlueprint) {
+      return sessionPlaceholderView({
+        sessionId: sessionView?.id ?? sessionParam,
+        loadingPhase,
+        error: sessionLoadFailed ? SESSION_ERROR_MESSAGE : null,
+      });
+    }
+
+    const blueprint = sessionView.worldBlueprint;
+    /** UI 用 0 基幕下标；DM / reducer 用 1 基 turnIndex（§十三）。 */
+    const blueprintIndex = Math.max(0, state.turnIndex - 1);
+    const displayAct = displayActNumber(blueprintIndex);
+    const objective = actObjectiveAt(blueprint, blueprintIndex);
+    const actSpec = blueprint.acts[blueprintIndex] ?? blueprint.acts[blueprint.acts.length - 1];
+
+    return sessionPlayViewOf({
+      sessionId: sessionView.id,
       question: sessionView.question,
-      act: {
-        index: state.turnIndex,
-        total: state.totalActs,
-        objective,
-        subtitle: actSpec?.titleHint ?? '',
-      },
-      scene: { sceneId: state.sceneId, timeLabel: scene.timeLabel },
-      speaker: state.speaker,
-      stage: state.stage,
-      title: currentTurn.title ?? '',
-      storyText: state.dialogueText || (currentTurn.storyText ?? ''),
-      phase: state.phase,
-      choices: currentTurn.choices,
+      blueprint,
+      turnIndex: state.turnIndex,
+      totalActs: state.totalActs,
+      runtimePhase: state.phase,
+      objective,
+      story: storyViewOf({
+        sceneId: state.sceneId,
+        timeLabel: scene.timeLabel,
+        speaker: state.speaker,
+        stage: state.stage,
+        title: currentTurn.title ?? '',
+        text: state.dialogueText || (currentTurn.storyText ?? ''),
+        // 本幕张力来自蓝图；没有就不显示一行编的
+        tension: actSpec?.conflict ?? null,
+      }),
       outcome:
-        state.phase === 'outcome' || state.phase === 'ended'
+        state.phase === 'outcome'
           ? { title: state.outcomeTitle ?? '', detail: state.outcomeDetail ?? '' }
           : null,
+      // 普通选项只带 title / hint：check / DC / 骰面在 ViewModel 就被丢掉（§九）
+      choices: choiceViewsOf({ choices: currentTurn.choices }),
+      experiences: sessionExperienceCards,
+      cardTitles: sessionCardTitles,
+      // 本幕 Encounter（§十七 / §十八）：没有就是 null，不硬凑一个 Stage
+      encounter: sessionEncounterViewOf({
+        blueprint,
+        act: displayAct,
+        focusVariables: sessionFocusVariables,
+      }),
+      counterFrame: counterFrameFor(blueprint),
       loading: state.dmLoading,
-      cards: sessionExperienceCards,
+      loadingPhase,
+      error: null,
       endgame: isEnded
-        ? {
+        ? sessionEndgameViewOf({
+            // 原问题**只**来自 DecisionSession，不允许被模型润色覆盖（§二十）
             originalQuestion: sessionView.question,
             keyUnknown: blueprint.keyUnknown?.label ?? null,
             experiment: sessionView.experiment ?? null,
             steps: sessionSteps,
-            highlights: realityQuest?.seen ?? [],
             unlockedActions: sessionCards,
-          }
+            highlights: realityQuest?.seen ?? [],
+            experiences: experienceSummariesOf(sessionExperienceCards, sessionCardTitles),
+          })
         : null,
       source: {
         open: sourceChoice !== null,
         facts: experienceFactsFor(sourceChoice, state.worldBlueprint),
         differences: differencesFor(state.worldBlueprint),
       },
-    };
+    });
   }, [
     currentTurn.choices,
     currentTurn.storyText,
@@ -2486,7 +2668,11 @@ function PlayScreen() {
     realityQuest,
     scene.timeLabel,
     sessionCards,
+    sessionCardTitles,
     sessionExperienceCards,
+    sessionFocusVariables,
+    sessionLoadFailed,
+    sessionParam,
     sessionSteps,
     sessionView,
     sourceChoice,
@@ -2504,17 +2690,26 @@ function PlayScreen() {
   ]);
 
   /**
-   * 新主链走自己的屏（方案 §32）：只渲染 幕 / 场景 / 叙事 / 选项 / 借来的经验 / 终局。
+   * 新主链走自己的屏（Agent 03 §三十）：只渲染
+   * 幕 / 场景 / 叙事 / 选项 / 借来的经验 / 碰撞 / 未知 / 终局。
+   *
    * 旧的整屏（含遗物、骰子、Boss、命途树、证据网格）在下面一行不改地保留给 legacy。
+   * 屏幕拿到的是**窄接口 + id 回调**：它看不见 stats、inventory、dice，也没有
+   * 任何办法派发旧 action。
    */
   if (isSessionMode && sessionPlayView) {
+    const findChoice = (choiceId: string) =>
+      currentTurn.choices.find((candidate) => candidate.id === choiceId) ?? null;
+
     return (
       <SessionPlayScreen
         view={sessionPlayView}
-        experienceOpen={experienceOpen}
-        onOpenExperience={() => setExperienceOpen(true)}
-        onCloseExperience={() => setExperienceOpen(false)}
-        onChoose={handleSelect}
+        onChoose={(choiceId) => {
+          const choice = findChoice(choiceId);
+          if (choice) {
+            handleSelect(choice);
+          }
+        }}
         onAdvance={() =>
           dispatch({ type: state.phase === 'outcome' ? 'ADVANCE_ACT' : 'ADVANCE_BEAT' })
         }
@@ -2522,8 +2717,25 @@ function PlayScreen() {
         onQuit={() => {
           window.location.href = '/';
         }}
-        onOpenSource={setSourceChoice}
+        onRetry={() => {
+          window.location.reload();
+        }}
+        onBackToQuestion={() => {
+          window.location.href = sessionView ? `/session/${sessionView.id}` : '/';
+        }}
+        onOpenSource={(choiceId) => {
+          const choice = findChoice(choiceId);
+          if (choice) {
+            setSourceChoice(choice);
+          }
+        }}
         onCloseSource={() => setSourceChoice(null)}
+        onSelectCollisionFocus={(focusId) =>
+          setSessionFocusVariables((previous) =>
+            previous.includes(focusId) ? previous : [...previous, focusId],
+          )
+        }
+        onContinueFromUnknown={() => dispatch({ type: 'END_SESSION' })}
       />
     );
   }
@@ -2885,7 +3097,7 @@ function PlayScreen() {
           subtitle="别人的真实经历，不是数值加成"
           onClose={() => setExperienceOpen(false)}
         >
-          <ExperienceCardPanel cards={sessionExperienceCards} />
+          <ExperienceCardPanel cards={sessionExperienceCards} titles={sessionCardTitles} />
         </Drawer>
       ) : null}
 
