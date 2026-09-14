@@ -10,6 +10,7 @@ import { FateProjectionConsole } from '@/components/visual/FateProjectionConsole
 import { OrbitField } from '@/components/visual/OrbitField';
 import { UniverseJump } from '@/components/visual/UniverseJump';
 import { KanshanSprite } from '@/components/characters/KanshanSprite';
+import ObserverChip from '@/components/session/ObserverChip';
 
 import { markJumpArrival, setJumpQuestion } from '@/features/visual/jump';
 import { NETWORK_UNAVAILABLE, playerFacingError, type PlayerFacingError } from '@/features/run/errorCopy';
@@ -265,6 +266,12 @@ export default function HomePage() {
               >
                 关于
               </Link>
+              {/*
+                观测者徽标：已登记显示知乎头像 + 昵称；访客显示一个「登记」入口。
+                放这里而不是页头，是因为首页页头被标题与观象仪占满，
+                而这个身份标识不该和主叙事抢位置。
+              */}
+              <ObserverChip />
             </nav>
           </footer>
         </div>
