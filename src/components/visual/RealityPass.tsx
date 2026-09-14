@@ -154,8 +154,8 @@ export function RealityPass({
               <p className="truncate text-[13px] font-semibold" style={{ color: INK }}>
                 {identity.name}
               </p>
-              <p className="mt-0.5 text-[10px]" style={{ color: INK_FAINT }}>
-                知乎登录 · 这份报告属于你
+              <p className="mt-0.5 text-[11px]" style={{ color: INK_FAINT }}>
+                本次推演的观测者
               </p>
             </div>
           </div>
