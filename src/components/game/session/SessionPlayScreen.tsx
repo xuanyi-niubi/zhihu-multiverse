@@ -267,9 +267,6 @@ export function SessionPlayScreen({
         */}
         {view.phase === 'ended' ? null : (
           <div className="sil-hud mt-3" aria-label="本局状态">
-            <span className="sil-hud__act">
-              ACT {String(view.act.display).padStart(2, '0')} / {String(view.act.total).padStart(2, '0')}
-            </span>
             <span className={gained ? 'sil-hud__cards sil-hud__cards--pulse' : 'sil-hud__cards'}>
               ◈ 经验卡 ×{view.experiences.length}
             </span>

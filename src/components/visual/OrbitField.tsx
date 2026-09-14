@@ -62,7 +62,7 @@ export interface OrbitFieldProps {
   readonly near?: boolean;
   /** 整体基调；`amber` 用于第三幕的琥珀反例轨道。 */
   readonly className?: string;
-  /** 是否缓慢漂移（默认是；reduced motion 由 CSS 关掉）。 */
+  /** 是否允许轨道场做极轻的明暗呼吸；几何位置始终固定。 */
   readonly drift?: boolean;
 }
 
@@ -94,44 +94,14 @@ const GEO = {
 } as const;
 
 /**
- * 轨道组绕 viewBox 中心旋转一周所扫出的**圆盘半径**。
+ * 固定的宽幅轨道画布。
  *
- * ## 为什么需要这个概念
- *
- * `sil-orbit__drift` 是 `rotate(0deg) → rotate(360deg)` 的整圈自转，
- * 不是轻微的摆动。所以真正必须被 viewBox 容纳的，不是「某一条椭圆」，
- * 而是**整族椭圆绕中心转一圈扫过的圆盘**。
- *
- * 任一椭圆的中心到旋转中心的最大距离是 `max|cy - cx|`；
- * 再叠加它的长半轴，就是该椭圆的最远点。取全族最大值即为圆盘半径。
- *
- * ## 写死 viewBox 造成的实际 bug
- *
- * 这里原本是 `viewBox="0 0 100 100"`。而最外层椭圆 rx = 30 + 32 = 62、
- * 中心 x = 50，横向跨度是 `-12 .. 112` —— 两侧各超出 viewBox 12 个单位。
- * SVG 会把 viewBox 之外的内容裁掉（`overflow: hidden` 是 svg 元素的
- * 默认值），于是首页那个正方形观象仪里，**最外面两三条轨道被竖直切断**，
- * 看起来像画面被裁坏了。
- *
- * 改成由常量推导后，只要有人调整 rxSpan / cyStep，viewBox 会自动跟上。
+ * 轨道不再整组旋转：全屏背景经过 `slice` 裁切后再旋转，会让宽屏与窄屏
+ * 看到完全不同的重心，窗口尺寸变化时尤其像整片星空“跑走”。
+ * 现在几何永远固定，只保留透明度呼吸；宽幅 viewBox 让桌面端自然铺开，
+ * 窄屏则稳定裁取中央区域。
  */
-const rotationRadius =
-  Math.max(Math.abs(GEO.cyBase - GEO.cx), Math.abs(GEO.cyBase + 2 * GEO.cyStep - GEO.cx)) +
-  (GEO.rxMin + GEO.rxSpan);
-
-/** viewBox 四周留的余量（容纳 non-scaling-stroke 的描边宽度）。 */
-const VIEW_PAD = 2;
-
-const VIEW_R = rotationRadius + VIEW_PAD;
-
-/**
- * 正方形 viewBox —— 必须是正方形。
- *
- * `preserveAspectRatio="xMidYMid slice"` 在对局页是有意为之（那是个
- * 全幅背景，容器不是正方形，靠 slice 裁成满屏）。但首页的容器是
- * `aspect-square`，只有 viewBox 也是正方形时才不会被 slice 二次裁剪。
- */
-const VIEWBOX = `${GEO.cx - VIEW_R} ${GEO.cx - VIEW_R} ${VIEW_R * 2} ${VIEW_R * 2}`;
+const VIEWBOX = '-14 18 128 64';
 
 /** 一条轨道：整条闭合椭圆，1 条 path。 */
 function orbitPath(index: number, total: number): string {
@@ -198,7 +168,7 @@ export function OrbitField({
         preserveAspectRatio="xMidYMid slice"
         className="sil-orbit__svg"
       >
-        <g className={drift ? 'sil-orbit__drift' : undefined}>
+        <g className={drift ? 'sil-orbit__breathe' : undefined}>
           {orbits.map((orbit) => (
             <path
               key={orbit.index}

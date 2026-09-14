@@ -359,6 +359,7 @@ export function SceneStage({ sceneId, className }: SceneStageProps) {
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         preserveAspectRatio="xMidYMid slice"
         className="h-full w-full"
+        style={{ filter: 'brightness(1.16) saturate(1.04)' }}
       >
         {scene.layers.map((kind) => {
           const Renderer = LAYER_RENDERERS[kind];
@@ -367,7 +368,7 @@ export function SceneStage({ sceneId, className }: SceneStageProps) {
       </svg>
 
       {/* 暗角与扫描线，统一氛围 */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_20%,transparent_35%,rgba(5,7,13,0.82)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_20%,transparent_35%,rgba(5,7,13,0.72)_100%)]" />
       <div className="pointer-events-none absolute inset-0 bg-scanline opacity-[0.1]" />
     </div>
   );

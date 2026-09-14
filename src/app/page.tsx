@@ -225,7 +225,7 @@ export default function HomePage() {
             title="你最近真正纠结什么？"
             placeholder="大三法学，想转计算机，但怕脱产以后找不到工作。"
             ctaLabel="生成我的平行宇宙"
-            hint="我们不会替你决定。"
+            hint="来自知乎真实回答 · 逐字引用 · 每条都可回溯。我们不替你决定，只帮你看见别人真正付出过什么。"
           />
 
           {error ? (

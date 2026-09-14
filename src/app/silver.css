@@ -44,7 +44,7 @@
   --sil-ink-100: #f2f4f8;
   --sil-ink-200: #c3cad6;
   --sil-ink-300: #8d95a5;
-  --sil-ink-400: #5e6675;
+  --sil-ink-400: #747d8d;
 
   /* ------------------------------------------------------------------ */
   /* 证据的三种意图 —— 全站唯一的三种强调色                               */
@@ -138,7 +138,7 @@
   --sil-rgb-ink-100: 242 244 248; /* = --sil-ink-100 #f2f4f8 */
   --sil-rgb-ink-200: 195 202 214; /* = --sil-ink-200 #c3cad6 */
   --sil-rgb-ink-300: 141 149 165; /* = --sil-ink-300 #8d95a5 */
-  --sil-rgb-ink-400: 94 102 117; /* = --sil-ink-400 #5e6675 */
+  --sil-rgb-ink-400: 116 125 141; /* = --sil-ink-400 #747d8d */
   --sil-rgb-zhihu: 47 111 208; /* = --sil-zhihu #2f6fd0 */
   /*
     `--sil-zhihu-deep` 的 RGB 通道版。
@@ -2076,7 +2076,7 @@ a {
   */
   .sil-dial__spin,
   .sil-dial__spin-rev,
-  .sil-orbit__drift,
+  .sil-orbit__breathe,
   .sil-reveal__line,
   .sil-reforged__new {
     animation: none !important;
@@ -2219,10 +2219,8 @@ a {
   opacity: 0.9;
 }
 
-.sil-orbit__drift {
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-  animation: sil-orbit-drift 140s linear infinite;
+.sil-orbit__breathe {
+  animation: sil-orbit-breathe 14s var(--sil-ease-in-out) infinite;
 }
 
 .sil-orbit__path {
@@ -2889,6 +2887,12 @@ a {
 @keyframes sil-orbit-drift {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@keyframes sil-orbit-breathe {
+  0%,
+  100% { opacity: 0.72; }
+  50% { opacity: 1; }
 }
 
 @keyframes sil-orbit-weave {

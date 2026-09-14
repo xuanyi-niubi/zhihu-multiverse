@@ -589,7 +589,7 @@ export default function SessionPage() {
                 <Link
                   href={`/play?session=${encodeURIComponent(id)}`}
                   data-destination="play-session"
-                  className="sil-btn sil-btn--block"
+                  className="sil-btn mx-auto flex w-full max-w-[360px]"
                   onClick={(event) => {
                     // 中键 / 新开标签保留原生跳转：只有左键单击才走客户端推送
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {

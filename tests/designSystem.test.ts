@@ -57,7 +57,7 @@ describe('§2 Color Palette：--sil-* 全套且数值逐字一致', () => {
       '--sil-ink-100': '#f2f4f8',
       '--sil-ink-200': '#c3cad6',
       '--sil-ink-300': '#8d95a5',
-      '--sil-ink-400': '#5e6675',
+      '--sil-ink-400': '#747d8d',
       // 三种证据意图（全站唯一的三种强调色）
       '--sil-zhihu': '#2f6fd0',
       '--sil-zhihu-soft': '#6a9ee0',
