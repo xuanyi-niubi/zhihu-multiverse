@@ -20,8 +20,6 @@
   <img src="./public/screenshots/endgame.jpg" width="49%" alt="终局 · 问题重写与现实支线" />
 </p>
 
-<sub>截图由 `node scripts/capture-screenshots.mjs` 走真实主链实拍（建局 → 澄清 → 世界编译 → 对局 → 终局），非静态拼图。</sub>
-
 ---
 
 ## 为什么必须是知乎
@@ -165,6 +163,5 @@ docker compose up -d --build
 
 ## 致谢
 
-- 设计规范产出流程参考 `web-design` skill 的两阶段工作流。
 - 中文衬线体使用 Noto Serif SC；动效全部为原生 CSS keyframes，未引入动画库。
 - 运行时依赖只有 React 与 Next.js。

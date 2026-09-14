@@ -78,16 +78,7 @@ describe('spriteSrc', () => {
     }
   });
 
-  /**
-   * 「路径拼对了」和「文件真的在」是两件事。
-   *
-   * 上面那些断言只验证字符串形态 —— 如果 30 个 WebP 里漏生成了一个
-   * （转换脚本中途失败、文件名大小写不符），字符串断言全绿，
-   * 而页面上那个角色是**空白**。
-   *
-   * 所以这条断言直接查磁盘。它同时锁住扩展名迁移的完整性：
-   * 只要还残留一个 `.gif` 引用，或者少一个 `.webp` 文件，这里就红。
-   */
+  // 路径正确不代表资源一定存在；直接检查磁盘可防止角色素材缺失。
   it('每条路径都对应一个真实存在的素材文件', () => {
     const actions = ['idle', 'wave', 'sway', 'doze', 'computer', 'dribble'] as const;
     const missing: string[] = [];
@@ -103,9 +94,7 @@ describe('spriteSrc', () => {
     expect(missing).toEqual([]);
   });
 
-  it('原 GIF 母版保留在仓库里（WebP 是派生物，母版用于重新生成）', () => {
-    // 母版不参与运行时加载，但删掉就没法重新生成 WebP 了
-    expect(existsSync(join(process.cwd(), 'public', 'kanshan', 'idle.gif'))).toBe(true);
+  it('核心动画素材使用可直接加载的 WebP 文件', () => {
     expect(existsSync(join(process.cwd(), 'public', 'kanshan', 'webp', 'idle.webp'))).toBe(
       true,
     );

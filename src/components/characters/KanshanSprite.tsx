@@ -7,35 +7,8 @@ import type { Expression } from '@/types/narrative';
 /**
  * 角色动态立绘（动画 WebP）。
  *
- * 素材来源：知乎官方刘看山动态包 + 同源画风的配角包（6 角色 × 4 动作）。
- * 全员共用「白色 3D 黏土北极狐 + 红围巾」母版，靠服装配饰区分身份，
- * 因此和官方刘看山同框不出戏。
- *
- * 按比赛规则，刘看山形象在赛事期间可用，赛后商用需另行取得授权。
- *
- * ## 为什么是 .webp 而不是 .gif
- *
- * 原始 GIF 每个约 950KB–1.9MB，30 个文件合计 **37.6MB**。首页只显示一个
- * 引导员立绘（`idle`），却要下 951KB —— 手机上这是「首屏能不能打开」的问题。
- *
- * 转成有损动画 WebP 后：
- *
- * ```text
- * 951KB  →  321KB   （首页那张，省 66%）
- * 37.6MB →  13.1MB  （全部 30 张，省 66%）
- * 质量   →  PSNR 44.4dB（合成到真实暗房底色后测得，>40dB 即看不出差别）
- * ```
- *
- * 另外顺带解决了 GIF 的 **1bit alpha** 问题：GIF 只有「全透明/全不透明」，
- * 抠图边是硬切；WebP 支持 8bit alpha，边缘是渐隐的。转换脚本还会按多帧
- * alpha 并集裁掉画布空白（`idle` 的实际内容只有 187×265，不是 320×320），
- * 于是 CSS 的 width/height 真正等于「角色有多大」。
- *
- * 生成方式：GIF 母版 → 动画 WebP（FFmpeg），原 GIF 仍保留在
- * `public/kanshan/*.gif` 作为母版，不在运行时加载。
- *
- * 说明：动图无法用 CSS 暂停，`prefers-reduced-motion` 下不做降级 ——
- * 素材只有动图，没有对应的静态帧。拿到静态图后可在此补降级分支。
+ * 素材来源：知乎官方刘看山动态包与同源画风配角素材。
+ * 页面只加载压缩后的 WebP 资源；赛事结束后的商业使用需另行确认授权。
  */
 
 export type KanshanAction = 'idle' | 'wave' | 'sway' | 'doze' | 'computer' | 'dribble';
@@ -72,7 +45,7 @@ export function actionForExpression(expression: Expression): KanshanAction {
 /**
  * 立绘素材版本号。**每次重绘角色后 +1。**
  *
- * 为什么需要它：素材文件名不随内容变化（`interviewer_idle.gif` 永远是这个名字），
+ * 为什么需要它：素材文件名不随内容变化（`interviewer_idle.webp` 永远是这个名字），
  * 而浏览器可能已经拿着旧图的长缓存（历史上 443 入口下发过
  * `max-age=2592000, immutable`，`immutable` 连刷新都不重新校验）。
  * 在 URL 上带一个 query 就能让地址变化，彻底绕开旧缓存。
@@ -82,28 +55,7 @@ export function actionForExpression(expression: Expression): KanshanAction {
  */
 export const SPRITE_VERSION = '2';
 
-/**
- * 素材目录与扩展名。
- *
- * 从 GIF 换成动画 WebP 是一次**体积级别的修正**（37.6MB → 13.1MB），
- * 不是风格偏好。
- *
- * ## 为什么 WebP 放在 `webp/` 子目录而不是同级
- *
- * 同一目录下 `idle.gif` 与 `idle.webp` 只差扩展名，肉眼极易看错；
- * 更实际的是，同目录混放会让「哪些是原版母版、哪些是派生物」失去区分，
- * 而母版必须保留 —— 转换参数（quality / 裁剪框 / 目标尺寸）改了要能重新生成。
- *
- * 现在边界很清楚：
- *
- * ```text
- * /kanshan/*.gif        原版母版（不参与运行时加载）
- * /kanshan/webp/*.webp  派生物（页面实际加载的）
- * ```
- *
- * 做成常量是因为组件里有两处拼路径，散落字符串一定会漏改一处
- * （那种 bug 的表现是「某些角色不显示」）。
- */
+/** 页面实际加载的动画 WebP 素材目录。 */
 const SPRITE_DIR = '/kanshan/webp';
 const SPRITE_EXT = 'webp';
 
