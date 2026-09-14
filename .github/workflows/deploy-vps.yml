@@ -58,11 +58,38 @@ jobs:
           set -Eeuo pipefail
 
           container="zhihu-multiverse"
-          project_dir="$(docker inspect "$container"             --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')"
+          repository="https://github.com/xuanyi-niubi/zhihu-multiverse.git"
+          project_dir="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')"
+          compose_project="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project" }}')"
 
-          if [ -z "$project_dir" ] || [ ! -d "$project_dir/.git" ]; then
-            echo "无法从现有容器识别 Git 仓库目录。"
+          if [ -z "$project_dir" ] || [ ! -d "$project_dir" ]; then
+            echo "无法从现有容器识别 Docker Compose 项目目录。"
             exit 1
+          fi
+
+          # 旧部署可能由压缩包上传，目录没有 .git。此时在旁边建立受 Git 管理的
+          # 新目录，旧目录原样保留作为回滚副本，只迁移运行时环境文件。
+          if [ ! -d "$project_dir/.git" ]; then
+            legacy_dir="$project_dir"
+            managed_dir="${project_dir%/}-managed"
+
+            if [ -e "$managed_dir" ] && [ ! -d "$managed_dir/.git" ]; then
+              echo "目标托管目录已存在但不是 Git 仓库：$managed_dir"
+              exit 1
+            fi
+
+            if [ ! -d "$managed_dir/.git" ]; then
+              git clone --depth=1 --branch main "$repository" "$managed_dir"
+            fi
+
+            for env_file in .env .env.local .env.production; do
+              if [ -f "$legacy_dir/$env_file" ]; then
+                install -m 600 "$legacy_dir/$env_file" "$managed_dir/$env_file"
+              fi
+            done
+
+            project_dir="$managed_dir"
+            echo "已建立 Git 托管目录；旧部署目录保留在：$legacy_dir"
           fi
 
           cd "$project_dir"
@@ -76,8 +103,8 @@ jobs:
           git fetch origin main
           git checkout main
           git merge --ff-only origin/main
-          docker compose up -d --build
-          docker compose ps
+          docker compose -p "$compose_project" up -d --build
+          docker compose -p "$compose_project" ps
 
           for attempt in $(seq 1 20); do
             health="$(docker inspect "$container"               --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}')"
@@ -86,13 +113,13 @@ jobs:
               exit 0
             fi
             if [ "$health" = "unhealthy" ]; then
-              docker compose logs --tail=100 web
+              docker compose -p "$compose_project" logs --tail=100 web
               exit 1
             fi
             sleep 3
           done
 
           echo "容器未在规定时间内进入 healthy。"
-          docker compose logs --tail=100 web
+          docker compose -p "$compose_project" logs --tail=100 web
           exit 1
           REMOTE
