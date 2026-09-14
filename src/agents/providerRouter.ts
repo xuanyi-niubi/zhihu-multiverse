@@ -121,7 +121,12 @@ export function createProviderRouter(input: RouterInput): ProviderRouter {
       for (const credential of candidates) {
         const startedAt = (options.now ?? now)();
         try {
-          const client = factory(credential);
+          // 角色级超时必须真的落到 provider。旧实现虽然配置了 8/15/20 秒，
+          // 实际 client 仍使用全局 30 秒，失败时会把整条链拖到分钟级。
+          const client = factory({
+            ...credential,
+            timeoutMs: Math.min(credential.timeoutMs, plan.timeoutMs),
+          });
           const result = await client.complete(messages, {
             jsonMode: options.jsonMode ?? credential.jsonMode,
             ...(options.signal ? { signal: options.signal } : {}),
