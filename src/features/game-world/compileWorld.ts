@@ -289,20 +289,20 @@ export function compileWorldBlueprint(input: CompileWorldBlueprintInput): WorldB
   const keyUnknown = keyUnknownOf(input.frame, input.paths);
 
   /**
-   * Encounter 计划（玩法线程 §34 / §82）：**可选**、纯数据、零模型。
+   * Encounter 计划（玩法机制 §二十二）：**可选**、纯数据、零模型。
    *
    * 它不推翻现有三幕，也不强制每局都有 —— 证据不足时返回空数组，
    * 蓝图照常成立（旧 snapshot 的 `encounters` 缺失同样是合法状态）。
-   * `unlocks` 直接复用现有 `ExperienceChoiceUnlock`（§35）。
+   * `unlocks` 直接复用现有 `ExperienceChoiceUnlock`（§七 / §八）。
    */
   const encounters = composeEncounters({
-    frame: input.frame,
-    cases,
     facts: input.facts,
+    cases,
     differences: input.paths.flatMap((path) => path.differencesFromUser),
-    paths: input.paths,
     unlocks,
     keyUnknown,
+    frame: { unknowns: input.frame.unknowns },
+    paths: input.paths,
   });
 
   return {

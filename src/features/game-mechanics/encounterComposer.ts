@@ -1,98 +1,49 @@
 import type {
-  ActionOption,
+  EncounterComposerInput,
   EncounterPlan,
   EncounterType,
-  ExperienceConflictPayload,
-  PathUnlockPayload,
+  ExperienceCollision,
+  PlayAction,
+  UnknownLock,
 } from '@/features/game-mechanics/domain';
-import { conditionShiftOptionsFromDifferences } from '@/features/game-mechanics/conditionShift';
-import { costRevealCandidate, costRevealPayload, closableUserActions } from '@/features/game-mechanics/costReveal';
-import { findExperienceConflict } from '@/features/game-mechanics/experienceConflict';
-import {
-  actionFacts,
-  pathUnlockPayloadFromFact,
-  pathUnlockPayloadFromUnlock,
-  type UnlockSource,
-} from '@/features/game-mechanics/pathUnlock';
-import { unknownLockCandidate, unknownLockPayload } from '@/features/game-mechanics/unknownLock';
-import { filterValidEncounters } from '@/features/game-mechanics/validate';
+import { actionFromExperienceUnlock } from '@/features/game-mechanics/pathReveal';
+import { findExperienceCollision } from '@/features/game-mechanics/experienceCollision';
+import { unknownLockFromKey } from '@/features/game-mechanics/unknownLock';
 import type {
-  ExperienceCase,
   ExperienceFact,
-  ExperiencePath,
-  ProblemFrame,
-  UnknownVariable,
   UserDifference,
 } from '@/features/experience/domain';
 
 /**
- * Encounter Composer（§13-§16 / §44-§45 / §59 / §81）。
+ * Encounter Composer（§十九-§二十）。
  *
- * ## 每局不使用全部 Encounter
+ * ## 数据决定这一局用哪几种
  *
- * 固定「PATH → CONDITION → CONFLICT → COST → UNKNOWN」会再次公式化。
- * 正确的做法是让**数据决定**这一局用哪 2～3 种：
+ * 固定顺序的机制表会让玩第二局就猜到套路。正确做法是让数据决定：
  *
  * ```text
- * 有 action fact        → PATH UNLOCK 可用
- * 有 meaningful diff     → CONDITION SHIFT 可用
- * 有相反 outcome 的 case → EXPERIENCE CONFLICT 可用
- * 有 cost fact + 可关行动 → COST REVEAL 可用
- * 有 unresolved variable → UNKNOWN LOCK 可用
+ * 有有效 unlock           → PATH REVEAL（act 2）
+ * 有 counterexample
+ *   + primary case
+ *   + difference          → EXPERIENCE COLLISION（act 3）
+ * 有 keyUnknown           → UNKNOWN LOCK（act 3）
  * ```
  *
- * ## Composer 不是 AI 自由发挥
+ * ## 最多 3 个，不随机，不硬补
  *
- * 这里只有代码规则 + 确定性打分，**不新增 EncounterAgent**，
- * 不调用任何模型。证据不足时允许只生成 1 个甚至 0 个。
+ * 上限 3；证据不足时允许只生成 1 个甚至 0 个。这里只有代码规则，
+ * **不调用任何模型**（§二十八：不调用 LLM / 不调用 API / 不使用 React）。
  */
 
-/** 类型去重时的稳定顺序。 */
-const TYPE_ORDER: readonly EncounterType[] = [
-  'path_unlock',
-  'condition_shift',
-  'cost_reveal',
-  'experience_conflict',
-  'unknown_lock',
+/** 类型去重与排序时的稳定顺序。 */
+export const ENCOUNTER_TYPE_ORDER: readonly EncounterType[] = [
+  'path-reveal',
+  'experience-collision',
+  'unknown-lock',
 ];
 
-export interface ComposeEncountersInput {
-  readonly frame: ProblemFrame;
-  readonly cases: readonly ExperienceCase[];
-  readonly facts: readonly ExperienceFact[];
-  readonly differences: readonly UserDifference[];
-  readonly paths?: readonly ExperiencePath[];
-  /** 现有 `ExperienceChoiceUnlock`（PATH UNLOCK 直接复用，§35）。 */
-  readonly unlocks?: readonly UnlockSource[];
-  /** 当前已知的用户行动空间（用于判断「新行动确实不在其中」）。 */
-  readonly actions?: readonly ActionOption[];
-  readonly keyUnknown: UnknownVariable | null;
-  /** 上限，默认 3；下限 0（§59）。 */
-  readonly maxEncounters?: number;
-}
-
-interface RankedEncounter {
-  readonly type: EncounterType;
-  readonly score: number;
-  readonly plan: EncounterPlan;
-}
-
-function toAct(value: number): 1 | 2 | 3 {
-  if (value <= 1) {
-    return 1;
-  }
-  if (value >= 3) {
-    return 3;
-  }
-  return 2;
-}
-
-function uniqueSorted(values: readonly string[]): readonly string[] {
-  return [...new Set(values)].filter((value) => value.length > 0).sort();
-}
-
-/** 有效差异：入参优先，否则从路径上取（去重后交给各模块）。 */
-function effectiveDifferences(input: ComposeEncountersInput): readonly UserDifference[] {
+/** 有效差异：入参优先，为空时从路径上补齐（按变量去重，保持顺序）。 */
+export function effectiveDifferences(input: EncounterComposerInput): readonly UserDifference[] {
   const fromInput = input.differences.length > 0 ? input.differences : [];
   const fromPaths = (input.paths ?? []).flatMap((path) => path.differencesFromUser);
   const merged = [...fromInput, ...fromPaths];
@@ -106,173 +57,103 @@ function effectiveDifferences(input: ComposeEncountersInput): readonly UserDiffe
   });
 }
 
-/** 有效未知：显式 keyUnknown 优先，否则取问题框定里优先级最高的未知。 */
-function effectiveUnknown(input: ComposeEncountersInput): UnknownVariable | null {
-  if (input.keyUnknown) {
-    return input.keyUnknown;
-  }
-  return [...input.frame.unknowns].sort((left, right) => left.priority - right.priority)[0] ?? null;
+function uniqueSorted(values: readonly string[]): readonly string[] {
+  return [...new Set(values)].filter((value) => value.length > 0).sort();
+}
+
+function factsByIds(facts: readonly ExperienceFact[], ids: readonly string[]): readonly ExperienceFact[] {
+  const byId = new Map(facts.map((fact) => [fact.id, fact]));
+  return ids.map((id) => byId.get(id)).filter((fact): fact is ExperienceFact => fact !== undefined);
 }
 
 /* -------------------------------------------------------------------------- */
-/* 各 Encounter 的候选构造                                                      */
+/* 三个机制各自的候选                                                           */
 /* -------------------------------------------------------------------------- */
 
-function pathUnlockCandidate(input: ComposeEncountersInput): RankedEncounter | null {
-  const userFactIds = new Set((input.actions ?? []).flatMap((action) => action.sourceFactIds));
-
-  const unlocks = [...(input.unlocks ?? [])].sort(
+/**
+ * PATH REVEAL 的真正来源是 `ExperienceChoiceUnlock`（§七）。
+ *
+ * 这里**复用** `actionFromExperienceUnlock` 的准入判断：没有 action fact
+ * 的解锁不会变成行动，也就不会产生 plan。
+ */
+export function pathRevealActionFrom(
+  input: EncounterComposerInput,
+): { readonly unlockId: string; readonly action: PlayAction } | null {
+  const ordered = [...input.unlocks].sort(
     (left, right) => left.availableFromAct - right.availableFromAct || left.id.localeCompare(right.id),
   );
-
-  if (unlocks.length > 0) {
-    const unlock = unlocks[0]!;
-    const isNew = unlock.sourceFactIds.every((id) => !userFactIds.has(id));
-    const payload: PathUnlockPayload = pathUnlockPayloadFromUnlock(unlock);
-    return {
-      type: 'path_unlock',
-      score: 3 + (isNew ? 2 : 0),
-      plan: {
-        id: `encounter-path-unlock-${unlock.id}`,
-        type: 'path_unlock',
-        act: toAct(unlock.availableFromAct),
-        sourceFactIds: uniqueSorted(unlock.sourceFactIds),
-        sourceCaseIds: [],
-        payload,
-      },
-    };
+  // 同一条真实行动只 reveal 一次（口径与 actionsFromExperienceUnlocks 一致）
+  const seen = new Set<string>();
+  for (const unlock of ordered) {
+    const action = actionFromExperienceUnlock(unlock, input.facts);
+    if (!action) {
+      continue;
+    }
+    const key = action.sourceFactIds.join('\u0001');
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    return { unlockId: unlock.id, action };
   }
-
-  // 兜底：没有现成 unlock 时，从真实行动片段直接构造
-  const actions = actionFacts(input.facts);
-  if (actions.length === 0) {
-    return null;
-  }
-  const fact = actions[0]!;
-  const payload = pathUnlockPayloadFromFact(fact);
-  if (!payload) {
-    return null;
-  }
-  const isNew = !userFactIds.has(fact.id);
-  return {
-    type: 'path_unlock',
-    score: 3 + (isNew ? 2 : 0),
-    plan: {
-      id: `encounter-path-unlock-${fact.id}`,
-      type: 'path_unlock',
-      act: toAct(2),
-      sourceFactIds: [fact.id],
-      sourceCaseIds: [`case:${fact.sourceId}`],
-      payload,
-    },
-  };
+  return null;
 }
 
-function conditionShiftCandidate(input: ComposeEncountersInput, differences: readonly UserDifference[]): RankedEncounter | null {
-  const changes = conditionShiftOptionsFromDifferences(differences);
-  if (changes.length === 0) {
+function pathRevealPlan(input: EncounterComposerInput): EncounterPlan | null {
+  const revealed = pathRevealActionFrom(input);
+  if (!revealed) {
     return null;
   }
-  const variables = changes.map((change) => change.variable);
-  const sourceFactIds = uniqueSorted(
-    differences
-      .filter((difference) => variables.includes(difference.variable))
-      .flatMap((difference) => difference.evidenceFactIds),
+  const action = revealed.action;
+  const cases = uniqueSorted(
+    factsByIds(input.facts, action.sourceFactIds).map((fact) => `case:${fact.sourceId}`),
   );
+
   return {
-    type: 'condition_shift',
-    score: 3 + 2,
-    plan: {
-      id: 'encounter-condition-shift',
-      type: 'condition_shift',
-      act: 1,
-      sourceFactIds,
-      sourceCaseIds: [],
-      requiredDifferenceKeys: variables,
-      payload: { kind: 'condition_shift', changes },
-    },
+    id: `encounter-path-reveal-${revealed.unlockId}`,
+    type: 'path-reveal',
+    act: 2,
+    sourceFactIds: uniqueSorted(action.sourceFactIds),
+    sourceCaseIds: cases,
+    unlockId: revealed.unlockId,
   };
 }
 
-function experienceConflictCandidate(input: ComposeEncountersInput, differences: readonly UserDifference[]): RankedEncounter | null {
-  const conflict = findExperienceConflict(input.cases, {
-    differences,
-    unknowns: input.frame.unknowns,
-    paths: input.paths ?? [],
-  });
-  if (!conflict) {
+function collisionPlan(
+  input: EncounterComposerInput,
+  differences: readonly UserDifference[],
+): EncounterPlan | null {
+  const collision: ExperienceCollision | null = findExperienceCollision(input.cases, differences);
+  if (!collision) {
     return null;
   }
-  const payload: ExperienceConflictPayload = {
-    kind: 'experience_conflict',
-    caseIds: [...conflict.caseIds],
-    supportingFactIds: uniqueSorted(conflict.supportingFactIds),
-    candidateFocusVariables: conflict.candidateFocusVariables,
-  };
+
   return {
-    type: 'experience_conflict',
-    score: 3 + 2,
-    plan: {
-      id: `encounter-experience-conflict-${conflict.caseIds.join('-')}`,
-      type: 'experience_conflict',
-      act: 3,
-      sourceFactIds: uniqueSorted(conflict.supportingFactIds),
-      sourceCaseIds: [...conflict.caseIds],
-      payload,
-    },
+    id: `encounter-experience-collision-${collision.primaryCaseId}-${collision.counterCaseId}`,
+    type: 'experience-collision',
+    act: 3,
+    sourceFactIds: uniqueSorted([...collision.primaryFactIds, ...collision.counterFactIds]),
+    sourceCaseIds: [collision.primaryCaseId, collision.counterCaseId],
+    primaryCaseId: collision.primaryCaseId,
+    counterCaseId: collision.counterCaseId,
+    focusCandidates: collision.focusCandidates,
   };
 }
 
-function costRevealCandidateFor(input: ComposeEncountersInput): RankedEncounter | null {
-  const closable = closableUserActions({
-    available: input.actions ?? [],
-    locked: [],
-    unlocked: [],
-    removed: [],
-  });
-  const candidate = costRevealCandidate({
-    facts: input.facts,
-    affectedActionIds: closable.slice(0, 1).map((action) => action.id),
-  });
-  if (!candidate) {
+function unknownLockPlan(input: EncounterComposerInput): EncounterPlan | null {
+  const lock: UnknownLock | null = unknownLockFromKey({ keyUnknown: input.keyUnknown });
+  if (!lock) {
     return null;
   }
-  return {
-    type: 'cost_reveal',
-    score: 3 + 2,
-    plan: {
-      id: 'encounter-cost-reveal',
-      type: 'cost_reveal',
-      act: 2,
-      sourceFactIds: candidate.sourceFactIds,
-      sourceCaseIds: candidate.sourceCaseIds,
-      payload: costRevealPayload(candidate),
-    },
-  };
-}
 
-function unknownLockCandidateFor(input: ComposeEncountersInput): RankedEncounter | null {
-  const unknown = effectiveUnknown(input);
-  if (!unknown) {
-    return null;
-  }
-  const userActions = (input.actions ?? []).filter((action) => action.source === 'user');
-  const candidate = unknownLockCandidate({
-    unknown,
-    affectsActionIds: userActions.slice(0, 1).map((action) => action.id),
-  });
   return {
-    type: 'unknown_lock',
-    score: 3 + (candidate.affectsActionIds.length > 0 ? 2 : 0),
-    plan: {
-      id: `encounter-unknown-lock-${unknown.id}`,
-      type: 'unknown_lock',
-      act: 3,
-      sourceFactIds: [],
-      sourceCaseIds: [],
-      unknownId: unknown.id,
-      payload: unknownLockPayload(candidate),
-    },
+    id: lock.id,
+    type: 'unknown-lock',
+    act: 3,
+    sourceFactIds: [],
+    sourceCaseIds: [],
+    unknownId: lock.id,
+    unknownLabel: lock.label,
   };
 }
 
@@ -281,42 +162,32 @@ function unknownLockCandidateFor(input: ComposeEncountersInput): RankedEncounter
 /* -------------------------------------------------------------------------- */
 
 /**
- * 根据真实数据组成 0～3 个 Encounter（§59）。
+ * 根据真实数据组成 0～3 个 Encounter（§二十）。
  *
  * 返回按 (act, 类型顺序) 排序的计划；证据不足时**允许 0 个**，
- * 绝不强行填满。
+ * 绝不为了凑满 3 个而硬补，也绝不随机。
  */
-export function composeEncounters(input: ComposeEncountersInput): readonly EncounterPlan[] {
-  const max = Math.max(0, Math.min(3, input.maxEncounters ?? 3));
-  if (max === 0) {
-    return [];
+export function composeEncounters(input: EncounterComposerInput): readonly EncounterPlan[] {
+  const differences = effectiveDifferences(input);
+  const candidates: readonly (EncounterPlan | null)[] = [
+    pathRevealPlan(input),
+    collisionPlan(input, differences),
+    unknownLockPlan(input),
+  ];
+
+  const byType = new Map<EncounterType, EncounterPlan>();
+  for (const plan of candidates) {
+    if (!plan || byType.has(plan.type)) {
+      continue;
+    }
+    byType.set(plan.type, plan);
   }
 
-  const differences = effectiveDifferences(input);
-
-  const ranked = [
-    pathUnlockCandidate(input),
-    conditionShiftCandidate(input, differences),
-    costRevealCandidateFor(input),
-    experienceConflictCandidate(input, differences),
-    unknownLockCandidateFor(input),
-  ].filter((candidate): candidate is RankedEncounter => candidate !== null);
-
-  const selected = ranked
-    .sort((left, right) => right.score - left.score || TYPE_ORDER.indexOf(left.type) - TYPE_ORDER.indexOf(right.type))
-    .slice(0, max);
-
-  const valid = filterValidEncounters(
-    selected.map((candidate) => candidate.plan),
-    {
-      facts: input.facts,
-      cases: input.cases,
-      differences,
-      unknownIds: effectiveUnknown(input) ? [effectiveUnknown(input)!.id] : [],
-    },
-  );
-
-  return [...valid].sort(
-    (left, right) => left.act - right.act || TYPE_ORDER.indexOf(left.type) - TYPE_ORDER.indexOf(right.type),
-  );
+  return [...byType.values()]
+    .sort(
+      (left, right) =>
+        left.act - right.act ||
+        ENCOUNTER_TYPE_ORDER.indexOf(left.type) - ENCOUNTER_TYPE_ORDER.indexOf(right.type),
+    )
+    .slice(0, 3);
 }

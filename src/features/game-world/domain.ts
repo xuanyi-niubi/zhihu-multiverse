@@ -146,13 +146,14 @@ export interface WorldBlueprint {
   readonly unlocks: readonly ExperienceChoiceUnlock[];
 
   /**
-   * 本局的 Encounter 计划（玩法线程 §34 / §69 / §82）。
+   * 本局的 Encounter 计划（玩法机制 §二十一 / §二十二）。
    *
    * **可选**：旧 Blueprint snapshot 没有这个字段，仍继续有效；
    * 运行时按 `?? []` 降级，不因为缺字段而崩。
    *
-   * 它只描述「这一局用哪几种机制」以及每种机制引用的真实证据，
-   * 具体怎么画交给视觉线程（本线程不改任何视觉组件）。
+   * 最终只有三种 Encounter：`path-reveal` / `experience-collision` /
+   * `unknown-lock`。它只描述「这一局用哪几种机制」以及每种机制引用的
+   * 真实证据，具体怎么画交给视觉线程（本线程不改任何视觉组件）。
    */
   readonly encounters?: readonly EncounterPlan[];
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
 import { buildExperienceCases } from '@/features/experience/cases';
-import { validateEncounterPlan } from '@/features/game-mechanics/validate';
+import { ENCOUNTER_TYPE_ORDER } from '@/features/game-mechanics/encounterComposer';
 import type { WorldBlueprint } from '@/features/game-world/domain';
 import type {
   ExperienceFact,
@@ -12,12 +12,13 @@ import type {
 } from '@/features/experience/domain';
 
 /**
- * WorldBlueprint 的 Encounter 接线（玩法线程 §34 / §82）。
+ * WorldBlueprint 的 Encounter 接线（玩法机制 §二十一 / §二十二）。
  *
- * 三条纪律：
+ * 四条纪律：
  * 1. 三幕结构不变（不因为玩法增强变成五幕）；
  * 2. `encounters` 可选，旧 snapshot 缺字段仍然有效；
- * 3. 每一条 Encounter 都必须能通过诚实校验（引用真实证据）。
+ * 3. 每一条 Encounter 都是冻结的三种之一，且引用真实证据；
+ * 4. 纯函数：同输入两次编译逐字节一致。
  */
 
 let seq = 0;
@@ -99,7 +100,7 @@ function realisticFacts(): readonly ExperienceFact[] {
 }
 
 describe('compileWorldBlueprint × Encounter', () => {
-  it('仍然三幕（§29），encounters 只是一个附加数组', () => {
+  it('仍然三幕，encounters 只是一个附加数组', () => {
     const blueprint = compileWorldBlueprint({
       sessionId: 's1',
       frame: frame(),
@@ -120,26 +121,63 @@ describe('compileWorldBlueprint × Encounter', () => {
     expect(blueprint.encounters).toEqual([]);
   });
 
-  it('每条 Encounter 都能通过诚实校验（引用真实证据）', () => {
+  it('每条 Encounter 都是冻结的三种之一，且引用真实 fact / case', () => {
     const facts = realisticFacts();
     const paths = [path({ supportingFactIds: ['act-main'] })];
     const blueprint = compileWorldBlueprint({ sessionId: 's1', frame: frame(), paths, facts });
 
     const cases = buildExperienceCases(facts);
-    const input = {
-      facts,
-      cases,
-      differences: paths.flatMap((item) => item.differencesFromUser),
-      unknownIds: [unknown.id],
-    };
+    const caseIds = new Set(cases.map((item) => item.id));
+    const factIds = new Set(facts.map((item) => item.id));
 
     expect(blueprint.encounters!.length).toBeGreaterThan(0);
     for (const plan of blueprint.encounters!) {
-      expect(validateEncounterPlan(plan, input)).toEqual([]);
+      expect(ENCOUNTER_TYPE_ORDER).toContain(plan.type);
+      expect([1, 2, 3]).toContain(plan.act);
+      for (const factId of plan.sourceFactIds) {
+        expect(factIds.has(factId)).toBe(true);
+      }
+      for (const caseId of plan.sourceCaseIds) {
+        expect(caseIds.has(caseId)).toBe(true);
+      }
     }
   });
 
-  it('旧 snapshot（无 encounters 字段）仍然有效（§34 / §82）', () => {
+  it('path-reveal 真的复用 ExperienceChoiceUnlock（不另造）', () => {
+    const facts = realisticFacts();
+    const paths = [path({ supportingFactIds: ['act-main'] })];
+    const blueprint = compileWorldBlueprint({ sessionId: 's1', frame: frame(), paths, facts });
+    const reveal = blueprint.encounters!.find((plan) => plan.type === 'path-reveal');
+
+    if (reveal) {
+      expect(blueprint.unlocks.some((unlock) => unlock.id === reveal.unlockId)).toBe(true);
+    }
+  });
+
+  it('unknown-lock 直接来自 keyUnknown', () => {
+    const blueprint = compileWorldBlueprint({
+      sessionId: 's1',
+      frame: frame(),
+      paths: [path()],
+      facts: realisticFacts(),
+    });
+    const lock = blueprint.encounters!.find((plan) => plan.type === 'unknown-lock');
+    expect(lock).toBeDefined();
+    expect(lock!.unknownId).toBe('unknown-lock-unknown-hours');
+    expect(blueprint.keyUnknown!.id).toBe('unknown-hours');
+  });
+
+  it('encounter 最多 3 条', () => {
+    const blueprint = compileWorldBlueprint({
+      sessionId: 's1',
+      frame: frame(),
+      paths: [path({ supportingFactIds: ['act-main'] })],
+      facts: realisticFacts(),
+    });
+    expect(blueprint.encounters!.length).toBeLessThanOrEqual(3);
+  });
+
+  it('旧 snapshot（无 encounters 字段）仍然有效（§二十一）', () => {
     const legacy: WorldBlueprint = {
       version: 'world-blueprint-v1',
       sessionId: 's-legacy',
@@ -157,13 +195,10 @@ describe('compileWorldBlueprint × Encounter', () => {
   });
 
   it('确定性：同输入两次编译逐字节一致（含 encounters）', () => {
-    const build = () =>
-      compileWorldBlueprint({
-        sessionId: 's1',
-        frame: frame(),
-        paths: [path({ supportingFactIds: ['act-main'] })],
-        facts: realisticFacts(),
-      });
+    // 夹具只构造一次：同输入才有「同输出」可言（fact id 递增会污染比较）
+    const facts = realisticFacts();
+    const paths = [path({ supportingFactIds: ['act-main'] })];
+    const build = () => compileWorldBlueprint({ sessionId: 's1', frame: frame(), paths, facts });
     expect(JSON.stringify(build())).toBe(JSON.stringify(build()));
   });
 });
