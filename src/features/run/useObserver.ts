@@ -13,11 +13,11 @@ import {
 } from '@/features/run/observer';
 
 /**
- * 观测者身份状态（登记门与页头徽标共用）。
+ * 观测者身份状态（登录门与页头徽标共用）。
  *
  * ## 为什么做成 hook 而不是各组件自己 fetch
  *
- * 登记门和页头徽标需要**同一份**会话状态。各拉一次的话：
+ * 登录门和页头徽标需要**同一份**会话状态。各拉一次的话：
  *   · 一次进站打两次 `/api/oauth/session`；
  *   · 更糟的是两处结果可能不一致（一处已授权、一处还没有），
  *     用户会看到「门关了但徽标还写着访客」这种自相矛盾的画面。
@@ -27,7 +27,7 @@ import {
  * ## 为什么首帧是 `null` 而不是「未登录」
  *
  * `/api/oauth/session` 是动态接口。若首帧就假定「未登录」，
- * 已登录用户每次刷新都会先闪一下登记门。所以 `session` 在读到之前保持
+ * 已登录用户每次刷新都会先闪一下登录门。所以 `session` 在读到之前保持
  * `null`，由 `shouldShowObserverGate` 决定「状态未知 = 先不显示」。
  */
 
@@ -71,7 +71,7 @@ export function useObserver(): {
   /** 状态是否已经读过一次（用来区分「还在读」与「读完了是访客」）。 */
   readonly ready: boolean;
   readonly continueAsGuest: () => void;
-  readonly requestRegister: () => void;
+  readonly requestLogin: () => void;
 } {
   const [state, setState] = React.useState<ObserverState>(
     () => cached ?? { session: null, choice: null },
@@ -123,12 +123,12 @@ export function useObserver(): {
     window.dispatchEvent(new Event(OBSERVER_CHANGE_EVENT));
   }, []);
 
-  const requestRegister = React.useCallback(() => {
-    // 清掉「随便逛逛」的记忆，让登记门重新出现
+  const requestLogin = React.useCallback(() => {
+    // 清掉「随便逛逛」的记忆，让登录门重新出现
     clearObserverChoice(browserObserverStorage());
     setState((prev) => ({ ...prev, choice: null }));
     window.dispatchEvent(new Event(OBSERVER_CHANGE_EVENT));
   }, []);
 
-  return { session: state.session, choice: state.choice, ready, continueAsGuest, requestRegister };
+  return { session: state.session, choice: state.choice, ready, continueAsGuest, requestLogin };
 }

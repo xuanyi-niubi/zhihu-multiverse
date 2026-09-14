@@ -27,6 +27,11 @@ import * as React from 'react';
  * 视觉组件不得 fetch API（04_AGENT §7）。
  */
 
+export interface RealityPassIdentity {
+  readonly name: string;
+  readonly avatarUrl: string | null;
+}
+
 export interface RealityPassProps {
   /** 真实时间盒，例如「接下来 3 天，每天 40 分钟」。 */
   readonly timebox: string;
@@ -37,6 +42,8 @@ export interface RealityPassProps {
   readonly artifact?: string | null;
   /** 停止信号（可选）。 */
   readonly stopSignal?: string | null;
+  /** 已登录的知乎身份；只用于终局相纸署名，不参与推演。 */
+  readonly identity?: RealityPassIdentity | null;
   readonly onBringBack?: () => void;
   readonly broughtBack?: boolean;
   readonly className?: string;
@@ -54,6 +61,7 @@ export function RealityPass({
   observation,
   artifact,
   stopSignal,
+  identity,
   onBringBack,
   broughtBack = false,
   className = '',
@@ -115,6 +123,47 @@ export function RealityPass({
           </dl>
         ) : null}
       </div>
+
+      {identity ? (
+        <div
+          className="mt-6 flex items-center justify-between gap-3 border-t pt-4"
+          style={{ borderColor: INK_RULE }}
+          aria-label={`观测者署名：${identity.name}`}
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            {identity.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/api/oauth/avatar"
+                alt=""
+                width={32}
+                height={32}
+                className="h-8 w-8 shrink-0 rounded-full border object-cover"
+                style={{ borderColor: INK_RULE }}
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold"
+                style={{ borderColor: INK_RULE, color: INK_SOFT }}
+              >
+                {identity.name.trim().charAt(0) || '知'}
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold" style={{ color: INK }}>
+                {identity.name}
+              </p>
+              <p className="mt-0.5 text-[10px]" style={{ color: INK_FAINT }}>
+                知乎登录 · 这份报告属于你
+              </p>
+            </div>
+          </div>
+          <span className="sil-label shrink-0" style={{ color: INK_FAINT }}>
+            观测者署名
+          </span>
+        </div>
+      ) : null}
 
       {onBringBack ? (
         <div className="mt-6">

@@ -14,7 +14,7 @@ import {
 } from '@/features/run/observer';
 
 /**
- * 观测者登记门（入口 OAuth 引导）的判据契约。
+ * 观测者登录引导（入口 OAuth 引导）的判据契约。
  *
  * ## 为什么这些判据值得单独测
  *
@@ -22,7 +22,7 @@ import {
  * 五个条件的组合。任何一条写错都会造成两种坏结果之一：
  *
  * - 该问没问 → OAuth 又变成「藏在设置页里的能力」，回到这次要修的问题；
- * - 不该问却问 → 已登记的人每次刷新被拦一次，或访客被反复追问。
+ * - 不该问却问 → 已登录的人每次刷新被拦一次，或访客被反复追问。
  *
  * 这两种都不会抛异常、不会让测试变红，只会让人觉得烦 ——
  * 所以必须用测试把判据钉住。
@@ -86,7 +86,7 @@ describe('观测者选择：读写', () => {
 
   it('存了别的值（人为改坏 / 旧版本残留）→ 当作没选择过', () => {
     // 不能把任何非空字符串都当成「选过随便逛逛」：那样一个脏值
-    // 会让登记门永远不再出现，且用户无从发现。
+    // 会让登录引导永远不再出现，且用户无从发现。
     expect(readObserverChoice(memoryStorage({ [OBSERVER_CHOICE_STORAGE_KEY]: 'yes' }))).toBeNull();
     expect(readObserverChoice(memoryStorage({ [OBSERVER_CHOICE_STORAGE_KEY]: '' }))).toBeNull();
   });
@@ -112,14 +112,14 @@ describe('观测者选择：读写', () => {
   });
 });
 
-describe('登记门：什么时候出现', () => {
+describe('登录引导：什么时候出现', () => {
   const base = { choice: null, suppressed: false } as const;
 
-  it('未登记 + OAuth 已配齐 → 出现', () => {
+  it('未登录 + OAuth 已配齐 → 出现', () => {
     expect(shouldShowObserverGate({ ...base, session: anonymousButConfigured })).toBe(true);
   });
 
-  it('已登记 → 不出现（不能每次刷新都拦一次）', () => {
+  it('已登录 → 不出现（不能每次刷新都拦一次）', () => {
     expect(shouldShowObserverGate({ ...base, session: member })).toBe(false);
   });
 
@@ -159,7 +159,7 @@ describe('登记门：什么时候出现', () => {
 });
 
 describe('页头徽标', () => {
-  it('已登记 → 显示头像与昵称', () => {
+  it('已登录 → 显示头像与昵称', () => {
     const state = observerChipState(member, null);
     expect(state?.kind).toBe('member');
   });

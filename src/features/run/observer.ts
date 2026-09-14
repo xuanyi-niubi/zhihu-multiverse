@@ -1,5 +1,5 @@
 /**
- * 观测者身份（入口登记的「随便逛逛」选择）。
+ * 观测者身份（观测者登录引导的「随便逛逛」选择）。
  *
  * ## 为什么需要这个东西
  *
@@ -7,16 +7,16 @@
  * 再点一个链接，才看得到「可以登录」这件事。结果是**能力在，但体验上不存在** ——
  * 访客从头到尾不知道这个站点可以记住他。
  *
- * 所以入口要有一个登记门：进来先问一次「要不要用知乎账号登记」，
+ * 所以入口要有一个登录引导：进来先问一次「要不要用知乎账号登录」，
  * 同时明确给出「随便逛逛」这条路。
  *
  * ## 三条纪律
  *
  * 1. **必须能拒绝。** 这一局的核心体验（检索 → 三幕 → 终局）对访客完全可用。
- *    登记换来的是「这个宇宙记得你」：跨设备可见的经历、未知与决策画像。
+ *    登录换来的是「这个宇宙记得你」：跨设备可见的经历、未知与决策画像。
  *    所以拒绝不是降级，只是不记账。
  * 2. **拒绝一次就不再问。** 每次进站都弹一次是最招人烦的模式。
- *    选择写进 localStorage，之后只有用户主动点「登记」才会再出现。
+ *    选择写进 localStorage，之后只有用户主动点「登录」才会再出现。
  * 3. **存储不可用也不能崩。** 隐私模式下 `localStorage` 会抛异常；
  *    此时按「没做过选择」处理 —— 门会出现，但点「随便逛逛」仍然关得掉
  *    （只是下次刷新还会问，这是无法避免的，不该为此阻断界面）。
@@ -28,10 +28,10 @@
 /** localStorage 键：只存「用户选择过以访客身份继续」这一个事实。 */
 export const OBSERVER_CHOICE_STORAGE_KEY = 'zhihu-multiverse:observer-guest';
 
-/** 同标签页内的通知事件（登记门关闭后，页头的小徽标要立刻换成访客态）。 */
+/** 同标签页内的通知事件（登录门关闭后，页头的小徽标要立刻换成访客态）。 */
 export const OBSERVER_CHANGE_EVENT = 'zhihu-multiverse:observer-change';
 
-/** 用户对登记门的回答。没做过回答就是 `null`。 */
+/** 用户对登录门的回答。没做过回答就是 `null`。 */
 export type ObserverChoice = 'guest';
 
 /** 读写所需的最小存储接口（`localStorage` 满足它）。 */
@@ -49,7 +49,7 @@ export interface ObserverProfile {
   readonly url: string | null;
 }
 
-/** 登记门与页头徽标共同需要的会话视图。 */
+/** 登录门与页头徽标共同需要的会话视图。 */
 export interface ObserverSession {
   readonly authorized: boolean;
   readonly profile: ObserverProfile | null;
@@ -92,7 +92,7 @@ export function writeObserverChoice(
   }
 }
 
-/** 忘记这个选择（用户在页头主动点「登记」时调用，门会重新出现）。 */
+/** 忘记这个选择（用户在页头主动点「登录」时调用，门会重新出现）。 */
 export function clearObserverChoice(storage: ObserverStorage | null | undefined): void {
   if (!storage) {
     return;
@@ -128,12 +128,12 @@ export function observerDisplayName(profile: ObserverProfile | null): string {
 }
 
 /**
- * 登记门要不要出现。
+ * 登录门要不要出现。
  *
  * 判据集中在这里，而不是散在组件里 —— 因为它有五个条件，
  * 漏掉任何一个都会造成「进门就被拦」或「该问却没问」。
  *
- * - 已登记 → 不问
+ * - 已登录 → 不问
  * - 已经选过随便逛逛 → 不问
  * - OAuth 没配齐 → 不问（给一个点不通的按钮比不问更糟）
  * - 回调还是本地地址 → 不问（真实登录不可能成功，登录后会停在知乎回调页）
@@ -164,14 +164,14 @@ export function observerChipState(
   }
   /*
     访客态只在「他其实有得选」时才显示 ——
-    OAuth 没配齐时显示「访客 · 登记」会引导到一个不存在的动作。
+    OAuth 没配齐时显示「访客 · 登录」会引导到一个不存在的动作。
   */
   if (session.configured && !session.localPreviewOnly) {
     return { kind: 'guest' };
   }
   /*
     已选择随便逛逛的访客：仍然显示访客态。
-    这是用户唯一能重新找到「登记」入口的地方，藏起来会让这个选择变成不可逆的。
+    这是用户唯一能重新找到「登录」入口的地方，藏起来会让这个选择变成不可逆的。
   */
   if (choice === 'guest') {
     return { kind: 'guest' };

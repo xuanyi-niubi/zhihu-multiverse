@@ -8,19 +8,19 @@ import { shouldShowObserverGate } from '@/features/run/observer';
 import { useObserver } from '@/features/run/useObserver';
 
 /**
- * 观测者登记门（入口）。
+ * 观测者登录引导（入口）。
  *
  * ## 它解决什么问题
  *
  * 之前 OAuth 只活在一个独立面板 `/oauth` 里。用户必须先想到「去设置页看看」，
  * 才可能发现这个站点支持知乎登录 —— 能力在，但**体验上不存在**。
  *
- * 所以进门先问一次：要不要用知乎账号登记。同时明确给出「随便逛逛」。
+ * 所以进门先问一次：要不要用知乎账号登录。同时明确给出「随便逛逛」。
  * 问一次就够了，回答记在 localStorage（见 `features/run/observer.ts`）。
  *
  * ## 为什么不做成硬门
  *
- * 这一局的核心（检索 → 三幕 → 终局）对访客完全可用，登记换来的是
+ * 这一局的核心（检索 → 三幕 → 终局）对访客完全可用，登录换来的是
  * 「这个宇宙记得你」。把可用功能锁在登录后面，是拿功能当人质换注册量 ——
  * 对一个要证明「知乎内容真的改变了选择」的作品来说，那是本末倒置。
  * 所以这是**邀请**，不是关卡：两个按钮视觉权重接近，且都能立刻继续。
@@ -30,7 +30,7 @@ import { useObserver } from '@/features/run/useObserver';
  * 判据集中在 `shouldShowObserverGate()`：已登录 / 已选过随便逛逛 /
  * OAuth 没配齐 / 回调还是本地地址 / 正在 OAuth 回调页 —— 都不弹。
  * 最后一条尤其重要：回调落点如果是 `/oauth?oauth=success`，
- * 在自己身上再叠一层登记门会让人以为「登录没成功」。
+ * 在自己身上再叠一层登录门会让人以为「登录没成功」。
  */
 export default function ObserverGate() {
   const pathname = usePathname();
@@ -56,7 +56,7 @@ export default function ObserverGate() {
     };
   }, [open]);
 
-  /* Esc = 随便逛逛：不想登记的人不该被一个弹层困住 */
+  /* Esc = 随便逛逛：不想登录的人不该被一个弹层困住 */
   React.useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -81,7 +81,7 @@ export default function ObserverGate() {
       /*
         遮罩用 0.95。
         实测 0.8 时背景那行大标题仍清晰可读（白字在黑底上，8 折后还是浅灰），
-        整块面板看起来像「浮在页面上的一个框」而不是一次登记；
+        整块面板看起来像「浮在页面上的一个框」而不是一次登录；
         0.9 仍能在面板上看到背景文字的浅带。0.95 之后背景退成纯轮廓。
 
         这里**不用 backdrop-filter: blur** —— 设计纪律里 blur 有并发预算
@@ -90,13 +90,13 @@ export default function ObserverGate() {
       style={{ background: 'rgb(4 5 10 / 0.95)' }}
     >
       <div className="sil-panel w-full max-w-[520px] p-6 sm:p-8">
-        <p className="sil-label">OBSERVER REGISTRATION</p>
+        <p className="sil-label">OBSERVER LOGIN</p>
 
         <h2
           id="observer-gate-title"
           className="sil-title mt-3 text-[26px] leading-tight sm:text-[30px]"
         >
-          登记你的观测者身份
+          登录你的观测者身份
         </h2>
 
         {/*
@@ -116,11 +116,11 @@ export default function ObserverGate() {
           </span>
           <div className="min-w-0 pt-0.5">
             <p className="text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]">
-              用知乎账号登记后，这个宇宙会记得你 ——
-              你纠结过的问题、借到的经验，以及那些只有现实能回答的未知。
+              知乎是这里的一种登录方式。登录后，这个宇宙会记得你的推演，
+              并在最后那张暖色报告纸上写下你的头像与昵称。
             </p>
             <p className="mt-2.5 text-[12.5px] leading-relaxed text-[color:var(--sil-ink-300)]">
-              你的头像与昵称会出现在推演过程中。
+              不登录也能完整体验，登录不会改变推演结果。
             </p>
           </div>
         </div>
@@ -131,7 +131,7 @@ export default function ObserverGate() {
             中文界面里「主要动作在右」更符合习惯，且与设置页的按钮序一致。
           */}
           <a href="/api/oauth/start" className="sil-btn sil-btn--block sm:flex-1">
-            用知乎账号登记
+            使用知乎登录
           </a>
           <button
             type="button"
@@ -143,8 +143,8 @@ export default function ObserverGate() {
         </div>
 
         <p className="mt-5 text-[11px] leading-relaxed text-[color:var(--sil-ink-400)]">
-          不登记也能完整走完一局 —— 只是这一局不会被记住。
-          之后想登记，点页面底部的「访客」即可。
+          不登录也能完整走完一局 —— 只是这一局不会被记住。
+          之后想登录，点页面底部的「访客 · 登录」即可。
         </p>
       </div>
     </div>

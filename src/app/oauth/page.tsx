@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 /**
- * 知乎账号接入面板。
+ * 知乎登录面板。
  *
  * ## 它为什么在 `/oauth` 而不是塞进设置页
  *
@@ -14,7 +14,7 @@ import { useSearchParams } from 'next/navigation';
  * 带 `?oauth=success` 回来。把它做成独立页面，回调落点才有明确语义，
  * 授权结果也不会和设置项的草稿状态混在一起。
  *
- * 设置页只放一个入口链接（`连接知乎账号`）指向这里。
+ * 设置页只放一个入口链接（`登录知乎`）指向这里。
  *
  * ## 只呈现用户需要知道的事
  *
@@ -115,9 +115,9 @@ function OAuthPanel() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="sil-label">AUTH BRIDGE</p>
-          <h1 className="sil-title mt-3 text-[26px] sm:text-[32px]">知乎账号接入</h1>
+          <h1 className="sil-title mt-3 text-[26px] sm:text-[32px]">观测者登录</h1>
           <p className="mt-3 max-w-[46ch] text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]">
-            让推演机读到真实的知乎身份与内容，而不只是你手打的一句目标。
+            知乎是本站的一种登录方式。登录后可显示头像昵称、保存推演记忆，并在终局报告上署名。
           </p>
         </div>
         <Link href="/" className="sil-btn sil-btn--ghost shrink-0">
@@ -132,7 +132,7 @@ function OAuthPanel() {
         >
           <p className="sil-label--sm font-mono text-[color:var(--sil-alternate)]">AUTHORIZED</p>
           <p className="mt-1.5 text-[14px] text-[color:var(--sil-ink-200)]">
-            授权成功，已拿到访问令牌。
+            登录成功，已获取知乎身份。
           </p>
         </div>
       ) : null}
@@ -184,7 +184,7 @@ function OAuthPanel() {
           </div>
         ) : (
           <p className="mt-3 text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]">
-            尚未连接知乎账号。连接后，你的推演记忆与密钥配置会跟着账号走。
+            尚未登录知乎。登录后，你的推演记忆会跟着账号保留。
           </p>
         )}
 
@@ -199,7 +199,7 @@ function OAuthPanel() {
             }}
             className={canLogin ? 'sil-btn' : 'sil-btn sil-btn--ghost pointer-events-none opacity-45'}
           >
-            {session?.authorized ? '重新授权知乎账号' : '授权知乎账号'}
+            {session?.authorized ? '重新登录知乎' : '使用知乎登录'}
           </a>
 
           {session?.authorized ? (
@@ -218,7 +218,7 @@ function OAuthPanel() {
                 disabled={busy}
                 className="sil-btn sil-btn--quiet"
               >
-                断开连接
+                退出登录
               </button>
             </>
           ) : null}
@@ -266,8 +266,8 @@ function OAuthPanel() {
       ) : null}
 
       <footer className="pb-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-400)]">
-        登录能力为黑客松演示级别：尚未接入 PKCE、scope、refresh token 与解绑能力，
-        请勿用于生产环境。
+        知乎登录为黑客松演示能力：尚未接入 PKCE、scope 与 refresh token，
+        请勿直接用于生产环境。
       </footer>
     </main>
   );

@@ -6,26 +6,26 @@ import { observerChipState, observerDisplayName } from '@/features/run/observer'
 import { useObserver } from '@/features/run/useObserver';
 
 /**
- * 观测者徽标：把「登记了没有」这件事显示在界面上。
+ * 观测者徽标：把「登录了没有」这件事显示在界面上。
  *
  * ## 为什么需要一个可见的徽标
  *
  * 两个理由，都不是装饰：
  *
- * 1. **已登记的人要看到自己被记住了。** 头像 + 昵称是「这个宇宙认得你」
- *    唯一的即时反馈。没有它，登记与否在体验上毫无差别 ——
+ * 1. **已登录的人要看到自己被记住了。** 头像 + 昵称是「这个宇宙认得你」
+ *    唯一的即时反馈。没有它，登录与否在体验上毫无差别 ——
  *    用户会合理地怀疑登录根本没生效。
- * 2. **拒绝过的人要有回头路。** 选了「随便逛逛」之后，登记门就不再出现。
+ * 2. **拒绝过的人要有回头路。** 选了「随便逛逛」之后，登录门就不再出现。
  *    如果界面上没有任何入口，这个选择就变成了不可逆的 ——
- *    想改主意的人只能去清浏览器存储。所以访客态会显示一个「登记」按钮。
+ *    想改主意的人只能去清浏览器存储。所以访客态会显示一个「登录」按钮。
  *
  * ## 显示规则都在 `observerChipState()`
  *
- * 这里只负责画。三个分支：已登记（头像+昵称）/ 访客（+登记入口）/
+ * 这里只负责画。三个分支：已登录（头像+昵称）/ 访客（+登录入口）/
  * 什么都不显示（OAuth 没配齐时：给一个通向不存在动作的入口更糟）。
  */
 export default function ObserverChip({ className = '' }: { readonly className?: string }) {
-  const { session, choice, requestRegister } = useObserver();
+  const { session, choice, requestLogin } = useObserver();
   const state = observerChipState(session, choice);
 
   if (!state) {
@@ -70,7 +70,7 @@ export default function ObserverChip({ className = '' }: { readonly className?: 
   return (
     <button
       type="button"
-      onClick={requestRegister}
+      onClick={requestLogin}
       className={[
         'flex min-h-11 items-center gap-1.5 text-[12px] text-[color:var(--sil-ink-400)]',
         'transition-colors hover:text-[color:var(--sil-ink-200)]',
@@ -78,10 +78,10 @@ export default function ObserverChip({ className = '' }: { readonly className?: 
       ]
         .filter(Boolean)
         .join(' ')}
-      title="用知乎账号登记，让这个宇宙记得你"
+      title="使用知乎登录，让这个宇宙记得你"
     >
       <span className="h-5 w-5 rounded-full border border-[color:var(--sil-rule)]" />
-      <span>访客 · 登记</span>
+      <span>访客 · 登录</span>
     </button>
   );
 }

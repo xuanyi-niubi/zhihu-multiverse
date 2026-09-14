@@ -384,13 +384,13 @@ export default function SettingsPage() {
             {/*
               v3 之后：**不再需要登录**。
 
-              原本这里是「需要先连接知乎账号」的硬墙。它有两个问题：
+              原本这里是「需要先登录知乎」的硬墙。它有两个问题：
               1. 对「配置我自己的 key」是过度约束 —— 玩家只想用自己的 key 玩一局；
               2. 更实际的：如果服务端 env 里留着部署者的共享 key，而访客没配时
                  回退到它，那任何访客都能白用部署者的 key。
 
               现在配置按**匿名身份**（cookie）隔离保存：不登录也能填、也能用。
-              登录知乎账号仍然有价值，但那是为了**记忆**（跨设备、前世遗念），
+              使用知乎登录仍然有价值，但那是为了**记忆**（跨设备、前世遗念），
               与能否配置 key 无关。
             */}
             <div className="mt-3 space-y-4">
@@ -403,7 +403,7 @@ export default function SettingsPage() {
                 <p className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--sil-zhihu)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-zhihu)_8%,transparent)] px-4 py-2.5 text-[11px] leading-relaxed text-zhihu-100">
                   你在这里填的凭据只保存在这台浏览器对应的匿名身份下，换设备需要重填。
                   <Link href="/oauth" className="ml-1 font-semibold underline decoration-zhihu-300/60 hover:text-[color:var(--sil-ink-100)]">
-                    连接知乎账号
+                    登录知乎
                   </Link>
                   可以让记忆跨设备保留（凭据本身仍按匿名身份隔离）。
                 </p>

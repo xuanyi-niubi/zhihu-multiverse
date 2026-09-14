@@ -82,10 +82,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 设置页的「减少动画」：把用户偏好落到 <html data-reduce-motion>，全站生效 */}
         <AppearanceBootstrap />
         {/*
-          观测者登记门。
+          观测者登录引导。
           挂在根布局而不是首页，因为「一进站就该看到」—— 用户可能直接落在
           /play 或 /session 的分享链接上，只在首页问等于漏掉这些人。
-          它自己会判断该不该出现（已登记 / 已选随便逛逛 / OAuth 未配齐都不弹）。
+          它自己会判断该不该出现（已登录 / 已选随便逛逛 / OAuth 未配齐都不弹）。
         */}
         <ObserverGate />
         {children}

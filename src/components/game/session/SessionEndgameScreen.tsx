@@ -5,6 +5,8 @@ import * as React from 'react';
 import { KanshanSprite } from '@/components/characters/KanshanSprite';
 import { RealityPass } from '@/components/visual/RealityPass';
 import { SentenceReforge } from '@/components/visual/SentenceReforge';
+import { observerDisplayName } from '@/features/run/observer';
+import { useObserver } from '@/features/run/useObserver';
 
 import type { SessionEndgameView } from '@/components/game/session/types';
 
@@ -63,6 +65,13 @@ function Block({
 
 export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScreenProps) {
   const [copied, setCopied] = React.useState(false);
+  const { session } = useObserver();
+  const reportIdentity = session?.authorized
+    ? {
+        name: observerDisplayName(session.profile),
+        avatarUrl: session.profile?.avatarUrl ?? null,
+      }
+    : null;
 
   /**
    * 成就 Toast（GAME-DESIGN §4.6）：一局 ≤ 2 个，都在终局，且都不是「奖励」——
@@ -291,6 +300,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               observation={view.realityPass.successSignal}
               artifact={view.realityPass.artifact}
               stopSignal={view.realityPass.stopSignal}
+              identity={reportIdentity}
               onBringBack={() => void onCopy()}
               broughtBack={copied}
             />
