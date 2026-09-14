@@ -322,7 +322,7 @@ describe('Session 编译体验', () => {
     // 世界就绪后先进入真实人生显影；唯一的穿越动作仍由用户按钮触发。
     expect(source).toContain('<ExperienceReveal');
     expect(source).toContain('onEnterWorld={enterWorld}');
-    expect(source).toContain('router.push(\`/play?session=\${encodeURIComponent(view.id)}\`)');
+    expect(source).toContain("router.push(`/play?session=${encodeURIComponent(view.id)}`)");
 
     const reveal = readFileSync(
       new URL('../src/components/visual/ExperienceReveal.tsx', import.meta.url),
