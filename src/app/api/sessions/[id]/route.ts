@@ -200,6 +200,12 @@ export async function PATCH(request: Request, context: { params: { id: string } 
         }
       }
 
+      // 编译页有明确的等待预算：知乎每批最多 6 秒，失败就诚实降级。
+      // 三个意图按 2+1 两批执行，因此检索最坏约 12 秒，而不是 40 秒。
+      if (zhihu) {
+        zhihu = { ...zhihu, timeoutMs: Math.min(zhihu.timeoutMs, 6_000) };
+      }
+
       const router = modelConfig
         ? createProviderRouter({
             providers: tieredProvidersFromConfig({
