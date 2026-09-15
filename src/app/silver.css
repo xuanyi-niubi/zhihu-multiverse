@@ -1527,6 +1527,44 @@ a {
   border-left-color: var(--sil-alternate);
 }
 
+/*
+ * 手机端：解锁项的「查看原文」不能和主按钮抢同一行。
+ * 原先它是 shrink-0 的并列 flex 子项，会把主按钮压到几十像素，
+ * 中文标题遂退化成「一个字一行」。小屏把来源链接放到下一行；
+ * 宽屏恢复横向票据布局。
+ */
+.session-choice--unlocked {
+  flex-wrap: wrap;
+}
+
+.session-choice--unlocked > button:first-child {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.session-choice--unlocked > .source-link {
+  width: 100%;
+  padding-top: 4px;
+  text-align: right;
+}
+
+@media (min-width: 640px) {
+  .session-choice--unlocked {
+    flex-wrap: nowrap;
+  }
+
+  .session-choice--unlocked > button:first-child {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  .session-choice--unlocked > .source-link {
+    width: auto;
+    padding-top: 0;
+    text-align: left;
+  }
+}
+
 /* 解锁的一次脉冲：只做透明度，不做光晕 */
 .session-choice__pulse {
   position: absolute;
