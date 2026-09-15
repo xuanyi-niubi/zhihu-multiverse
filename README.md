@@ -20,9 +20,6 @@
   <img src="./public/screenshots/play-act1.jpg" width="360" alt="手机端 · 对局第一幕" />
 </p>
 <p align="center">
-  <img src="./public/screenshots/session-ready.jpg" width="360" alt="手机端 · 世界就绪" />
-</p>
-<p align="center">
   <img src="./public/screenshots/endgame.jpg" width="360" alt="手机端 · 终局现实支线" />
 </p>
 
