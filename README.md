@@ -5,19 +5,27 @@
 说出你正在经历的那件事，系统会去知乎找**真正走过相似、不同和相反道路的人**。
 他们真实做过的事，会直接改变这一局可以选择的行动。
 
+> README 截图已按手机端阅读方式改为单列展示；每张图对应一段真实流程，点击图片可查看完整界面。
+
 **知乎黑客松 2026 · 校园新锐季** | 主赛道：跨次元游乐场 | 关联方向：知识炼金场
 
 <p align="center">
-  <img src="./public/screenshots/home.jpg" width="49%" alt="首页 · 命运观象厅" />
-  <img src="./public/screenshots/session-clarify.jpg" width="49%" alt="动态澄清" />
+  <img src="./public/screenshots/home.jpg" width="360" alt="手机端首页 · 命运观象厅" />
 </p>
 <p align="center">
-  <img src="./public/screenshots/world-forge.jpg" width="49%" alt="World Forge · 三条轨道" />
-  <img src="./public/screenshots/play-act1.jpg" width="49%" alt="对局 · 第一幕" />
+  <img src="./public/screenshots/session-clarify.jpg" width="360" alt="手机端 · 动态澄清" />
 </p>
 <p align="center">
-  <img src="./public/screenshots/session-ready.jpg" width="49%" alt="世界就绪" />
-  <img src="./public/screenshots/endgame.jpg" width="49%" alt="终局 · 问题重写与现实支线" />
+  <img src="./public/screenshots/world-forge.jpg" width="360" alt="手机端 · World Forge 三条轨道" />
+</p>
+<p align="center">
+  <img src="./public/screenshots/play-act1.jpg" width="360" alt="手机端 · 对局第一幕" />
+</p>
+<p align="center">
+  <img src="./public/screenshots/session-ready.jpg" width="360" alt="手机端 · 世界就绪" />
+</p>
+<p align="center">
+  <img src="./public/screenshots/endgame.jpg" width="360" alt="手机端 · 终局现实支线" />
 </p>
 
 ---
@@ -28,7 +36,7 @@
 
 | 机制 | 玩家能感觉到什么 | 代码落点 |
 |---|---|---|
-| **强制三视角检索** —— 相似处境 / 另一种走法 / 反例，缺一不可 | 你看到的不只是支持你原想法的人 | `features/experience/queryPlan.ts` |
+| **先找人，再谈相似** —— 先审查亲历、行动与结果，再按相似 / 邻近 / 替代 / 反例分轨 | 找不到完全相同的人时，也能看清“哪里相同、哪里不同” | `features/experience/qualification.ts` · `features/experience/retrieve.ts` |
 | **逐字引用** —— `exactQuote` 必须是原回答的连续子串，改一个字整条丢弃 | 每句话都能点回那一篇真实回答 | `features/experience/validate.ts` |
 | **Experience Unlock** —— 一条真实经历会在某一幕解锁一个此前不存在的行动 | 「他的做法我原来根本没想到」 | `features/game-world/experienceUnlock.ts` |
 | **反例驱动第三幕** —— 找不到真实反例就诚实留空，不编 | 「原来看起来对的路，有人是这样走坏的」 | `features/game-world/compileWorld.ts` |
@@ -95,7 +103,7 @@ npm run verify       # typecheck + test + build + smoke
 当前实测（`scripts/test-stats.json`，由 `npm run test:stats` 生成，不手写数字）：
 
 ```
-92 个测试文件 · 1456 个用例 · 全部通过
+以 `scripts/test-stats.json` 为准 · CI 全部通过
 ```
 
 契约覆盖三条主线：**产品纪律**（三视角检索、逐字引用、未知永不补全）、
