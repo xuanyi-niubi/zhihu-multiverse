@@ -267,6 +267,35 @@ export default function SessionPage() {
   const status = view?.status ?? null;
   const showClarify = status === 'clarifying';
   const worldReady = status === 'ready_to_play';
+  const stages = stagesFrom(view, worldReady);
+  const foundTotal = stages.reduce((sum, stage) => sum + (stage.found ?? 0), 0);
+  const revealRef = React.useRef<HTMLDivElement>(null);
+  const [compileElapsed, setCompileElapsed] = React.useState(0);
+
+  /** 只显示真实经过的时间，不伪造百分比或检索结果。 */
+  React.useEffect(() => {
+    if (!busy || worldReady || showClarify) {
+      setCompileElapsed(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      setCompileElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [busy, showClarify, worldReady]);
+
+  /** 编译完成后让真实经历接管视口，手机端无需猜测还要继续下滑。 */
+  React.useEffect(() => {
+    if (!worldReady || foundTotal === 0) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      revealRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [foundTotal, worldReady]);
 
   /** 澄清答完（或本来就不需要澄清）→ 自动编译。 */
   const autoPreparedRef = React.useRef(false);
@@ -425,8 +454,6 @@ export default function SessionPage() {
     return null;
   }
 
-  const stages = stagesFrom(view, worldReady);
-  const foundTotal = stages.reduce((sum, stage) => sum + (stage.found ?? 0), 0);
   /**
    * 命中的真实片段（§19）：只有检索完成后才有内容可上墙。
    * 没有片段时如实留空，不用假动画填满。
@@ -544,22 +571,22 @@ export default function SessionPage() {
             <p className="sil-prose text-[14px] leading-relaxed text-[color:var(--sil-ink-300)]">
               {worldReady
                 ? foundTotal > 0
-                  ? `筛出了 ${foundTotal} 位可核验亲历者。走吧。`
+                  ? `筛出了 ${foundTotal} 位可核验亲历者。先看看他们真正走过的部分。`
                   : '这里暂时是观测盲区。你仍可进入明确标注的假设推演。'
                 : '我去找找，有没有人活过你正在纠结的这几种人生。'}
             </p>
           </div>
 
-          <WorldForge
-            question={view.question}
-            stages={stages}
-            phase={phase}
-            /* 显影阶段一次只聚焦一段经历；完整碎片由 ExperienceReveal 在后续按需展开。 */
-            fragments={worldReady ? [] : shards}
-            /* 碎片可点：完整逐字原文 + 回知乎原回答（`sourceUrl` 就在这里落地） */
-            onSelectFragment={(fragmentId) => setSelectedFragmentId(fragmentId)}
-            selectedFragmentId={selectedFragmentId}
-          />
+          {worldReady && foundTotal > 0 ? null : (
+            <WorldForge
+              question={view.question}
+              stages={stages}
+              phase={phase}
+              fragments={shards}
+              onSelectFragment={(fragmentId) => setSelectedFragmentId(fragmentId)}
+              selectedFragmentId={selectedFragmentId}
+            />
+          )}
 
           {error ? (
             <p role="alert" className="mt-4 text-[13px] leading-relaxed text-[color:var(--sil-counter-soft)]">
@@ -569,7 +596,11 @@ export default function SessionPage() {
           ) : null}
 
           {worldReady ? (
-            <div className="mt-8">
+            <div
+              ref={revealRef}
+              tabIndex={-1}
+              className="scroll-mt-6 outline-none"
+            >
               {foundTotal === 0 ? (
                 /**
                  * 一条都没找到：如实说，并给两条出路 —— 不假装、也不困住用户。
@@ -640,7 +671,7 @@ export default function SessionPage() {
                 onClick={() => void act({ action: 'prepare-world' })}
                 className="sil-btn sil-btn--block sm:w-[280px]"
               >
-                {busy ? '正在编译你的世界…' : '进入我的平行宇宙'}
+                {busy ? `正在检索与编译…${compileElapsed > 0 ? ` ${compileElapsed}s` : ''}` : '进入我的平行宇宙'}
               </button>
             </div>
           )}
