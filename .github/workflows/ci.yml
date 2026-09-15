@@ -30,8 +30,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test OAuth
-        run: npx vitest run tests/zhihuOAuth.test.ts
+      - name: Test suite
+        run: npm run test
 
       - name: Build
         run: npm run build
