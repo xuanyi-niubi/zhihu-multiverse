@@ -3,6 +3,7 @@
 import * as React from 'react';
 
 import { KanshanSprite } from '@/components/characters/KanshanSprite';
+import { CelestialBackdrop } from '@/components/visual/CelestialBackdrop';
 import { RealityPass } from '@/components/visual/RealityPass';
 import { SentenceReforge } from '@/components/visual/SentenceReforge';
 import { observerDisplayName } from '@/features/run/observer';
@@ -192,14 +193,17 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
         />
       </div>
 
-      {view.realityPass ? (
-        <>
+      <section className="sil-reality-sheet relative mt-8 overflow-hidden px-1 pb-2 pt-5 sm:px-5">
+        <CelestialBackdrop scene="returning" />
+        <div className="relative z-[1]">
+          {view.realityPass ? (
+            <>
           {/*
             终局不能从「新问题」直接跳到行动。这里不让 AI 另写一段结论，
             而只摆出本局真实发生过的两类依据：真的解锁过的行动、真的引用过的人。
             因果链完整，但不会把最终那张纸埋进长回顾里。
           */}
-          <section className="mt-8 border-t pt-4" style={{ borderColor: 'var(--sil-rule)' }}>
+          <section className="border-t pt-4" style={{ borderColor: 'var(--sil-rule)' }}>
             <p className="sil-label">这张现实支线从哪里来</p>
             <div className="mt-3 flex flex-col gap-2.5">
               {view.unlockedActions.length > 0 ? (
@@ -231,8 +235,32 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
             onBringBack={() => void onCopy()}
             broughtBack={copied}
           />
-        </>
-      ) : null}
+            </>
+          ) : (
+            <section
+              className="sil-paper sil-develop relative px-5 py-6 sm:px-6"
+              aria-label="现实支线尚未显影"
+            >
+              <div className="relative z-[1]">
+                <p className="sil-label">REALITY PASS · 现实支线</p>
+                <h3
+                  className="mt-3 text-[22px] font-black leading-tight"
+                  style={{ color: 'var(--sil-paper-ink)' }}
+                >
+                  现实支线尚未显影
+                </h3>
+                <p
+                  className="mt-3 text-[13px] leading-relaxed"
+                  style={{ color: 'var(--sil-paper-muted)' }}
+                >
+                  这局没有足够的已核验条件来设计一个诚实的实验。我们保留空白，
+                  不替你写一个看起来完整、却无法验证的计划。
+                </p>
+              </div>
+            </section>
+          )}
+        </div>
+      </section>
 
       <div className="mt-9 flex flex-col gap-5">
         <p className="sil-label">回看这一次推演</p>
@@ -334,29 +362,6 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
           ) : null}
         </Block>
 
-        {!view.realityPass ? (
-          <section
-            className="sil-paper sil-develop relative px-5 py-5 sm:px-6"
-            aria-label="现实支线尚未显影"
-          >
-            <div className="relative z-[1]">
-              <p className="sil-label">REALITY PASS · 现实支线</p>
-              <h3
-                className="mt-3 text-[22px] font-black leading-tight"
-                style={{ color: 'var(--sil-paper-ink)' }}
-              >
-                现实支线尚未显影
-              </h3>
-              <p
-                className="mt-3 text-[13px] leading-relaxed"
-                style={{ color: 'var(--sil-paper-muted)' }}
-              >
-                这局没有足够的已核验条件来设计一个诚实的实验。我们保留空白，
-                不替你写一个看起来完整、却无法验证的计划。
-              </p>
-            </div>
-          </section>
-        ) : null}
       </div>
 
       {/*

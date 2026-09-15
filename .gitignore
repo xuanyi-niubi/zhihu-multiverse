@@ -7,6 +7,9 @@ out/
 build/
 dist/
 *.tsbuildinfo
+# Next.js 在 dev / build 时自动生成，不是源码（create-next-app 默认也忽略它）。
+# 不写这行它就会一直以「未跟踪」出现在 git status 里。
+next-env.d.ts
 
 # Local environment and credentials
 .env*
@@ -26,6 +29,12 @@ Thumbs.db
 /.codex/
 /.yanagent/
 /.vercel/
+/.worktrees/
+
+# agent 会话工作目录（`<日期>-<会话号>`，内含任务注册表与产物快照）。
+# 与上面那几个同类：本机专用、换台机器就没用，且可能含未定稿的私人材料
+# （例如发布文案草稿）。不锚定的话 `git add -A` 会把它们一起推上公开仓库。
+/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*/
 
 # Local previews, runtime data and private notes
 /design-system-preview.html

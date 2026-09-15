@@ -5,6 +5,7 @@ import {
   retrieveExperienceSources,
 } from '@/features/experience/retrieve';
 import { buildSearchPlan } from '@/features/experience/queryPlan';
+import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 
 import type { ExperienceSearch } from '@/features/experience/retrieve';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
@@ -42,6 +43,20 @@ function frame(): ProblemFrame {
     centralTension: '',
     unknowns: [],
     parseConfidence: 0.3,
+  };
+}
+
+function transitionFrame(): ProblemFrame {
+  return {
+    rawQuestion: '我是电工专业，然后想转导游',
+    currentSituation: '电工专业',
+    desiredChange: '转导游',
+    constraints: [],
+    resources: [],
+    concerns: [],
+    centralTension: '',
+    unknowns: [],
+    parseConfidence: 0.8,
   };
 }
 
@@ -212,5 +227,129 @@ describe('人物资格审查与均衡选人', () => {
     });
     expect(result.runs.find((item) => item.queryId === first.id)?.status).toBe('failed');
     expect(result.runs.some((item) => item.status === 'empty')).toBe(true);
+  });
+});
+
+describe('按相似等级渐进选择', () => {
+  const lived = (id: string, quote: string) => source({
+    id,
+    author: `答主-${id}`,
+    title: '我的职业转变经历',
+    quote,
+    url: `https://www.zhihu.com/answer/${id}`,
+  });
+
+  const expandedIntent = () => buildTransitionIntent(transitionFrame(), {
+    familyOrigins: ['自动化', '电气'],
+    domainOrigins: ['工科', '机械'],
+    adjacentTargets: ['领队'],
+    counterTerms: ['离职', '后悔'],
+  });
+
+  it('精确亲历达到两人时跳过 AI 扩展，但仍检索替代与反例', async () => {
+    const plan = buildSearchPlan({ frame: transitionFrame() });
+    let expansionCalls = 0;
+    const searched: string[] = [];
+    const result = await retrieveExperienceSources({
+      plan,
+      frame: transitionFrame(),
+      expandIntent: async () => {
+        expansionCalls += 1;
+        return expandedIntent();
+      },
+      search: async (query) => {
+        searched.push(query);
+        if (query === plan.queries[0]?.query) {
+          return [
+            lived('exact-a', '我以前是电工，后来转行做导游，最后进入旅行社。'),
+            lived('exact-b', '我原来做电工，之后去做导游，后来开始独立带团。'),
+          ];
+        }
+        return [];
+      },
+    });
+
+    expect(expansionCalls).toBe(0);
+    expect(searched).toHaveLength(3);
+    expect(result.similarity?.exactCount).toBe(2);
+  });
+
+  it('精确亲历不足两人时只扩展一次，并将总检索限制为四次', async () => {
+    const plan = buildSearchPlan({ frame: transitionFrame() });
+    let expansionCalls = 0;
+    const searched: string[] = [];
+    const result = await retrieveExperienceSources({
+      plan,
+      frame: transitionFrame(),
+      expandIntent: async () => {
+        expansionCalls += 1;
+        return expandedIntent();
+      },
+      search: async (query) => {
+        searched.push(query);
+        if (query.includes('自动化')) {
+          return [lived('family-expanded', '我学自动化，后来转行做导游，最后开始带团。')];
+        }
+        return [];
+      },
+    });
+
+    expect(expansionCalls).toBe(1);
+    expect(searched.length).toBeLessThanOrEqual(4);
+    expect(result.sources[0]?.source.id).toBe('family-expanded');
+    expect(result.sources[0]?.qualification?.similarityTier).toBe('same-family');
+  });
+
+  it('完全同路优先，并彻底淘汰与导游无关的转行故事', async () => {
+    const plan = buildSearchPlan({ frame: transitionFrame() });
+    const exactQuery = plan.queries.find((item) => item.id === 'q-similar-exact')!;
+    const result = await retrieveExperienceSources({
+      plan,
+      frame: transitionFrame(),
+      intent: expandedIntent(),
+      search: searchOf({
+        [exactQuery.query]: [
+          lived('family', '我学自动化，后来转行做导游，最后开始带团。'),
+          lived('unrelated', '我以前是程序员，后来转行做产品经理，最后顺利入职。'),
+          lived('exact', '我以前是电工，后来转行做导游，最后进入旅行社。'),
+        ],
+      }),
+    });
+
+    expect(result.sources.map((item) => item.source.id)).toEqual(['exact', 'family']);
+    expect(result.sources.some((item) => item.source.id === 'unrelated')).toBe(false);
+    expect(result.similarity).toEqual({
+      exactCount: 1,
+      bestAvailableTier: 'exact',
+      widened: false,
+    });
+  });
+
+  it('完全同路为空时按同族、同域、相同终点依次放宽', async () => {
+    const plan = buildSearchPlan({ frame: transitionFrame() });
+    const exactQuery = plan.queries.find((item) => item.id === 'q-similar-exact')!;
+    const result = await retrieveExperienceSources({
+      plan,
+      frame: transitionFrame(),
+      intent: expandedIntent(),
+      search: searchOf({
+        [exactQuery.query]: [
+          lived('target', '我以前做会计，后来考证转行做导游，最后开始带团。'),
+          lived('domain', '我机械专业毕业，后来转行做导游，最后进入旅行社。'),
+          lived('family', '我学自动化，后来转行做导游，最后开始带团。'),
+        ],
+      }),
+    });
+
+    expect(result.sources.map((item) => item.qualification?.similarityTier)).toEqual([
+      'same-family',
+      'same-domain',
+      'same-target',
+    ]);
+    expect(result.similarity).toEqual({
+      exactCount: 0,
+      bestAvailableTier: 'same-family',
+      widened: true,
+    });
   });
 });

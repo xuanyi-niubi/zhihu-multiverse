@@ -3160,6 +3160,121 @@ a {
   color: var(--sil-ink-200);
 }
 
+/* ==========================================================================
+ * 叙事星系：一张 SVG 贯穿观测、检索、推演与返回现实
+ * ========================================================================== */
+
+.sil-celestial {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  color: var(--sil-ink-200);
+  opacity: 0.72;
+}
+
+.sil-celestial__stars {
+  fill: currentColor;
+}
+
+.sil-celestial__stars--desktop,
+.sil-celestial__orbit--desktop,
+.sil-celestial__planet--desktop {
+  display: none;
+}
+
+.sil-celestial__nebula ellipse:first-child {
+  fill: rgb(var(--sil-rgb-zhihu-deep) / 0.12);
+}
+
+.sil-celestial__nebula ellipse:last-child {
+  fill: rgb(var(--sil-rgb-alternate) / 0.06);
+}
+
+.sil-celestial__orbits {
+  fill: none;
+  stroke: rgb(var(--sil-rgb-ink-300) / 0.17);
+  stroke-width: 0.16;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sil-celestial-drift 72s linear infinite;
+}
+
+.sil-celestial__planet {
+  fill: rgb(var(--sil-rgb-zhihu-deep) / 0.72);
+  stroke: rgb(var(--sil-rgb-ink-100) / 0.2);
+  stroke-width: 0.22;
+}
+
+.sil-celestial__planet-shade {
+  fill: rgb(var(--sil-rgb-zhihu) / 0.2);
+}
+
+.sil-celestial__planet--secondary {
+  fill: rgb(var(--sil-rgb-alternate) / 0.32);
+}
+
+.sil-celestial__track {
+  stroke-width: 0.26;
+  transition: opacity 320ms var(--sil-ease), transform 320ms var(--sil-ease);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.sil-celestial__track--similar { fill: var(--sil-zhihu); stroke: var(--sil-zhihu-soft); }
+.sil-celestial__track--alternative { fill: var(--sil-alternate); stroke: var(--sil-alternate-soft); }
+.sil-celestial__track--counter { fill: var(--sil-counter); stroke: var(--sil-counter-soft); }
+.sil-celestial__track[data-state='pending'] { opacity: 0.38; }
+.sil-celestial__track[data-state='hit'] { opacity: 0.9; transform: scale(1.18); }
+.sil-celestial__track[data-state='empty'] { opacity: 0.14; }
+
+.sil-celestial--simulation {
+  opacity: 0.34;
+}
+
+.sil-celestial--retrieving {
+  opacity: 0.58;
+}
+
+.sil-celestial--returning {
+  opacity: 0.32;
+}
+
+@keyframes sil-celestial-drift {
+  from { transform: rotate(0deg); opacity: 0.76; }
+  50% { opacity: 1; }
+  to { transform: rotate(360deg); opacity: 0.76; }
+}
+
+@media (min-width: 768px) {
+  .sil-celestial__stars--mobile {
+    display: none;
+  }
+
+  .sil-celestial__stars--desktop,
+  .sil-celestial__orbit--desktop,
+  .sil-celestial__planet--desktop {
+    display: initial;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sil-celestial,
+  .sil-celestial * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+html[data-reduce-motion='true'] .sil-celestial,
+html[data-reduce-motion='true'] .sil-celestial * {
+  animation: none !important;
+  transition: none !important;
+}
+
   .sil-cast__sprite--sm {
     width: 48px;
     height: 48px;

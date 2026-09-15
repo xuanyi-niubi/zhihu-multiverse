@@ -7,6 +7,8 @@ import { legacyExperiencePaths } from '@/features/experience/legacyAdapter';
 import { buildSearchPlan } from '@/features/experience/queryPlan';
 import { qualifyExperienceSource } from '@/features/experience/qualification';
 import { retrieveExperienceSources, type ExperienceSearch } from '@/features/experience/retrieve';
+import { similaritySummaryCopy } from '@/features/experience/similarityCopy';
+import { expandTransitionIntent } from '@/features/experience/transitionIntent';
 import { synthesizeExperiencePaths } from '@/features/experience/pathSynthesis';
 import { compileWorldBlueprint } from '@/features/game-world/compileWorld';
 import { caseSources, matchDemoCase } from '@/data/demoCases';
@@ -633,7 +635,14 @@ export async function prepareExperienceSession(
   let liveRun: RetrievalRun | null = null;
   if (deps.search) {
     const plan = buildSearchPlan({ frame });
-    const retrieved = await retrieveExperienceSources({ plan, search: deps.search, frame });
+    const retrieved = await retrieveExperienceSources({
+      plan,
+      search: deps.search,
+      frame,
+      ...(deps.router
+        ? { expandIntent: (targetFrame: ProblemFrame) => expandTransitionIntent(targetFrame, { router: deps.router! }) }
+        : {}),
+    });
     /**
      * 直接把 `retrieved.sources` 交给提取层（P0-6）。
      *
@@ -674,7 +683,7 @@ export async function prepareExperienceSession(
             ? 'adjacent'
             : 'limited';
     liveRun = {
-      queries: plan.queries.map((query) => query.query),
+      queries: retrieved.runs.map((run) => run.query),
       provenance: 'live',
       retrievedAt: new Date().toISOString(),
       sourceCount: retrieved.sources.length,
@@ -689,6 +698,7 @@ export async function prepareExperienceSession(
       unsupportedSynthesisCount: 0,
       factual: retrieved.sources.length > 0,
       notes: [
+        ...(retrieved.similarity ? [similaritySummaryCopy(retrieved.similarity)] : []),
         retrieved.sources.length > 0
           ? `从 ${retrieved.rawSourceCount} 条候选中筛出 ${retrieved.sources.length} 位可核验亲历者，得到 ${facts.length} 条逐字片段。`
           : failureKind === 'upstream-error'

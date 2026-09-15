@@ -92,6 +92,7 @@ export function SessionChoiceCard({
       className={[
         'session-choice group',
         isUnlock ? 'session-choice--unlocked' : '',
+        isUnlock ? 'flex-col items-stretch sm:flex-row sm:items-center' : '',
         className,
       ]
         .filter(Boolean)

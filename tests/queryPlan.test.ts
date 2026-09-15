@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { buildProblemFrame } from '@/features/experience/frame';
 import {
+  buildInitialSearchPlan,
   buildSearchPlan,
   DEFAULT_MAX_REQUESTS,
   MAX_SEARCH_REQUESTS,
 } from '@/features/experience/queryPlan';
+import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 import { extractProfile } from '@/core/dm/profile';
 
 import type { ProblemFrame, SearchPurpose } from '@/features/experience/domain';
@@ -107,6 +109,71 @@ describe('确定性', () => {
     const plan = buildSearchPlan({ frame: frameOf('大二想参加比赛') });
     const similar = plan.queries.find((item) => item.purpose === 'similar-person');
     expect(similar?.query).toContain('大二');
+  });
+});
+
+describe('跨行业转变的分层检索', () => {
+  it('首轮只搜索精确起点与精确目标，不先支付模型成本', () => {
+    const plan = buildInitialSearchPlan(frameOf('我是电工专业，然后想转导游', {
+      currentSituation: '电工专业',
+      desiredChange: '转导游',
+    }));
+
+    expect(plan.maxRequests).toBe(1);
+    expect(plan.queries).toHaveLength(1);
+    expect(plan.queries[0]).toMatchObject({ purpose: 'similar-person', expectedTier: 'exact' });
+    expect(plan.queries[0]?.query).toContain('电工');
+    expect(plan.queries[0]?.query).toContain('导游');
+  });
+
+  it('拿到开放式语义扩展后在预算内搜索精确、放宽、替代与反例', () => {
+    const frame = frameOf('我是电工专业，然后想转导游', {
+      currentSituation: '电工专业',
+      desiredChange: '转导游',
+    });
+    const intent = buildTransitionIntent(frame, {
+      familyOrigins: ['电气', '自动化'],
+      domainOrigins: ['工科'],
+      adjacentTargets: ['领队'],
+      counterTerms: ['离职', '后悔'],
+    });
+    const plan = buildSearchPlan({
+      frame,
+      intent,
+    });
+
+    expect(plan.queries).toHaveLength(4);
+    const text = plan.queries.map((item) => item.query).join('\n');
+    expect(text).toContain('电工');
+    expect(text).toContain('电气');
+    expect(text).toContain('工科');
+    expect(plan.queries.every((item) => item.purpose !== 'similar-person' || item.query.includes('导游'))).toBe(true);
+    expect(text).not.toContain('做出一个改变现状的决定');
+    expect(plan.queries.some((item) => item.expectedTier === 'exact')).toBe(true);
+    expect(plan.queries.some((item) => item.expectedTier === 'same-family')).toBe(true);
+  });
+
+  it('显式压到三条预算时仍保留相似、替代、反例三个视角', () => {
+    const frame = frameOf('我是电工专业，然后想转导游', {
+      currentSituation: '电工专业',
+      desiredChange: '转导游',
+    });
+    const plan = buildSearchPlan({
+      frame,
+      intent: buildTransitionIntent(frame, {
+        familyOrigins: ['电气'],
+        domainOrigins: ['工科'],
+        adjacentTargets: ['领队'],
+        counterTerms: [],
+      }),
+      maxRequests: 3,
+    });
+    expect(plan.queries).toHaveLength(3);
+    expect(plan.queries.map((item) => item.purpose)).toEqual([
+      'similar-person',
+      'alternative',
+      'counterexample',
+    ]);
   });
 });
 

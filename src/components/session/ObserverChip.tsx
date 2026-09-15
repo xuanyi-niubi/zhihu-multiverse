@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import { ObserverAvatar } from '@/components/session/ObserverAvatar';
 import { observerChipState, observerDisplayName } from '@/features/run/observer';
 import { useObserver } from '@/features/run/useObserver';
 
@@ -38,25 +39,11 @@ export default function ObserverChip({ className = '' }: { readonly className?: 
 
     return (
       <span className={['flex items-center gap-2', className].filter(Boolean).join(' ')}>
-        {state.profile?.avatarUrl ? (
-          /*
-            用原生 <img> 而不是 next/image：头像是知乎 CDN 的外链，
-            走 next/image 需要在 config 里为每个第三方域名开白名单，
-            而这里只是一张 20px 的方图，优化收益为零。
-            referrerPolicy 必须给：知乎 CDN 会拒绝带 referrer 的请求。
-          */
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src="/api/oauth/avatar"
-            alt=""
-            width={20}
-            height={20}
-            referrerPolicy="no-referrer"
-            className="h-5 w-5 rounded-full border border-[color:var(--sil-rule-strong)] object-cover"
-          />
-        ) : (
-          <span className="h-5 w-5 rounded-full border border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)]" />
-        )}
+        <ObserverAvatar
+          name={name}
+          avatarUrl={state.profile?.avatarUrl ?? null}
+          className="h-5 w-5 border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-[9px] text-[color:var(--sil-ink-200)]"
+        />
         <span
           className="max-w-[9rem] truncate text-[12px] text-[color:var(--sil-ink-200)]"
           title={headline ? `${name} · ${headline}` : name}

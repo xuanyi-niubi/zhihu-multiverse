@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { ObserverAvatar } from '@/components/session/ObserverAvatar';
 
 /**
  * 知乎登录面板。
@@ -159,22 +160,11 @@ function OAuthPanel() {
 
         {session?.authorized ? (
           <div className="mt-4 flex items-center gap-3">
-            {session.profile?.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src="/api/oauth/avatar"
-                alt=""
-                className="h-11 w-11 rounded-full border border-[color:var(--sil-rule-strong)] object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-[15px] font-semibold text-[color:var(--sil-ink-200)]"
-                aria-label="知乎头像暂不可用"
-              >
-                {(session.profile?.name?.trim().charAt(0) || '知')}
-              </div>
-            )}
+            <ObserverAvatar
+              name={session.profile?.name ?? '知乎用户'}
+              avatarUrl={session.profile?.avatarUrl ?? null}
+              className="h-11 w-11 border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-[15px] text-[color:var(--sil-ink-200)]"
+            />
             <div className="min-w-0">
               <p className="truncate text-[14px] font-semibold text-[color:var(--sil-ink-100)]">
                 {session.profile?.name ?? '已授权（账号资料未返回）'}

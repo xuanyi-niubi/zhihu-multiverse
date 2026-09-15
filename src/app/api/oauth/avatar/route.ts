@@ -1,10 +1,12 @@
 import { getSession, normalizeAvatarUrl } from '@/core/oauth/zhihu';
+import { detectAvatarContentType } from '@/core/oauth/avatar';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
 
 function isAllowedAvatarHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -61,13 +63,19 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const upstream = await fetchAllowedAvatar(avatarUrl, controller.signal);
-    const contentType = upstream.headers.get('content-type') ?? '';
-    if (!upstream.ok || !contentType.toLowerCase().startsWith('image/')) {
+    if (!upstream.ok) {
       return new Response(null, { status: 502, headers: { 'cache-control': 'no-store' } });
     }
 
     const body = await upstream.arrayBuffer();
     if (body.byteLength === 0 || body.byteLength > MAX_AVATAR_BYTES) {
+      return new Response(null, { status: 502, headers: { 'cache-control': 'no-store' } });
+    }
+    const contentType = detectAvatarContentType(
+      upstream.headers.get('content-type'),
+      new Uint8Array(body),
+    );
+    if (!contentType) {
       return new Response(null, { status: 502, headers: { 'cache-control': 'no-store' } });
     }
 

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 
 import type { ExperienceFact, SearchPurpose } from '@/features/experience/domain';
+import { similarityTierLabel } from '@/features/experience/similarityCopy';
 
 /**
  * 经验解锁的来源弹层（P0-9 的 WOW Point；外观 04_AGENT §26 / §27）。
@@ -173,6 +174,18 @@ export function ExperienceSourceModal({
                     {fact.exactQuote}
                     <span className="ml-0.5 text-[color:var(--sil-ink-300)]">”</span>
                   </blockquote>
+
+                  {fact.qualification ? (
+                    <p className="mt-1.5 text-[10px] text-[color:var(--sil-ink-300)]">
+                      相似层级：{similarityTierLabel(fact.qualification.similarityTier)}
+                      {fact.qualification.matchedOriginTerms.length > 0
+                        ? ` · 起点 ${fact.qualification.matchedOriginTerms.join('、')}`
+                        : ''}
+                      {fact.qualification.matchedTargetTerms.length > 0
+                        ? ` · 目标 ${fact.qualification.matchedTargetTerms.join('、')}`
+                        : ''}
+                    </p>
+                  ) : null}
 
                   {/* 检索意图：让「反例是我们主动去找的」可见 */}
                   {fact.purposes.length > 0 ? (

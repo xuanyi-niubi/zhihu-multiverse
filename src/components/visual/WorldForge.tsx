@@ -2,8 +2,10 @@
 
 import * as React from 'react';
 
+import { CelestialBackdrop } from '@/components/visual/CelestialBackdrop';
 import { FragmentShard, type FragmentCategory } from '@/components/visual/FragmentShard';
 import { Undeveloped } from '@/components/visual/Undeveloped';
+import type { CelestialTrackState } from '@/features/visual/celestial';
 
 /**
  * World Forge —— 世界编译场景（04_AGENT §16 / §17 / §18 / §20）。
@@ -96,24 +98,11 @@ export const FORGE_PHASE_TEXT: Readonly<Record<ForgePhase, string>> = {
   ready: 'WORLD READY',
 };
 
-/** 三条轨道：从外围向中央收束（§17 / §20）。 */
-const TRACKS: readonly { readonly id: ForgeStageId; readonly d: string; readonly tone: string }[] = [
-  {
-    id: 'similar-person',
-    d: 'M -6 26 C 22 26, 30 50, 50 50',
-    tone: 'var(--sil-zhihu)',
-  },
-  {
-    id: 'alternative',
-    d: 'M -6 74 C 22 74, 30 50, 50 50',
-    tone: 'var(--sil-alternate)',
-  },
-  {
-    id: 'counterexample',
-    d: 'M 106 50 C 78 50, 70 50, 50 50',
-    tone: 'var(--sil-counter)',
-  },
-];
+function celestialTrackOf(stage: ForgeStage): CelestialTrackState {
+  if (stage.id === 'similar-person') return { id: 'similar', found: stage.found };
+  if (stage.id === 'alternative') return { id: 'alternative', found: stage.found };
+  return { id: 'counter', found: stage.found };
+}
 
 function stageCaption(phase: ForgePhase, stage: ForgeStage): string {
   if (phase === 'understanding') {
@@ -139,6 +128,7 @@ export function WorldForge({
 }: WorldForgeProps) {
   const foundTotal = stages.reduce((sum, stage) => sum + (stage.found ?? 0), 0);
   const ready = phase === 'ready';
+  const celestialTracks = stages.map(celestialTrackOf);
 
   return (
     <section
@@ -152,26 +142,9 @@ export function WorldForge({
         .join(' ')}
       data-forge-phase={phase}
     >
-      {/* 外围：三条人生轨道（§17）。收束时它们是同一个组。 */}
-      <span aria-hidden="true" className="sil-forge__ring" />
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        className="sil-forge__weave pointer-events-none absolute inset-0 h-full w-full"
-      >
-        {TRACKS.map((track) => (
-          <path
-            key={track.id}
-            d={track.d}
-            vectorEffect="non-scaling-stroke"
-            className="sil-forge__track"
-            style={{ stroke: track.tone, strokeWidth: 0.9, opacity: 0.5 }}
-          />
-        ))}
-      </svg>
+      <CelestialBackdrop scene="retrieving" tracks={celestialTracks} />
 
-      <div className="relative">
+      <div className="relative z-[1]">
         <p className="sil-label">The World Forge</p>
 
         {/* 外围是哪三条轨道，直接写在仪器上（§17），用统一的三意图徽标（DS §4.6） */}

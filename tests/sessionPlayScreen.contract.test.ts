@@ -135,4 +135,25 @@ describe('语义结构 class（04_AGENT §21 的对接面）', () => {
     const card = sessionSources().find((item) => item.file === 'SessionChoiceCard.tsx')!;
     expect(card.text).not.toMatch(/min-h-\[(1[0-9]|2[0-9]|3[0-9])px\]/);
   });
+
+  it('经验解锁项在手机上纵向排版，来源按钮不能挤成单字列', () => {
+    const card = sessionSources().find((item) => item.file === 'SessionChoiceCard.tsx')!;
+    expect(card.text).toContain("isUnlock ? 'flex-col items-stretch sm:flex-row sm:items-center' : ''");
+    expect(card.text).toContain('className="source-link shrink-0 self-end"');
+  });
+
+  it('推演只使用一层低干扰星系背景，不再叠加 OrbitField', () => {
+    const screen = sessionSources().find((item) => item.file === 'SessionPlayScreen.tsx')!;
+    expect(screen.text).toContain('<CelestialBackdrop scene="simulation"');
+    expect(screen.text).not.toContain('<OrbitField');
+  });
+
+  it('终局的返回星系在暖色 Reality Pass 外层', () => {
+    const endgame = sessionSources().find((item) => item.file === 'SessionEndgameScreen.tsx')!;
+    expect(endgame.text).toContain('<CelestialBackdrop scene="returning"');
+    expect(endgame.text.indexOf('<CelestialBackdrop scene="returning"')).toBeLessThan(
+      endgame.text.indexOf('<RealityPass'),
+    );
+    expect(endgame.text).toContain('sil-reality-sheet');
+  });
 });

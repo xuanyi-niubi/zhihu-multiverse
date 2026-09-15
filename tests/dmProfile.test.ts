@@ -16,6 +16,18 @@ import {
  */
 
 describe('extractProfile（确定性兜底）', () => {
+  it('离线规则保留电工与导游，不退化成泛化目标', () => {
+    const profile = extractProfile('我是电工专业，然后想转导游');
+    expect(profile.background).toContain('电工');
+    expect(profile.target).toContain('导游');
+  });
+
+  it('通用句式同样能保留非职业问题', () => {
+    const profile = extractProfile('我和室友长期冲突，想搬宿舍');
+    expect(profile.background).toContain('室友长期冲突');
+    expect(profile.target).toContain('搬宿舍');
+  });
+
   it('从「大三法学，想转计算机，但怕脱产找不到工作」抽出关键处境', () => {
     const profile = extractProfile('大三法学，想转计算机，但怕脱产找不到工作');
 

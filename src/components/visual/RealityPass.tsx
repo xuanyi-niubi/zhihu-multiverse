@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { ObserverAvatar } from '@/components/session/ObserverAvatar';
 
 /**
  * Reality Pass —— 现实层票据（DESIGN-SYSTEM §4.9 / 04_AGENT §32）。
@@ -131,25 +132,13 @@ export function RealityPass({
           aria-label={`观测者署名：${identity.name}`}
         >
           <div className="flex min-w-0 items-center gap-2.5">
-            {identity.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src="/api/oauth/avatar"
-                alt=""
-                width={32}
-                height={32}
-                className="h-8 w-8 shrink-0 rounded-full border object-cover"
-                style={{ borderColor: INK_RULE }}
-              />
-            ) : (
-              <span
-                aria-hidden="true"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold"
-                style={{ borderColor: INK_RULE, color: INK_SOFT }}
-              >
-                {identity.name.trim().charAt(0) || '知'}
-              </span>
-            )}
+            <ObserverAvatar
+              name={identity.name}
+              avatarUrl={identity.avatarUrl}
+              className="h-8 w-8 text-[13px]"
+              imageClassName="bg-[color:var(--sil-paper)]"
+              style={{ borderColor: INK_RULE, color: INK_SOFT }}
+            />
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold" style={{ color: INK }}>
                 {identity.name}

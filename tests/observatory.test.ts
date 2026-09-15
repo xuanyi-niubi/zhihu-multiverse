@@ -54,6 +54,15 @@ const OBSERVATORY = SILVER_CSS;
 const VISUAL_DIR = `${root}src/components/visual`;
 const VISUAL_FILES = readdirSync(VISUAL_DIR).filter((name) => name.endsWith('.tsx'));
 
+describe('首页观象场景', () => {
+  it('只挂一个语义星系背景，不再叠加旧星尘与 OrbitField', () => {
+    const home = read('src/app/page.tsx');
+    expect(home).toContain('<CelestialBackdrop scene="observatory"');
+    expect(home).not.toContain('<OrbitField');
+    expect(home).not.toContain('const DUST');
+  });
+});
+
 describe('§4 观象厅 Token（已并入银盐设计系统）', () => {
   /*
     这一节原来在 globals.css 末尾追加了一整套 `--obs-*` 变量，并逐条钉死取值。
@@ -354,15 +363,14 @@ describe('§33 刘看山只以官方 GIF 立绘出现', () => {
 });
 
 describe('PASS 3 · 游戏感的三个细节', () => {
-  it('星尘 <= 24 颗，且坐标写死（刷新十次是同一片天区）', () => {
+  it('星位来自固定几何，刷新十次是同一片天区', () => {
     const page = read('src/app/page.tsx');
-    expect(page).toContain('sil-dust');
-    const block = page.slice(page.indexOf('const DUST'), page.indexOf('function delay'));
-    const count = (block.match(/\{ x:/g) ?? []).length;
-    expect(count).toBeGreaterThan(0);
-    expect(count).toBeLessThanOrEqual(24);
+    const celestial = read('src/features/visual/celestial.ts');
+    expect(page).toContain('<CelestialBackdrop scene="observatory"');
+    expect(celestial).toContain('MOBILE_STARS = stars(36');
+    expect(celestial).toContain('DESKTOP_STARS = stars(72');
     expect(page).not.toContain('Math.random');
-    expect(SILVER_CSS).toContain('.sil-dust__mote');
+    expect(celestial).not.toContain('Math.random');
   });
 
   it('每一幕换场有一条扫光（复用既有 keyframe，不新增动画）', () => {
@@ -500,18 +508,11 @@ describe('§36 性能硬限制', () => {
     expect(dial).toContain('const FOCUS = { angle: -90, radius: 250 } as const;');
   });
 
-  it('§36 首页 SVG path 预算 <= 12（Dial 不用 path，Orbit 每条轨道一条 path）', () => {
-    // 首页同时挂 Dial + Orbit；Orbit 的 path 数量上限就是桌面上限 10 条
+  it('§36 首页 SVG 几何固定（Dial 不用 path，星系只有三条 ellipse 轨道）', () => {
     expect(read('src/components/visual/AstralDial.tsx')).not.toContain('<path');
-    const orbit = read('src/components/visual/OrbitField.tsx');
-    expect(orbit).toContain('<path');
-    // 页面显式传的轨道数不超过桌面上限（10）
+    const celestial = read('src/components/visual/CelestialBackdrop.tsx');
+    expect((celestial.match(/<ellipse/g) ?? []).length).toBeLessThanOrEqual(5);
     const page = read('src/app/page.tsx');
-    const counts = [...page.matchAll(/count=\{nearFocus \? (\d+) : (\d+)\}/g)];
-    expect(counts.length).toBeGreaterThan(0);
-    for (const match of counts) {
-      expect(Number(match[1])).toBeLessThanOrEqual(10);
-      expect(Number(match[2])).toBeLessThanOrEqual(10);
-    }
+    expect(page).not.toContain('<OrbitField');
   });
 });

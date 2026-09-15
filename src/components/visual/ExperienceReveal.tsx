@@ -4,6 +4,7 @@ import * as React from 'react';
 
 import { FragmentShard, type FragmentCategory } from '@/components/visual/FragmentShard';
 import type { ForgeShard } from '@/components/visual/WorldForge';
+import { similarityTierLabel } from '@/features/experience/similarityCopy';
 
 /**
  * ExperienceReveal —— 真实人生显影。
@@ -103,10 +104,10 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
   const representative = firstFragmentOf(fragments, chapter.track);
   const qualification = representative?.qualification;
   const displayLabel =
-    qualification?.assignedTrack === 'adjacent' ? '目标相同，条件不同' : chapter.label;
+    qualification ? similarityTierLabel(qualification.similarityTier) : chapter.label;
   const displayLead =
-    qualification?.assignedTrack === 'adjacent'
-      ? '没有找到条件完全相同的人，先看一段目标相同的邻近经历。'
+    qualification && qualification.similarityTier !== 'exact' && chapter.track === 'similar'
+      ? `没有找到完整同路经历，先看一段「${similarityTierLabel(qualification.similarityTier)}」的真实经验。`
       : chapter.lead;
   const sourceYear = sourceYearOf(representative?.sourceEditTime);
 
@@ -159,6 +160,13 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
               ) : null}
               {qualification ? (
                 <div className="mb-3 space-y-1 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                  <p>相似层级：{similarityTierLabel(qualification.similarityTier)}</p>
+                  {qualification.matchedOriginTerms.length > 0 ? (
+                    <p>起点命中：{qualification.matchedOriginTerms.join('、')}</p>
+                  ) : null}
+                  {qualification.matchedTargetTerms.length > 0 ? (
+                    <p>目标命中：{qualification.matchedTargetTerms.join('、')}</p>
+                  ) : null}
                   {qualification.matchedConstraints.length > 0 ? (
                     <p>与你相同：{qualification.matchedConstraints.join('、')}</p>
                   ) : (

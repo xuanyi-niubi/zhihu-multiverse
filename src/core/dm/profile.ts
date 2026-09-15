@@ -131,6 +131,24 @@ function firstLabel(
   return null;
 }
 
+/**
+ * 不依赖主题词典的通用句式抽取。
+ *
+ * 它只截取用户明确写下的 X/Y，不判断 X/Y 属于什么行业。判断相似领域是
+ * 后续按需语义扩展的职责，因此这里同样适用于职业、学业、关系和生活问题。
+ */
+function explicitBackground(text: string): string | null {
+  const match = /(?:我是|我现在是|目前是|现在是|我学(?:的)?是|我的专业是)([^，,。！？；;]{2,20}?)(?=(?:，|,|。|！|？|；|然后|想|打算|准备|考虑|希望|要不要|是否|$))/.exec(text);
+  if (match?.[1]) return match[1].trim();
+  const context = /^([^，,。！？；;]{2,24})(?:，|,)(?:想|打算|准备|考虑|希望|要不要|是否)/.exec(text);
+  return context?.[1]?.replace(/^我/, '').trim() || null;
+}
+
+function explicitTarget(text: string): string | null {
+  const match = /(?:想|打算|准备|考虑|希望|要不要|是否)([^，,。！？；;]{2,20})/.exec(text);
+  return match?.[1]?.trim() ?? null;
+}
+
 /** 从自由文本里抽出结构化处境。纯函数，无网络调用。 */
 export function extractProfile(goal: string): PlayerProfile {
   const text = goal.trim();
@@ -139,8 +157,13 @@ export function extractProfile(goal: string): PlayerProfile {
   const gradeLabel = firstLabel(text, GRADES);
   const targetLabel = firstLabel(text, TARGETS);
 
-  const background = [backgroundLabel, gradeLabel].filter(Boolean).join(' ') || '背景未明确';
-  const target = targetLabel ?? (text.length > 0 ? '做出一个改变现状的决定' : '尚未明确');
+  const explicitBackgroundLabel = explicitBackground(text);
+  const explicitTargetLabel = explicitTarget(text);
+  const background = explicitBackgroundLabel
+    ?? ([backgroundLabel, gradeLabel].filter(Boolean).join(' ') || '背景未明确');
+  const target = targetLabel
+    ?? explicitTargetLabel
+    ?? (text.length > 0 ? '做出一个改变现状的决定' : '尚未明确');
 
   const constraints = collect(text, CONSTRAINT_RULES);
   const fears = collect(text, FEAR_RULES);

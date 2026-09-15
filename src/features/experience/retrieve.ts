@@ -4,9 +4,14 @@ import type {
   RetrievedExperienceSource,
   SearchPlan,
   SearchPurpose,
+  SimilaritySummary,
+  SimilarityTier,
   SourceQualification,
+  TransitionIntent,
 } from '@/features/experience/domain';
 import { qualifyExperienceSource } from '@/features/experience/qualification';
+import { buildSearchPlan, MAX_SEARCH_REQUESTS } from '@/features/experience/queryPlan';
+import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
 export const MAX_EXPERIENCE_SOURCES = 12;
@@ -30,6 +35,7 @@ export interface RetrieveExperienceResult {
   readonly runs: readonly RetrieveRun[];
   readonly rawSourceCount: number;
   readonly rejectedCount: number;
+  readonly similarity: SimilaritySummary | null;
 }
 
 function sameSource(left: KnowledgeSource, right: KnowledgeSource): boolean {
@@ -53,6 +59,19 @@ const TRACK_CAP: Readonly<Record<QualificationTrack, number>> = {
   counter: 2,
 };
 
+const TIER_ORDER: readonly SimilarityTier[] = [
+  'exact',
+  'same-family',
+  'same-domain',
+  'same-target',
+  'adjacent-target',
+  'unrelated',
+];
+
+function tierRank(tier: SimilarityTier): number {
+  return TIER_ORDER.indexOf(tier);
+}
+
 function authorKey(source: KnowledgeSource): string {
   const author = source.author.trim().toLowerCase();
   return author && author !== '匿名用户' ? author : source.id;
@@ -70,10 +89,22 @@ function compareLegacy(left: Accumulator, right: Accumulator): number {
 }
 
 function compareQualified(left: QualifiedAccumulator, right: QualifiedAccumulator): number {
+  const tierGap = tierRank(left.qualification.similarityTier) - tierRank(right.qualification.similarityTier);
+  if (tierGap !== 0) return tierGap;
   if (right.qualification.rankScore !== left.qualification.rankScore) {
     return right.qualification.rankScore - left.qualification.rankScore;
   }
   return compareLegacy(left, right);
+}
+
+function similaritySummary(items: readonly QualifiedAccumulator[]): SimilaritySummary {
+  const tiers = items.map((item) => item.qualification.similarityTier);
+  const bestAvailableTier = TIER_ORDER.find((tier) => tier !== 'unrelated' && tiers.includes(tier)) ?? null;
+  return {
+    exactCount: tiers.filter((tier) => tier === 'exact').length,
+    bestAvailableTier,
+    widened: bestAvailableTier !== null && bestAvailableTier !== 'exact',
+  };
 }
 
 function selectBalanced(items: readonly QualifiedAccumulator[]): readonly QualifiedAccumulator[] {
@@ -100,43 +131,78 @@ export async function retrieveExperienceSources(input: {
   readonly search: ExperienceSearch;
   /** 有 frame 才启用人物资格审查；省略时保留旧调用兼容行为。 */
   readonly frame?: ProblemFrame;
+  /** 已解析的开放式相似概念；主要供缓存复用与确定性测试使用。 */
+  readonly intent?: TransitionIntent;
+  /** 仅在精确亲历不足两人时调用一次。 */
+  readonly expandIntent?: (frame: ProblemFrame) => Promise<TransitionIntent>;
 }): Promise<RetrieveExperienceResult> {
   const runs: RetrieveRun[] = [];
   const merged: Accumulator[] = [];
-  const queries = input.plan.queries;
+  let intent = input.frame
+    ? input.intent ?? buildTransitionIntent(input.frame)
+    : undefined;
 
-  for (let start = 0; start < queries.length; start += RETRIEVAL_CONCURRENCY) {
-    const batch = queries.slice(start, start + RETRIEVAL_CONCURRENCY);
-    const results = await Promise.all(
-      batch.map(async (query) => {
-        try {
-          const found = await input.search(query.query);
-          return { query, found, failed: false };
-        } catch {
-          return { query, found: [] as readonly KnowledgeSource[], failed: true };
+  const mergeResults = async (queries: SearchPlan['queries']): Promise<void> => {
+    for (let start = 0; start < queries.length; start += RETRIEVAL_CONCURRENCY) {
+      const batch = queries.slice(start, start + RETRIEVAL_CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (query) => {
+          try {
+            const found = await input.search(query.query);
+            return { query, found, failed: false };
+          } catch {
+            return { query, found: [] as readonly KnowledgeSource[], failed: true };
+          }
+        }),
+      );
+
+      for (const { query, found, failed } of results) {
+        runs.push({
+          queryId: query.id,
+          query: query.query,
+          purpose: query.purpose,
+          sourceCount: found.length,
+          status: failed ? 'failed' : found.length > 0 ? 'ok' : 'empty',
+        });
+
+        for (const source of found) {
+          const existing = merged.find((item) => sameSource(item.source, source));
+          if (existing) {
+            if (!existing.purposes.includes(query.purpose)) existing.purposes.push(query.purpose);
+            if (!existing.matchedQueryIds.includes(query.id)) existing.matchedQueryIds.push(query.id);
+            continue;
+          }
+          merged.push({ source, purposes: [query.purpose], matchedQueryIds: [query.id] });
         }
-      }),
-    );
-
-    for (const { query, found, failed } of results) {
-      runs.push({
-        queryId: query.id,
-        query: query.query,
-        purpose: query.purpose,
-        sourceCount: found.length,
-        status: failed ? 'failed' : found.length > 0 ? 'ok' : 'empty',
-      });
-
-      for (const source of found) {
-        const existing = merged.find((item) => sameSource(item.source, source));
-        if (existing) {
-          if (!existing.purposes.includes(query.purpose)) existing.purposes.push(query.purpose);
-          if (!existing.matchedQueryIds.includes(query.id)) existing.matchedQueryIds.push(query.id);
-          continue;
-        }
-        merged.push({ source, purposes: [query.purpose], matchedQueryIds: [query.id] });
       }
     }
+  };
+
+  let queries = input.plan.queries;
+  if (input.frame && input.expandIntent && queries.length > 0) {
+    const exactQuery = queries.find((query) => query.id === 'q-similar-exact') ?? queries[0]!;
+    await mergeResults([exactQuery]);
+    const exactQualified = merged.filter((item) => {
+      const qualification = qualifyExperienceSource({
+        source: item.source,
+        frame: input.frame!,
+        purposes: item.purposes,
+        intent,
+      });
+      return qualification.eligibleAsCase && qualification.similarityTier === 'exact';
+    }).length;
+
+    if (exactQualified < 2) {
+      intent = await input.expandIntent(input.frame);
+      queries = buildSearchPlan({ frame: input.frame, intent, maxRequests: MAX_SEARCH_REQUESTS }).queries;
+    }
+    const seenQueries = new Set(runs.map((run) => run.query.replace(/\s+/g, '')));
+    const remaining = queries
+      .filter((query) => !seenQueries.has(query.query.replace(/\s+/g, '')))
+      .slice(0, MAX_SEARCH_REQUESTS - runs.length);
+    await mergeResults(remaining);
+  } else {
+    await mergeResults(queries);
   }
 
   if (!input.frame) {
@@ -145,7 +211,7 @@ export async function retrieveExperienceSources(input: {
       purposes: [...item.purposes],
       matchedQueryIds: [...item.matchedQueryIds],
     }));
-    return { sources, runs, rawSourceCount: merged.length, rejectedCount: 0 };
+    return { sources, runs, rawSourceCount: merged.length, rejectedCount: 0, similarity: null };
   }
 
   const qualified: QualifiedAccumulator[] = merged.map((item) => ({
@@ -154,6 +220,7 @@ export async function retrieveExperienceSources(input: {
       source: item.source,
       frame: input.frame!,
       purposes: item.purposes,
+      intent,
     }),
   }));
   const eligible = qualified.filter((item) => item.qualification.eligibleAsCase).sort(compareQualified);
@@ -170,6 +237,7 @@ export async function retrieveExperienceSources(input: {
     runs,
     rawSourceCount: merged.length,
     rejectedCount: merged.length - selected.length,
+    similarity: similaritySummary(selected),
   };
 }
 

@@ -104,6 +104,21 @@ describe('§2 Color Palette：--sil-* 全套且数值逐字一致', () => {
   });
 });
 
+describe('叙事星系：低负载、移动优先、完整减少动画', () => {
+  it('背景不拦截交互，桌面星位只在宽屏出现', () => {
+    const root = /\.sil-celestial \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(root).toContain('pointer-events: none');
+    expect(SILVER_CSS).toContain('.sil-celestial__stars--desktop');
+    expect(SILVER_CSS).toMatch(/@media \(min-width: 768px\)[\s\S]*?sil-celestial__stars--desktop/);
+  });
+
+  it('连续运动不少于 45 秒，系统设置和站内设置都可彻底静止', () => {
+    expect(SILVER_CSS).toMatch(/animation:\s*sil-celestial-[^;]+\s(?:4[5-9]|[5-9]\d|\d{3,})s/);
+    expect(SILVER_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.sil-celestial/);
+    expect(SILVER_CSS).toMatch(/html\[data-reduce-motion='true'\][\s\S]*?\.sil-celestial/);
+  });
+});
+
 describe('§0 单一事实源：旧 token 前缀不许回流', () => {
   it('silver.css 里没有 gmv-* / arc-* / ds-* / gd-* / obs-* 任何一族的**定义**', () => {
     // 「只允许一套」是本次重构的核心纪律；回流即退化回「堆补丁」。
@@ -292,9 +307,9 @@ describe('§7 / §8 禁令与降级', () => {
     expect(backdrop).toBeLessThanOrEqual(3);
   });
 
-  it('§8 移动端降级：星尘只在宽屏出现，且 reduced motion 有兜底', () => {
-    expect(read('src/app/page.tsx')).toContain('sil-dust hidden lg:block');
-    expect(SILVER_CSS).toContain('.sil-dust');
+  it('§8 移动端降级：使用较少星位，且 reduced motion 有兜底', () => {
+    expect(read('src/app/page.tsx')).toContain('<CelestialBackdrop scene="observatory"');
+    expect(SILVER_CSS).toContain('.sil-celestial__stars--mobile');
     /*
       ## 为什么要找「所有」降级块，而不是最后/第一个
 
@@ -317,7 +332,7 @@ describe('§7 / §8 禁令与降级', () => {
     const reduced = blocks.join('\n');
     expect(reduced).toContain('.sil-develop');
     expect(reduced).toContain('.sil-aurora');
-    expect(reduced).toContain('.sil-dust');
+    expect(reduced).toContain('.sil-celestial');
   });
 });
 

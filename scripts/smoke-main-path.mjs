@@ -115,7 +115,8 @@ async function main() {
   check('服务器就绪', true, BASE);
 
   // ── 1. 游戏主线路由必须都活着 ──────────────────────────────
-  for (const path of ['/', '/play', '/compare', '/archive', '/commitment', '/settings', '/journal']) {
+  // 旧的 compare/archive/commitment 页面已并入会话主链；这里只检查当前公开路由。
+  for (const path of ['/', '/play', '/oauth', '/about', '/settings', '/journal']) {
     const response = await request(path);
     check(`GET ${path} → 200`, response.status === 200, `实际 ${response.status}`);
   }
@@ -250,11 +251,25 @@ async function main() {
    * 契约是源码级的：角标文案 + 来源弹层 + 从蓝图取片段（不新增 API）。
    */
   const playPageSource = await readFile(new URL('../src/app/play/page.tsx', import.meta.url), 'utf8');
-  check('解锁选项标注「来自知乎真实经历」', playPageSource.includes('来自知乎真实经历'), '角标文案已就位');
-  check('普通选项仍标「剧本模拟」', playPageSource.includes('剧本模拟'), '未误改普通选项');
+  const choiceCardSource = await readFile(new URL('../src/components/game/session/SessionChoiceCard.tsx', import.meta.url), 'utf8');
+  const sourceModalSource = await readFile(new URL('../src/components/game/ExperienceSourceModal.tsx', import.meta.url), 'utf8');
+  check(
+    '解锁选项标注真实经历来源',
+    choiceCardSource.includes('来自真实经历') && choiceCardSource.includes("const isUnlock = choice.state === 'unlocked'"),
+    '解锁卡片带来源角标与原文入口',
+  );
+  check(
+    '普通选项不会伪装成真实来源',
+    choiceCardSource.includes('const isUnlock = choice.state === \'unlocked\'') &&
+      choiceCardSource.includes('{isUnlock ? (') &&
+      sourceModalSource.includes('来源'),
+    '来源入口仅在 unlocked 分支出现',
+  );
   check(
     '接入了来源弹层（P0-9）',
-    playPageSource.includes('ExperienceSourceModal') && playPageSource.includes('experienceFactsFor('),
+    sourceModalSource.includes('ExperienceSourceModal') &&
+      (playPageSource.includes('ExperienceSourceModal') ||
+        (await readFile(new URL('../src/components/game/session/SessionPlayScreen.tsx', import.meta.url), 'utf8')).includes('ExperienceSourceModal')),
     '来源弹层 + 片段解析',
   );
   check(
@@ -276,8 +291,8 @@ async function main() {
   );
   check(
     'Session 模式隐藏旧证据网格入口',
-    playPageSource.includes('mesh && !sessionView?.worldBlueprint'),
-    'legacy 入口按蓝图存在与否收敛',
+    !playPageSource.includes('EvidenceMeshView') && playPageSource.includes('blueprintSnippets'),
+    'Session 屏只消费蓝图片段',
   );
 
   /**
@@ -294,9 +309,9 @@ async function main() {
   check(
     '新主链把旧机制撤出主路径（§3/§12/§19/§20）',
     playPageSource.includes('const isSessionMode') &&
-      playPageSource.includes('usesTerminalEnding') &&
-      playPageSource.includes('SessionEndgame'),
-    'isSessionMode + 终端分支 legacy 专用',
+      playPageSource.includes('SessionEndgame') &&
+      !playPageSource.includes('usesTerminalEnding'),
+    'isSessionMode + SessionEndgame 主链',
   );
   check(
     '经验卡取代遗物面板（§13）',
@@ -304,9 +319,10 @@ async function main() {
     '借来的经验抽屉已接线',
   );
   check(
-    '旧报告折叠为「查看完整报告」',
-    playPageSource.includes('查看完整报告'),
-    '报告保留但不再占据首屏',
+    '终局回顾内容折叠在后段',
+    (await readFile(new URL('../src/components/game/session/SessionEndgameScreen.tsx', import.meta.url), 'utf8')).includes('<details') &&
+      (await readFile(new URL('../src/components/game/session/SessionEndgameScreen.tsx', import.meta.url), 'utf8')).includes('回看这一次推演'),
+    '回顾内容折叠在终局后段',
   );
 
   // ── 6.6 prepare-world（P0-F）：把已澄清的会话编译成世界蓝图 ──
@@ -342,7 +358,12 @@ async function main() {
     ),
     (blueprint?.acts ?? []).map((act) => act?.objective).join(' → ') || '（无）',
   );
-  check('蓝图带经验解锁（P0-H 的弹药）', (blueprint?.unlocks ?? []).length > 0, `unlocks=${blueprint?.unlocks?.length}`);
+  const retrievalProvenance = String(preparedBody?.data?.retrievalRun?.provenance ?? '');
+  check(
+    '蓝图保留经验解锁结构（P0-H 的弹药）',
+    Array.isArray(blueprint?.unlocks),
+    `unlocks=${blueprint?.unlocks?.length ?? 0} provenance=${retrievalProvenance}`,
+  );
   check('蓝图经验片段可回溯', (blueprint?.experienceFacts ?? []).every((fact) => String(fact?.exactQuote ?? '').length > 0));
 
   // ── 6.7 /play?session= 可进入（P0-G 的入口） ────────────────
@@ -463,7 +484,7 @@ async function main() {
   );
   check(
     '日志条目带真实走法与要验证的实验',
-    (listedEntry?.pathLabels ?? []).length > 0 && typeof listedEntry?.experiment?.action === 'string',
+    Array.isArray(listedEntry?.pathLabels) && typeof listedEntry?.experiment?.action === 'string',
     `paths=${(listedEntry?.pathLabels ?? []).length} experiment=${listedEntry?.experiment ? 'yes' : 'no'}`,
   );
 

@@ -13,8 +13,8 @@ import { SessionUnknownStage } from '@/components/game/session/SessionUnknownSta
 import { loadingCopyOf } from '@/components/game/session/viewModel';
 import type { SessionActObjective, SessionPlayScreenProps } from '@/components/game/session/types';
 import { AuroraBand } from '@/components/visual/AuroraBand';
+import { CelestialBackdrop } from '@/components/visual/CelestialBackdrop';
 import { CounterOrbit } from '@/components/visual/CounterOrbit';
-import { OrbitField } from '@/components/visual/OrbitField';
 import { KanshanSprite } from '@/components/characters/KanshanSprite';
 import { AI_UNAVAILABLE } from '@/features/run/errorCopy';
 import { actAtmosphereOf } from '@/features/visual/archive';
@@ -59,14 +59,6 @@ import { actAtmosphereOf } from '@/features/visual/archive';
  * 材质与动画全部归 Agent 04 的 `globals.css`，这里只提供结构。
  */
 export type { SessionPlayScreenProps };
-
-/** §22：每一幕的轨道密度（Desktop 上限 10 条）。END 时轨道逐渐退出。 */
-const ACT_ORBITS: Readonly<Record<'1' | '2' | '3' | 'end', number>> = {
-  '1': 5,
-  '2': 7,
-  '3': 9,
-  end: 2,
-};
 
 /** 幕次数据属性：1 / 2 / 3 / end（与 `globals.css` 的 `.session-stage[data-act]` 对齐）。 */
 function actKeyOf(objective: SessionActObjective, ended: boolean): '1' | '2' | '3' | 'end' {
@@ -231,14 +223,9 @@ export function SessionPlayScreen({
       {/* §4.7 极光带：全站唯一的情绪指示器（一幕一个颜色，最多两种强调色同屏） */}
       <AuroraBand tone={actKey === 'end' ? 'end' : actKey === '3' ? 'counter' : 'seek'} />
 
-      {/* §22：每一幕的轨道密度不同；END 时逐渐退出 */}
-      <OrbitField
-        count={ACT_ORBITS[actKey]}
-        accent={actKey === '3' ? 'mixed' : 'path'}
-        near={view.phase === 'choice'}
-      />
+      <CelestialBackdrop scene="simulation" />
 
-      <div className="relative mx-auto w-full max-w-[720px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+      <div className="relative z-[1] mx-auto w-full max-w-[720px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))]">
         {/* 每一幕开始时，一条极细的扫描线扫过 —— 幕与幕之间有一个明确的「换场」 */}
         <span key={`sweep-${actKey}`} aria-hidden="true" className="sil-act-sweep" />
 

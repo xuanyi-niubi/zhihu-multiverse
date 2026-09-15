@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 
 import { AstralDial } from '@/components/visual/AstralDial';
 import { AuroraBand } from '@/components/visual/AuroraBand';
+import { CelestialBackdrop } from '@/components/visual/CelestialBackdrop';
 import { FateProjectionConsole } from '@/components/visual/FateProjectionConsole';
-import { OrbitField } from '@/components/visual/OrbitField';
 import { UniverseJump } from '@/components/visual/UniverseJump';
 import { KanshanSprite } from '@/components/characters/KanshanSprite';
 import ObserverChip from '@/components/session/ObserverChip';
@@ -52,24 +52,6 @@ import { NETWORK_UNAVAILABLE, playerFacingError, type PlayerFacingError } from '
  * —— 仍是 1 秒以内，而且转场与真实请求并行，不增加任何等待。
  */
 const ENTER_MS = 720;
-
-/**
- * 观测台前的星尘：9 颗，坐标写死。
- *
- * 为什么不用随机数：刷新十次应该是同一片天区 —— 这是「仪器」而不是「壁纸」。
- * 为什么从 18 降到 9：移动端这层不可见却要付渲染成本，宽屏上 9 颗已够。
- */
-const DUST: readonly { readonly x: number; readonly y: number; readonly tone?: 'path' | 'zhihu' }[] = [
-  { x: 14, y: 20, tone: 'zhihu' },
-  { x: 27, y: 64 },
-  { x: 36, y: 33, tone: 'path' },
-  { x: 45, y: 84 },
-  { x: 58, y: 24 },
-  { x: 66, y: 72, tone: 'zhihu' },
-  { x: 76, y: 40 },
-  { x: 85, y: 60 },
-  { x: 22, y: 88, tone: 'path' },
-];
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -142,39 +124,7 @@ export default function HomePage() {
       {/* 极光带：全站唯一的情绪指示器（首页恒为 seek） */}
       <AuroraBand tone="seek" />
 
-      {/*
-        星尘：只在宽屏出现（窄屏不可见却要付渲染成本）
-      */}
-      <div aria-hidden="true" className="sil-dust hidden lg:block">
-        {DUST.map((mote, index) => (
-          <span
-            key={`mote-${index}`}
-            className={['sil-dust__mote', mote.tone ? `sil-dust__mote--${mote.tone}` : '']
-              .filter(Boolean)
-              .join(' ')}
-            style={{ left: `${mote.x}%`, top: `${mote.y}%` }}
-          />
-        ))}
-      </div>
-
-      {/*
-        人生轨道场：**整页背景**，不放进任何栅格列。
-
-        ## 为什么不做成左栏里的一个方块
-
-        轨道族原本被包在左栏的正方形容器里（`aspect-square`）。
-        但轨道是为「满屏铺开」设计的：它的 SVG 用
-        `preserveAspectRatio="xMidYMid slice"`，意思就是「按容器尺寸裁切铺满」——
-        这正是对局页的用法（那里它是全幅背景）。
-
-        塞进正方形后，容器不再是整个画面，`slice` 的裁切就从
-        「画面边缘」变成了「方块边缘」：轨道在方块左右被竖直切断，
-        读起来像画面被裁坏了，而不是「天空延伸到画面之外」。
-
-        放回成整页背景后，弧线自然地在视口边缘之外延续，
-        与 `AuroraBand` / 星尘同一层，内容栅格用 `z-10` 压在它上面。
-      */}
-      <OrbitField count={nearFocus ? 10 : 7} accent="path" near={nearFocus} />
+      <CelestialBackdrop scene="observatory" />
 
       {/*
         两栏栅格。

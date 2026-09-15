@@ -164,12 +164,49 @@ export interface SearchQuery {
   readonly query: string;
   readonly purpose: SearchPurpose;
   readonly priority: number;
+  /** 只记录这条 query 想寻找的层级；来源最终层级必须独立审核。 */
+  readonly expectedTier?: SimilarityTier;
 }
 
 export interface SearchPlan {
   readonly queries: readonly SearchQuery[];
   /** 请求上限（知乎接口有配额，必须显式设限）。 */
   readonly maxRequests: number;
+}
+
+/** 一条真实来源与用户转变之间的可解释相似层级。 */
+export type SimilarityTier =
+  | 'exact'
+  | 'same-family'
+  | 'same-domain'
+  | 'same-target'
+  | 'adjacent-target'
+  | 'unrelated';
+
+/** 一个起点或目标概念的逐层放宽词组。 */
+export interface ConceptTerms {
+  readonly exact: readonly string[];
+  readonly family: readonly string[];
+  readonly domain: readonly string[];
+  readonly adjacent: readonly string[];
+}
+
+/**
+ * 用户真正想完成的转变。
+ *
+ * 这只服务检索与来源分级，不会被提升成用户确认过的现实事实。
+ */
+export interface TransitionIntent {
+  readonly origin: ConceptTerms;
+  readonly target: ConceptTerms;
+  readonly transition: 'career-change' | 'major-change' | 'entry' | 'choice' | 'other';
+  readonly counterTerms: readonly string[];
+}
+
+export interface SimilaritySummary {
+  readonly exactCount: number;
+  readonly bestAvailableTier: SimilarityTier | null;
+  readonly widened: boolean;
 }
 
 export type QualificationTrack = 'similar' | 'adjacent' | 'alternative' | 'counter';
@@ -190,6 +227,9 @@ export interface SourceQualification {
   readonly eligibleAsCase: boolean;
   /** 0..1，仅供内部排序，不作为用户可见的“匹配度”。 */
   readonly rankScore: number;
+  readonly similarityTier: SimilarityTier;
+  readonly matchedOriginTerms: readonly string[];
+  readonly matchedTargetTerms: readonly string[];
   readonly assignedTrack: QualificationTrack;
   readonly reasons: readonly string[];
 }

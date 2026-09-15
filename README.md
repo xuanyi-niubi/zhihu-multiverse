@@ -2,8 +2,9 @@
 
 > 把别人真实走过的人生，显影成你自己能验证的一局。
 
-说出你正在经历的那件事，系统会去知乎找**真正走过相似、不同和相反道路的人**。
-他们真实做过的事，会直接改变这一局可以选择的行动。
+说出你正在经历的那件事，系统会先在知乎寻找**完整同路经历**；如果样本不足，
+再逐层放宽到相似起点、同类背景、相同终点与相邻路径。每一层都标明差异，
+不会把不相关的故事伪装成答案。
 
 **知乎黑客松 2026 · 校园新锐季** | 主赛道：跨次元游乐场 | 关联方向：知识炼金场
 
@@ -31,7 +32,7 @@
 
 | 机制 | 玩家能感觉到什么 | 代码落点 |
 |---|---|---|
-| **先找人，再谈相似** —— 先审查亲历、行动与结果，再按相似 / 邻近 / 替代 / 反例分轨 | 找不到完全相同的人时，也能看清“哪里相同、哪里不同” | `features/experience/qualification.ts` · `features/experience/retrieve.ts` |
+| **先找人，再谈相似** —— 先查精确起点；不足两位时才用一次短 AI 扩展，按相似起点 / 同类背景 / 相同终点 / 相邻路径逐层放宽 | 找不到完全相同的人时，也能看清“哪里相同、哪里不同”；同一问题 24 小时内复用扩展结果 | `features/experience/transitionIntent.ts` · `features/experience/qualification.ts` · `features/experience/retrieve.ts` |
 | **逐字引用** —— `exactQuote` 必须是原回答的连续子串，改一个字整条丢弃 | 每句话都能点回那一篇真实回答 | `features/experience/validate.ts` |
 | **Experience Unlock** —— 一条真实经历会在某一幕解锁一个此前不存在的行动 | 「他的做法我原来根本没想到」 | `features/game-world/experienceUnlock.ts` |
 | **反例驱动第三幕** —— 找不到真实反例就诚实留空，不编 | 「原来看起来对的路，有人是这样走坏的」 | `features/game-world/compileWorld.ts` |
@@ -66,7 +67,7 @@ npm run dev                    # http://localhost:3000
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
-| `APP_LLM_API_KEY` | 是 | 模型密钥，只在服务端读取（`config/serverEnv.ts` 是唯一入口） |
+| `APP_LLM_API_KEY` | 是 | 模型密钥，只在服务端读取（敏感凭证统一由 `src/config/serverEnv.ts` 管理） |
 | `APP_LLM_BASE_URL` | 是 | 兼容 OpenAI 协议的端点 |
 | `APP_LLM_FAST_MODEL` / `APP_LLM_DEEP_MODEL` | 否 | 不配则两者都用同一模型 |
 | `APP_LLM_JSON_MODE` | 否 | 默认 `true`；端点不支持 `json_object` 时才关 |
@@ -147,7 +148,7 @@ src/
 3. **暖色只属于现实层。** 相纸暖白只出现在终局那张「要带走的纸」上。
 
 三个机制：**显影** Development（620ms 入场）· **极光带** Aurora（全站唯一的情绪指示器）· **三层世界** Three Planes。
-中文正文走系统字体栈；自托管只有拉丁等宽（JetBrains Mono，6 个 woff2 / 约 65KB），因为「仪器读数」需要它。
+中文正文走系统字体栈（不额外下载 Noto Serif SC）；自托管只有拉丁等宽（JetBrains Mono，6 个 woff2 / 约 65KB），因为「仪器读数」需要它。
 
 ## 部署
 
@@ -166,5 +167,5 @@ docker compose up -d --build
 
 ## 致谢
 
-- 中文衬线体使用 Noto Serif SC；动效全部为原生 CSS keyframes，未引入动画库。
+- 中文衬线体使用系统字体栈；动效全部为原生 CSS keyframes，未引入动画库。
 - 运行时依赖只有 React 与 Next.js。

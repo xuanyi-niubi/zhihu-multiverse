@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { similarityTierLabel } from '@/features/experience/similarityCopy';
 
 /**
  * 编译页的来源详情（你截图那一屏的「点一下看详情 / 回原文」）。
@@ -152,6 +153,13 @@ export function SessionSourceDialog({ data, onClose }: SessionSourceDialogProps)
 
         {data.qualification ? (
           <div className="mt-3 border-l border-[color:rgb(var(--sil-rgb-counter-soft)/0.45)] pl-3 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+            <p>相似层级：{similarityTierLabel(data.qualification.similarityTier)}</p>
+            {data.qualification.matchedOriginTerms.length > 0 ? (
+              <p>起点命中：{data.qualification.matchedOriginTerms.join('、')}</p>
+            ) : null}
+            {data.qualification.matchedTargetTerms.length > 0 ? (
+              <p>目标命中：{data.qualification.matchedTargetTerms.join('、')}</p>
+            ) : null}
             {data.qualification.matchedConstraints.length > 0 ? (
               <p>与你相同：{data.qualification.matchedConstraints.join('、')}</p>
             ) : (
