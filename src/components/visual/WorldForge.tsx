@@ -161,7 +161,7 @@ export function WorldForge({
 
         <p
           className={[
-            'sil-forge__caption mt-3 text-[13px] leading-relaxed text-[color:var(--sil-ink-200)]',
+            'sil-forge__caption mt-3 text-meta leading-relaxed text-[color:var(--sil-ink-200)]',
             ready ? 'sil-forge__ready text-[color:var(--sil-ink-100)]' : '',
           ]
             .filter(Boolean)
@@ -187,7 +187,7 @@ export function WorldForge({
                 >
                   {stage.found === null ? '·' : hit ? '◆' : '—'}
                 </span>
-                <span className="text-[13px] leading-relaxed text-[color:var(--sil-ink-200)]">
+                <span className="text-meta leading-relaxed text-[color:var(--sil-ink-200)]">
                   {FORGE_STAGE_TEXT[stage.id]}
                 </span>
                 {/* 找不到就是找不到：用未显影语法，不补一条、不假装 */}

@@ -68,7 +68,7 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
 
   return (
     <section className="mt-8">
-      <p className="sil-prose text-[14px]">
+      <p className="sil-prose text-body">
         {questions.length > 1
           ? `我还差一点信息。一共 ${questions.length} 个问题，都可以跳过。`
           : '我还差一点信息。可以跳过。'}
@@ -85,7 +85,7 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
           {question.question}
         </p>
         {question.hint ? (
-          <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
+          <p className="mt-2 text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
             {question.hint}
           </p>
         ) : null}
@@ -106,7 +106,7 @@ export function ClarificationStep({ questions, busy, onSubmit }: ClarificationSt
                   }))
                 }
                 className={[
-                  'min-h-11 w-full rounded-[3px] border px-4 py-2.5 text-left text-[14px] transition-[border-color,background-color,color] duration-200 sm:w-auto sm:text-center',
+                  'min-h-11 w-full rounded-[3px] border px-4 py-2.5 text-left text-body transition-[border-color,background-color,color] duration-200 sm:w-auto sm:text-center',
                   active
                     ? 'border-[color:color-mix(in_srgb,var(--sil-alternate)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-alternate)_12%,transparent)] text-[color:var(--sil-ink-100)]'
                     : 'border-[color:var(--sil-rule)] bg-[color:rgb(242_244_248_/_0.02)] text-[color:var(--sil-ink-200)] hover:border-[color:var(--sil-rule-strong)]',

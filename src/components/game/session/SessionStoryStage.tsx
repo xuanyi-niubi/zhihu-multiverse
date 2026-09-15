@@ -70,19 +70,19 @@ export function SessionStoryStage({ story, loading, className = '' }: SessionSto
       </div>
 
       {story.tension ? (
-        <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wider text-counter-soft">
+        <p className="mt-3 font-mono text-micro leading-relaxed tracking-wider text-counter-soft">
           本幕张力 · {story.tension}
         </p>
       ) : null}
 
       {loading ? (
-        <p className="mt-5 animate-pulse font-mono text-[12px] text-archive-600">
+        <p className="mt-5 animate-pulse font-mono text-meta text-archive-600">
           这一局正在继续往下长…
         </p>
       ) : (
         <>
           {story.title ? (
-            <p className="mt-5 text-[13px] font-semibold text-archive-400">{story.title}</p>
+            <p className="mt-5 text-meta font-semibold text-archive-400">{story.title}</p>
           ) : null}
           <p className="sil-story mt-2 block">
             <PhraseText key={story.text} phrases={story.phrases} />

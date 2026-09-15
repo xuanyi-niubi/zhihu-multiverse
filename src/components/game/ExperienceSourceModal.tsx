@@ -141,23 +141,23 @@ export function ExperienceSourceModal({
             type="button"
             onClick={onClose}
             aria-label="关闭"
-            className="shrink-0 border border-[color:rgb(var(--sil-rgb-ink-100)/0.16)] px-2 py-0.5 text-[11px] text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:border-[color:rgb(var(--sil-rgb-ink-100)/0.32)] hover:text-[color:var(--sil-ink-100)]"
+            className="shrink-0 border border-[color:rgb(var(--sil-rgb-ink-100)/0.16)] px-2 py-0.5 text-label text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:border-[color:rgb(var(--sil-rgb-ink-100)/0.32)] hover:text-[color:var(--sil-ink-100)]"
           >
             ✕
           </button>
         </header>
 
         {facts.length === 0 ? (
-          <p className="mt-3 border border-[color:rgb(var(--sil-rgb-ink-100)/0.1)] bg-[color:rgb(var(--sil-rgb-ink-100)/0.02)] px-3 py-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+          <p className="mt-3 border border-[color:rgb(var(--sil-rgb-ink-100)/0.1)] bg-[color:rgb(var(--sil-rgb-ink-100)/0.02)] px-3 py-2 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
             这条选择有一条经验片段，但它此刻不在本局蓝图里 —— 我们不会替你补一段原文。
           </p>
         ) : (
           <>
             {/* P0-3：把「AI 不许改一个字」这条纪律在评委眼前写死一次 */}
-            <p className="mt-3 border border-[color:rgb(var(--sil-rgb-alternate-soft)/0.28)] bg-[color:rgb(var(--sil-rgb-alternate-soft)/0.06)] px-3 py-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-200)]">
+            <p className="mt-3 border border-[color:rgb(var(--sil-rgb-alternate-soft)/0.28)] bg-[color:rgb(var(--sil-rgb-alternate-soft)/0.06)] px-3 py-2 text-label leading-relaxed text-[color:var(--sil-ink-200)]">
               这段话<strong className="font-semibold text-[color:var(--sil-ink-100)]">逐字</strong>
               来自知乎原文 —— AI 只负责挑选，不负责改写。
-              <span className="mt-1 block font-mono text-[10px] text-[color:var(--sil-alternate-soft)]">
+              <span className="mt-1 block font-mono text-micro text-[color:var(--sil-alternate-soft)]">
                 校验：exactQuote ∈ source.quote ✓
               </span>
             </p>
@@ -169,14 +169,14 @@ export function ExperienceSourceModal({
                   className="border-l border-[color:rgb(var(--sil-rgb-zhihu)/0.5)] pl-3"
                 >
                   {/* 逐字片段：引号包裹，视作证物 */}
-                  <blockquote className="text-[12px] leading-relaxed text-[color:var(--sil-ink-200)]">
+                  <blockquote className="text-meta leading-relaxed text-[color:var(--sil-ink-200)]">
                     <span className="mr-0.5 text-[color:var(--sil-ink-300)]">“</span>
                     {fact.exactQuote}
                     <span className="ml-0.5 text-[color:var(--sil-ink-300)]">”</span>
                   </blockquote>
 
                   {fact.qualification ? (
-                    <p className="mt-1.5 text-[10px] text-[color:var(--sil-ink-300)]">
+                    <p className="mt-1.5 text-micro text-[color:var(--sil-ink-300)]">
                       相似层级：{similarityTierLabel(fact.qualification.similarityTier)}
                       {fact.qualification.matchedOriginTerms.length > 0
                         ? ` · 起点 ${fact.qualification.matchedOriginTerms.join('、')}`
@@ -195,8 +195,8 @@ export function ExperienceSourceModal({
                           key={purpose}
                           className={
                             NEGATIVE_PURPOSES.has(purpose)
-                              ? 'border border-[color:rgb(var(--sil-rgb-counter)/0.42)] bg-[color:rgb(var(--sil-rgb-counter)/0.08)] px-2 py-0.5 text-[9px] tracking-[0.06em] text-[color:var(--sil-counter-soft)]'
-                              : 'border border-[color:rgb(var(--sil-rgb-ink-100)/0.14)] bg-[color:rgb(var(--sil-rgb-ink-100)/0.03)] px-2 py-0.5 text-[9px] tracking-[0.06em] text-[color:var(--sil-ink-300)]'
+                              ? 'border border-[color:rgb(var(--sil-rgb-counter)/0.42)] bg-[color:rgb(var(--sil-rgb-counter)/0.08)] px-2 py-0.5 text-micro tracking-[0.06em] text-[color:var(--sil-counter-soft)]'
+                              : 'border border-[color:rgb(var(--sil-rgb-ink-100)/0.14)] bg-[color:rgb(var(--sil-rgb-ink-100)/0.03)] px-2 py-0.5 text-micro tracking-[0.06em] text-[color:var(--sil-ink-300)]'
                           }
                         >
                           {PURPOSE_LABEL[purpose]}
@@ -205,7 +205,7 @@ export function ExperienceSourceModal({
                     </p>
                   ) : null}
 
-                  <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[10px] text-[color:var(--sil-ink-300)]">
+                  <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-micro text-[color:var(--sil-ink-300)]">
                     <span>{fact.author}</span>
                     <span>·</span>
                     <span>{FACT_TYPE_LABEL[fact.type]}</span>
@@ -234,7 +234,7 @@ export function ExperienceSourceModal({
             <p className="sil-label">与你的差异</p>
             <ul className="mt-1.5 flex flex-col gap-1">
               {differences.slice(0, 4).map((item) => (
-                <li key={item.variable} className="text-[11px] leading-relaxed text-[color:var(--sil-ink-200)]">
+                <li key={item.variable} className="text-label leading-relaxed text-[color:var(--sil-ink-200)]">
                   <span className="text-[color:var(--sil-ink-100)]">{item.variable}</span>
                   <span className="mx-1 text-[color:var(--sil-ink-300)]">·</span>
                   <span className={RELATION_CLASS[item.relation]}>
@@ -254,7 +254,7 @@ export function ExperienceSourceModal({
           </div>
         ) : null}
 
-        <p className="mt-4 border-t border-[color:rgb(var(--sil-rgb-ink-100)/0.08)] pt-2.5 text-[10px] leading-relaxed text-[color:var(--sil-ink-300)]">
+        <p className="mt-4 border-t border-[color:rgb(var(--sil-rgb-ink-100)/0.08)] pt-2.5 text-micro leading-relaxed text-[color:var(--sil-ink-300)]">
           以上是<strong className="font-semibold text-[color:var(--sil-ink-200)]">原文逐字片段</strong>
           ，没有改写、没有概括。它说明有人这样做过，
           不说明这样做会得到什么结果 —— 那需要你自己去验证。

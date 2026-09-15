@@ -389,7 +389,7 @@ export default function SessionPage() {
           <p className="sil-label">The Observatory</p>
           <Link
             href="/"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-meta tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
           >
             换个问题
           </Link>
@@ -404,7 +404,7 @@ export default function SessionPage() {
               alt=""
             />
           </span>
-          <p className="sil-prose text-[14px] leading-relaxed text-[color:var(--sil-ink-300)]">
+          <p className="sil-prose text-body leading-relaxed text-[color:var(--sil-ink-300)]">
             我去找找，有没有人活过你正在纠结的这几种人生。
           </p>
         </div>
@@ -428,11 +428,11 @@ export default function SessionPage() {
         className="sil-viewport relative mx-auto flex w-full max-w-[880px] flex-col justify-center px-5 py-16 sm:px-8"
       >
         <p className="sil-label">Session</p>
-        <p role="alert" className="sil-prose mt-4 text-[15px] text-[color:var(--sil-ink-100)]">
+        <p role="alert" className="sil-prose mt-4 text-body text-[color:var(--sil-ink-100)]">
           {error.title}
         </p>
         {error.hint ? (
-          <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">{error.hint}</p>
+          <p className="mt-2 text-meta leading-relaxed text-[color:var(--sil-ink-300)]">{error.hint}</p>
         ) : null}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
@@ -517,7 +517,7 @@ export default function SessionPage() {
         <p className="sil-label">The Observatory</p>
         <Link
           href="/"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-meta tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
         >
           换个问题
         </Link>
@@ -538,7 +538,7 @@ export default function SessionPage() {
                 alt="刘看山"
               />
             </span>
-            <p className="sil-prose text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
+            <p className="sil-prose text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
               只问会改变结论的事。你答的每一句，都会改变我接下来去找谁。
             </p>
           </div>
@@ -568,7 +568,7 @@ export default function SessionPage() {
                 alt=""
               />
             </span>
-            <p className="sil-prose text-[14px] leading-relaxed text-[color:var(--sil-ink-300)]">
+            <p className="sil-prose text-body leading-relaxed text-[color:var(--sil-ink-300)]">
               {worldReady
                 ? foundTotal > 0
                   ? `筛出了 ${foundTotal} 位可核验亲历者。先看看他们真正走过的部分。`
@@ -589,7 +589,7 @@ export default function SessionPage() {
           )}
 
           {error ? (
-            <p role="alert" className="mt-4 text-[13px] leading-relaxed text-[color:var(--sil-counter-soft)]">
+            <p role="alert" className="mt-4 text-meta leading-relaxed text-[color:var(--sil-counter-soft)]">
               {error.title}
               {error.hint ? ` ${error.hint}` : ''}
             </p>
@@ -607,10 +607,10 @@ export default function SessionPage() {
                  * 文案与按钮固定为 05_AGENT §9 的那一套。
                  */
                 <div className="sil-panel px-5 py-5 sm:px-6">
-                  <p className="sil-prose text-[15px] text-[color:var(--sil-ink-100)]">
+                  <p className="sil-prose text-body text-[color:var(--sil-ink-100)]">
                     {NO_RELIABLE_EXPERIENCE.title}
                   </p>
-                  <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                  <p className="mt-2 text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
                     {NO_RELIABLE_EXPERIENCE.hint}
                   </p>
                   <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -627,7 +627,7 @@ export default function SessionPage() {
                       {busy ? '正在重新检索…' : NO_RELIABLE_EXPERIENCE.actions[1]}
                     </button>
                   </div>
-                  <p className="mt-4 text-[12px] leading-relaxed text-[color:var(--sil-ink-400)]">
+                  <p className="mt-4 text-meta leading-relaxed text-[color:var(--sil-ink-400)]">
                     也可以先进入这一局：
                     <Link
                       href={`/play?session=${encodeURIComponent(id)}`}

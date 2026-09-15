@@ -42,10 +42,10 @@ export default function ObserverChip({ className = '' }: { readonly className?: 
         <ObserverAvatar
           name={name}
           avatarUrl={state.profile?.avatarUrl ?? null}
-          className="h-5 w-5 border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-[9px] text-[color:var(--sil-ink-200)]"
+          className="h-5 w-5 border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-micro text-[color:var(--sil-ink-200)]"
         />
         <span
-          className="max-w-[9rem] truncate text-[12px] text-[color:var(--sil-ink-200)]"
+          className="max-w-[9rem] truncate text-meta text-[color:var(--sil-ink-200)]"
           title={headline ? `${name} · ${headline}` : name}
         >
           {name}
@@ -59,7 +59,7 @@ export default function ObserverChip({ className = '' }: { readonly className?: 
       type="button"
       onClick={requestLogin}
       className={[
-        'flex min-h-11 items-center gap-1.5 text-[12px] text-[color:var(--sil-ink-400)]',
+        'flex min-h-11 items-center gap-1.5 text-meta text-[color:var(--sil-ink-400)]',
         'transition-colors hover:text-[color:var(--sil-ink-200)]',
         className,
       ]

@@ -94,7 +94,7 @@ export function FateProjectionConsole({
           .join(' ')}
       >
         <div className="flex items-baseline justify-between gap-3">
-          <label className="sil-label text-[11px]" htmlFor="fate-projection-input">
+          <label className="sil-label text-label" htmlFor="fate-projection-input">
             {title}
           </label>
           <span aria-hidden="true" className="sil-label sil-label--sm sil-num">
@@ -147,7 +147,7 @@ export function FateProjectionConsole({
           </span>
         </div>
 
-        <p className="mt-3 text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">{hint}</p>
+        <p className="mt-3 text-meta leading-relaxed text-[color:var(--sil-ink-300)]">{hint}</p>
       </div>
     </form>
   );

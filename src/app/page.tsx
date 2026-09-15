@@ -165,7 +165,7 @@ export default function HomePage() {
               <span className="flex h-[68px] w-[68px] shrink-0 items-center justify-center">
                 <KanshanSprite characterId="kanshan" action="idle" className="h-full w-full object-contain" alt="刘看山" />
               </span>
-              <p className="sil-prose text-[13px] leading-relaxed text-[color:var(--sil-ink-300)] sm:text-[14px]">
+              <p className="sil-prose text-meta leading-relaxed text-[color:var(--sil-ink-300)] sm:text-body">
                 我去找找，有没有人活过你正在纠结的这几种人生。
               </p>
             </div>
@@ -188,7 +188,7 @@ export default function HomePage() {
           {error ? (
             <div
               role="alert"
-              className="mt-4 border-l-2 border-[color:var(--sil-counter)] bg-[color:rgb(179_133_74_/_0.06)] px-3.5 py-3 text-[13px] leading-relaxed text-[color:var(--sil-counter-soft)]"
+              className="mt-4 border-l-2 border-[color:var(--sil-counter)] bg-[color:rgb(179_133_74_/_0.06)] px-3.5 py-3 text-meta leading-relaxed text-[color:var(--sil-counter-soft)]"
             >
               <p className="font-medium">{error.title}</p>
               {error.hint ? <p className="mt-1 opacity-80">{error.hint}</p> : null}
@@ -213,13 +213,13 @@ export default function HomePage() {
               */}
               <Link
                 href="/journal"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-meta tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
               >
                 我的经历
               </Link>
               <Link
                 href="/about"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-meta tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
               >
                 关于
               </Link>

@@ -123,6 +123,25 @@
   /* 页面的最大阅读宽度：超过这个宽度的行长会让人跳行 */
   --sil-measure: 62ch;
 
+  /* ------------------------------------------------------------------ */
+  /* §3 小字阶梯：手机与电脑各有对应尺寸                                    */
+  /* ------------------------------------------------------------------ */
+  /*
+    大字号一直是流体的（`--display` / `--act` 用 clamp），但 ≤15px 这一档
+    长期是固定 px —— 双端实测的后果是「手机 10px，2560 桌面也 10px」：
+    同一语义在两端没有对应尺寸，手机上读不清、大屏上又小得像灰尘。
+
+    这里把这一档也做成流体：**移动端有可读下限（≥12px），宽屏随视口缓增**。
+    上限刻意收得保守（13.5–16.5px），因为「仪器铭牌」的质感来自
+    等宽 + 疏排 + 大写，不来自字号小。
+
+    实测口径：360 / 390 / 430 / 768 / 1024 / 1280 / 1440 / 1920 / 2560。
+  */
+  --sil-text-micro: clamp(12px, 0.2vw + 11.2px, 13.5px);
+  --sil-text-label: clamp(12.5px, 0.22vw + 11.7px, 14px);
+  --sil-text-meta: clamp(13px, 0.26vw + 12.1px, 15px);
+  --sil-text-body: clamp(14.5px, 0.3vw + 13.4px, 16.5px);
+
   /*
     ## RGB 通道变体
     用于 `rgb(var(--sil-rgb-x) / 0.12)` 这种**需要任意透明度**的场合。
@@ -232,6 +251,30 @@ a {
   a:not(.sil-tap-exempt),
   [role='button'] {
     min-height: 44px;
+    /*
+      行内元素上的 min-height 是**无效**的 —— 旧版只写了 min-height，
+      于是行内链接（设置页的「登录知乎」「developer.zhihu.com ↗」等）
+      实测仍然是 15px 高，规则写了但没生效。改成 inline-flex 才真的撑开。
+      行内代码/术语若要豁免，加 .sil-tap-exempt。
+    */
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /*
+    输入类元素旧版完全没被覆盖：设置页的文本框实测 35px 高、
+    复选框 14×14。iOS 上低于 16px 的输入还会触发聚焦自动放大。
+  */
+  input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -297,7 +340,7 @@ a {
 */
 .sil-label {
   font-family: var(--sil-font-mono);
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -306,7 +349,7 @@ a {
 
 /* 更次要的元数据（例如诊断编号、世界编号） */
 .sil-label--sm {
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   letter-spacing: 0.16em;
 }
 
@@ -332,7 +375,7 @@ a {
 
 /* 正文：限制行长，行高放松 */
 .sil-prose {
-  font-size: 15px;
+  font-size: var(--sil-text-body);
   line-height: 1.85;
   color: var(--sil-ink-200);
   max-width: var(--sil-measure);
@@ -340,17 +383,19 @@ a {
 }
 
 .sil-prose--lead {
-  font-size: 16px;
+  font-size: var(--sil-text-body);
   line-height: 1.9;
   color: var(--sil-ink-200);
 }
 
+/*
+  宽屏不再用固定 px 覆盖正文 —— 那会让 clamp 在 ≥768px 之后失去意义
+  （旧写法：这里写死 16px / 17px，于是 768 和 2560 的正文一样大）。
+  `--sil-text-body` 自己就会从 14.5px 长到 16.5px。
+*/
 @media (min-width: 768px) {
-  .sil-prose {
-    font-size: 16px;
-  }
   .sil-prose--lead {
-    font-size: 17px;
+    line-height: 1.9;
   }
 }
 
@@ -394,7 +439,7 @@ a {
   border-radius: 2px;
   background: rgb(6 7 11 / 0.62);
   font-family: var(--sil-font-mono);
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   font-variant-numeric: tabular-nums;
   color: var(--sil-ink-300);
 }
@@ -553,7 +598,7 @@ a {
   align-items: center;
   gap: 6px;
   font-family: var(--sil-font-mono);
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--sil-ink-300);
@@ -1000,7 +1045,7 @@ a {
 /* 幕次编号：等宽、大字距，像仪器上的刻度盘标签 */
 .sil-acthead__index {
   font-family: var(--sil-font-mono);
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.24em;
   color: var(--sil-ink-400);
@@ -1123,7 +1168,7 @@ a {
 /* 序号：等宽刻度，不是「A/B/C」的街机选项 */
 .sil-choice__index {
   font-family: var(--sil-font-mono);
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.18em;
   color: var(--sil-ink-400);
@@ -1152,7 +1197,7 @@ a {
   align-items: center;
   gap: 8px 18px;
   font-family: var(--sil-font-mono);
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
   color: var(--sil-ink-400);
@@ -1228,7 +1273,7 @@ a {
 .sil-cardgain__kicker {
   display: block;
   font-family: var(--sil-font-mono);
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--sil-alternate);
@@ -1266,7 +1311,7 @@ a {
   padding-top: 12px;
   border-top: 1px solid var(--sil-rule-faint);
   font-family: var(--sil-font-mono);
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   color: var(--sil-ink-400);
 }
 
@@ -1296,7 +1341,7 @@ a {
 
 .sil-unknown__label {
   font-family: var(--sil-font-mono);
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--sil-undev-text);
@@ -1479,7 +1524,7 @@ a {
 
 .session-choice__index {
   font-family: var(--sil-font-mono);
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.18em;
   color: var(--sil-ink-400);
@@ -1633,6 +1678,39 @@ a {
     rgb(11 14 20 / 0.5) 100%
   );
   padding: 16px;
+}
+
+/*
+  ## §29 三栏：左经验 / 中央极细轴 / 右反例（移动端上下）
+
+  ### 为什么单独一个类，而不是复用 `.sil-coordinate`
+
+  `.sil-coordinate` 是给**单行元数据条**（推演屏底部那条
+  `COORDINATE 大三法学…`）用的：`display: flex` + 等宽字体 + 上边框。
+  把它当三栏容器用有两个后果，线上都实测复现过：
+
+  1. `display: flex` 会盖掉这里需要的 `grid`（两者特异性同为 0,1,0，
+     靠样式表顺序决胜 —— 打包后 `.sil-coordinate` 在后，flex 赢）；
+  2. 反过来，把 `grid-template-columns: 1fr 1px 1fr` 挂到**外层**
+     section 上时，中间那个 `1px` 列会落在**包裹两个 article 的 div**
+     身上 —— 两个 <article> 于是被压进 1px，中文变成逐字竖排。
+     （CounterOrbit 曾经就是这个形态。）
+
+  所以三栏布局归这一个类，且它必须**直接**包含那三个子元素。
+*/
+.sil-cases {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .sil-cases {
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+    gap: 20px;
+  }
 }
 
 /* --- 反思（这一幕过去了）--- */
@@ -1871,7 +1949,7 @@ a {
   display: block;
   margin-top: 8px;
   font-family: var(--sil-font-mono);
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--sil-undev-text);
@@ -2588,7 +2666,7 @@ a {
 
 .sil-jump__note {
   margin-top: 12px;
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   letter-spacing: 0.06em;
   color: var(--sil-ink-200);
 }
@@ -2651,7 +2729,7 @@ a {
   align-items: center;
   gap: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--sil-ink-300);
@@ -2794,7 +2872,7 @@ a {
 .sil-fragment__meta {
   margin-top: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   letter-spacing: 0.06em;
   color: var(--sil-ink-300);
 }
@@ -3051,7 +3129,7 @@ a {
   margin-left: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* 10px 是这套排版里等宽标签的可读下限（见 .sil-label--sm 的说明） */
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   letter-spacing: 0.22em;
   color: var(--sil-ink-300);
 }
@@ -3148,7 +3226,7 @@ a {
 .sil-toast__name {
   flex: 0 0 auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--sil-text-label);
   font-weight: 700;
   letter-spacing: 0.16em;
   color: var(--sil-counter-soft);

@@ -110,7 +110,7 @@ function renderFacts(facts: readonly ExperienceFact[]): React.ReactNode {
   return (
     <ul className="flex flex-col gap-1">
       {facts.map((fact) => (
-        <li key={fact.id} className="text-[13px] leading-relaxed text-[color:var(--sil-ink-200)]">
+        <li key={fact.id} className="text-meta leading-relaxed text-[color:var(--sil-ink-200)]">
           {fact.exactQuote}
         </li>
       ))}
@@ -146,11 +146,11 @@ function ExperienceReliquary({
           <span className="sil-label block">
             Real Life / Zhihu · {String(index).padStart(3, '0')}
           </span>
-          <span className="mt-2 block text-[15px] font-bold leading-snug text-[color:var(--sil-ink-100)]">
+          <span className="mt-2 block text-body font-bold leading-snug text-[color:var(--sil-ink-100)]">
             {title}
           </span>
         </span>
-        <span className="mt-1 shrink-0 text-[10px] tracking-[0.2em] text-[color:var(--sil-ink-300)]">
+        <span className="mt-1 shrink-0 text-micro tracking-[0.2em] text-[color:var(--sil-ink-300)]">
           {open ? '收起' : '读取'}
         </span>
       </button>
@@ -187,7 +187,7 @@ function ExperienceReliquary({
                   {card.differences.slice(0, 3).map((difference) => (
                     <li
                       key={difference.variable}
-                      className="text-[12px] leading-relaxed text-[color:var(--sil-counter-soft)]"
+                      className="text-meta leading-relaxed text-[color:var(--sil-counter-soft)]"
                     >
                       {difference.variable}
                       {difference.experienceValue ? `：他 ${difference.experienceValue}` : ''}
@@ -208,7 +208,7 @@ function ExperienceReliquary({
                 href={card.sourceUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-[11px] font-semibold text-[color:var(--sil-zhihu-soft)] transition-opacity duration-200 hover:opacity-80"
+                className="text-label font-semibold text-[color:var(--sil-zhihu-soft)] transition-opacity duration-200 hover:opacity-80"
               >
                 查看知乎原回答 ↗
               </a>
@@ -223,7 +223,7 @@ function ExperienceReliquary({
 export function ExperienceCardPanel({ cards, titles, className = '' }: ExperienceCardPanelProps) {
   if (cards.length === 0) {
     return (
-      <p className="text-[12px] leading-relaxed text-[color:var(--sil-ink-300)]">
+      <p className="text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
         这一局还没有借到经验 —— 我们不会为了填满列表编一张卡。
       </p>
     );
@@ -241,7 +241,7 @@ export function ExperienceCardPanel({ cards, titles, className = '' }: Experienc
         />
       ))}
 
-      <p className="text-[10px] leading-relaxed text-[color:var(--sil-ink-300)]">
+      <p className="text-micro leading-relaxed text-[color:var(--sil-ink-300)]">
         晶体上的每一句都是原文逐字片段，没有改写、没有概括。它说明有人这样做过，
         不说明这样做会得到什么结果 —— 那需要你自己去验证。
       </p>

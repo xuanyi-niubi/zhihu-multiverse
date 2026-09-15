@@ -89,7 +89,7 @@ function ErrorState({
       <p className="text-[17px] font-semibold leading-relaxed" style={{ color: 'var(--sil-ink-100)' }}>
         {message}
       </p>
-      <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+      <p className="mt-2 text-meta leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
         {AI_UNAVAILABLE.hint}
       </p>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -102,7 +102,7 @@ function ErrorState({
           <button
             type="button"
             onClick={onBackToQuestion}
-            className="min-h-11 border px-5 text-[14px] font-semibold transition-opacity duration-200 hover:opacity-80 sm:max-w-[240px]"
+            className="min-h-11 border px-5 text-body font-semibold transition-opacity duration-200 hover:opacity-80 sm:max-w-[240px]"
             style={{ borderColor: 'var(--sil-rule)', color: 'var(--sil-ink-200)' }}
           >
             返回修改问题
@@ -240,7 +240,7 @@ export function SessionPlayScreen({
           <button
             type="button"
             onClick={onQuit}
-            className="min-h-11 text-[11px] transition-opacity duration-200 hover:opacity-80"
+            className="min-h-11 text-label transition-opacity duration-200 hover:opacity-80"
             style={{ color: 'var(--sil-ink-300)' }}
           >
             换一个问题
@@ -263,10 +263,10 @@ export function SessionPlayScreen({
         ) : isEmptyPlaceholder ? (
           <section className="mt-16 flex flex-col items-center gap-3" aria-live="polite">
             <p className="sil-label">WORLD COMPILING</p>
-            <p className="text-[15px] font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
+            <p className="text-body font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
               {loadingCopyOf(view.loadingPhase)}
             </p>
-            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+            <p className="text-label leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               我们只会说现在真的在等什么 —— 没有假进度条。
             </p>
           </section>
@@ -298,7 +298,7 @@ export function SessionPlayScreen({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p
-                      className="text-[15px] font-bold"
+                      className="text-body font-bold"
                       style={{
                         color: 'var(--sil-counter-soft)',
                         animation: 'fragment-materialize 520ms var(--sil-ease) both',
@@ -307,7 +307,7 @@ export function SessionPlayScreen({
                       等等。
                     </p>
                     <p
-                      className="mt-1 text-[13px] leading-relaxed"
+                      className="mt-1 text-meta leading-relaxed"
                       style={{
                         color: 'var(--sil-counter-soft)',
                         opacity: 0.8,
@@ -349,7 +349,7 @@ export function SessionPlayScreen({
 
             {/* 检定中：不显示骰面，只说明结果不由玩家决定 */}
             {checking ? (
-              <p className="mt-6 animate-pulse text-[12px]" style={{ color: 'var(--sil-ink-300)' }}>
+              <p className="mt-6 animate-pulse text-meta" style={{ color: 'var(--sil-ink-300)' }}>
                 {loadingCopyOf('resolving-choice')}
               </p>
             ) : null}
@@ -387,11 +387,11 @@ export function SessionPlayScreen({
             {view.phase === 'reflection' ? (
               <>
                 <section className="session-reflection mt-6">
-                  <p className="text-[14px] font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
+                  <p className="text-body font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
                     {view.outcome?.title || '这一刻过去了'}
                   </p>
                   <p
-                    className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed"
+                    className="mt-1.5 whitespace-pre-line text-body leading-relaxed"
                     style={{ color: 'var(--sil-ink-200)' }}
                   >
                     {view.outcome?.detail ?? ''}

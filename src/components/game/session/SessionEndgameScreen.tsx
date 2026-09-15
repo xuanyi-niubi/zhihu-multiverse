@@ -190,13 +190,13 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
         </span>
         <div className="min-w-0 flex-1">
           <p
-            className="text-[13px] font-semibold leading-relaxed"
+            className="text-meta font-semibold leading-relaxed"
             style={{ color: 'var(--sil-ink-200)' }}
           >
             他们的路你已经看到了。
           </p>
           <p
-            className="mt-1 text-[15px] font-black leading-relaxed"
+            className="mt-1 text-body font-black leading-relaxed"
             style={{ color: 'var(--sil-ink-100)' }}
           >
             现在，走你自己的。
@@ -230,18 +230,18 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
             <p className="sil-label">这张现实支线从哪里来</p>
             <div className="mt-3 flex flex-col gap-2.5">
               {view.unlockedActions.length > 0 ? (
-                <p className="text-[13px] leading-relaxed" style={{ color: 'var(--sil-alternate-soft)' }}>
+                <p className="text-meta leading-relaxed" style={{ color: 'var(--sil-alternate-soft)' }}>
                   <span className="mr-2" style={{ color: 'var(--sil-alternate)' }} aria-hidden="true">◆</span>
                   本局多看见的行动：{view.unlockedActions.slice(0, 2).join('；')}
                 </p>
               ) : null}
               {view.experiences.length > 0 ? (
-                <p className="text-[13px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
+                <p className="text-meta leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
                   <span className="mr-2" style={{ color: 'var(--sil-zhihu-soft)' }} aria-hidden="true">·</span>
                   这条路来自 {view.experiences.slice(0, 2).map((item) => item.author).join('、')} 的真实经历。
                 </p>
               ) : null}
-              <p className="text-[13px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+              <p className="text-meta leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
                 有些答案仍然只能回到现实里验证，所以这一局没有替你下结论。
               </p>
             </div>
@@ -274,7 +274,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
                   现实支线尚未显影
                 </h3>
                 <p
-                  className="mt-3 text-[13px] leading-relaxed"
+                  className="mt-3 text-meta leading-relaxed"
                   style={{ color: 'var(--sil-paper-muted)' }}
                 >
                   这局没有足够的已核验条件来设计一个诚实的实验。我们保留空白，
@@ -295,7 +295,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               {view.unlockedActions.map((action) => (
                 <li
                   key={action}
-                  className="flex gap-2 text-[12px] leading-relaxed"
+                  className="flex gap-2 text-meta leading-relaxed"
                   style={{ color: 'var(--sil-alternate-soft)' }}
                 >
                   <span aria-hidden="true" style={{ color: 'var(--sil-alternate)' }}>
@@ -306,7 +306,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               ))}
             </ul>
           ) : (
-            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+            <p className="text-meta leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               这一局没有出现原本不存在的做法 —— 我们不把普通选项算成「成长」。
             </p>
           )}
@@ -320,7 +320,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
                 {view.steps.map((step, index) => (
                   <li
                     key={`${step}-${index}`}
-                    className="flex gap-2 text-[12px] leading-relaxed"
+                    className="flex gap-2 text-meta leading-relaxed"
                     style={{ color: 'var(--sil-ink-200)' }}
                   >
                     <span aria-hidden="true" style={{ color: 'var(--sil-ink-300)' }}>
@@ -340,11 +340,11 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
             <ul className="flex flex-col gap-2.5">
               {view.experiences.map((item) => (
                 <li key={item.id} className="flex flex-col gap-0.5">
-                  <span className="text-[12px] font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
+                  <span className="text-meta font-semibold" style={{ color: 'var(--sil-ink-200)' }}>
                     {item.title}
                   </span>
                   {item.summary ? (
-                    <span className="text-[11px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
+                    <span className="text-label leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
                       「{item.summary}」
                     </span>
                   ) : null}
@@ -360,7 +360,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               ))}
             </ul>
           ) : (
-            <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+            <p className="text-meta leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
               这一局没有引用到任何真实经历 —— 我们不为了填满这一栏编一段。
             </p>
           )}
@@ -373,7 +373,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
               {view.highlights.map((item) => (
                 <li
                   key={item}
-                  className="flex gap-2 text-[12px] leading-relaxed"
+                  className="flex gap-2 text-meta leading-relaxed"
                   style={{ color: 'var(--sil-ink-200)' }}
                 >
                   <span aria-hidden="true" style={{ color: 'var(--sil-ink-300)' }}>

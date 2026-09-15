@@ -115,11 +115,11 @@ export default function ObserverGate() {
             />
           </span>
           <div className="min-w-0 pt-0.5">
-            <p className="text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]">
+            <p className="text-body leading-relaxed text-[color:var(--sil-ink-200)]">
               知乎是这里的一种登录方式。登录后，这个宇宙会记得你的推演，
               并在最后那张暖色报告纸上写下你的头像与昵称。
             </p>
-            <p className="mt-2.5 text-[12.5px] leading-relaxed text-[color:var(--sil-ink-300)]">
+            <p className="mt-2.5 text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
               不登录也能完整体验，登录不会改变推演结果。
             </p>
           </div>
@@ -142,7 +142,7 @@ export default function ObserverGate() {
           </button>
         </div>
 
-        <p className="mt-5 text-[11px] leading-relaxed text-[color:var(--sil-ink-400)]">
+        <p className="mt-5 text-label leading-relaxed text-[color:var(--sil-ink-400)]">
           不登录也能完整走完一局 —— 只是这一局不会被记住。
           之后想登录，点页面底部的「访客 · 登录」即可。
         </p>

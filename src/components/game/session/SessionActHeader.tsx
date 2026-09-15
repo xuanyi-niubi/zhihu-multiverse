@@ -89,7 +89,7 @@ export function SessionActHeader({ act, children, className = '' }: SessionActHe
 
         {/* 副标题来自 blueprint 的 titleHint；没有就不写一句编的。 */}
         {act.subtitle ? (
-          <p className="mt-1.5 text-[13px] leading-relaxed text-archive-600">{act.subtitle}</p>
+          <p className="mt-1.5 text-meta leading-relaxed text-archive-600">{act.subtitle}</p>
         ) : null}
       </div>
     </div>

@@ -670,19 +670,20 @@
   color: var(--sil-ink-300);
 }
 
-/* §29 Collision：桌面左遗物 / 中央轴 / 右遗物；移动端上下 */
-.session-collision {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
+/*
+  §29 Collision 的三栏布局**已移入 silver.css 的 `.sil-cases`**。
 
-@media (min-width: 768px) {
-  .session-collision {
-    grid-template-columns: 1fr 1px 1fr;
-    gap: 20px;
-  }
-}
+  这里原先写的是：
+    .session-collision { display: grid; grid-template-columns: 1fr; }
+    @media (min-width: 768px) { .session-collision { grid-template-columns: 1fr 1px 1fr; } }
+
+  但那套规则挂错了元素：`CounterOrbit` 把 `.session-collision` 放在**外层
+  section**，而需要三栏的两个 <article> 在它内层的 div 里 —— 于是那个
+  `1px` 的中间列落在了包裹两个 article 的 div 上，中文被压成逐字竖排。
+
+  而且它与 silver.css 的 `.session-collision`（视觉：边框/底色/内边距）
+  同名分家，两处各管一半，出问题时很难看出谁在生效。现在布局只有一处事实源。
+*/
 
 /* §30 Unknown：灰蓝雾区 + REALITY REQUIRED */
 .session-unknown {
@@ -836,7 +837,7 @@ html[data-reduce-motion='on'] *::after {
   flex: 0 0 auto;
   width: 22px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--sil-text-micro);
   letter-spacing: 0.12em;
   color: var(--sil-ink-300);
   transition: color 300ms var(--sil-ease);

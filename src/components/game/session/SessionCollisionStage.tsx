@@ -56,14 +56,14 @@ function CaseBlock({
         {isCounter ? '结果不同的人' : '走这条路的人'}
       </p>
       <p
-        className="mt-2 text-[13px] font-semibold leading-relaxed"
+        className="mt-2 text-meta font-semibold leading-relaxed"
         style={{ color: isCounter ? 'var(--sil-counter-soft)' : 'var(--sil-ink-200)' }}
       >
         {label}
       </p>
       <ul className="mt-2.5 flex flex-col gap-1.5">
         {quotes.map((quote) => (
-          <li key={quote} className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
+          <li key={quote} className="text-meta leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
             「{quote}」
           </li>
         ))}
@@ -83,12 +83,12 @@ export function SessionCollisionStage({
       aria-label="两段真实经历的冲突"
     >
       <p className="sil-label">COLLISION</p>
-      <p className="mt-2 text-[13px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
+      <p className="mt-2 text-meta leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
         两个人的经验互相矛盾 —— 这里没有标准答案。
       </p>
 
       {/* §29：桌面 左遗物 / 中央极细轴 / 右遗物；移动端上下 */}
-      <div className="session-collision sil-coordinate mt-4">
+      <div className="session-collision sil-cases">
         <CaseBlock side="primary" label={view.primary.label} quotes={view.primary.quotes} />
         <span aria-hidden="true" className="sil-coordinate__key" />
         <CaseBlock side="counter" label={view.counter.label} quotes={view.counter.quotes} />
@@ -96,7 +96,7 @@ export function SessionCollisionStage({
 
       {view.focuses.length > 0 ? (
         <div className="mt-5">
-          <p className="text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
+          <p className="text-meta leading-relaxed" style={{ color: 'var(--sil-ink-200)' }}>
             你更想继续观察哪一个变量？
           </p>
           <div className="mt-2.5 flex flex-wrap gap-2">
@@ -109,7 +109,7 @@ export function SessionCollisionStage({
                   aria-pressed={active}
                   disabled={onSelectFocus === undefined}
                   onClick={() => onSelectFocus?.(focus.id)}
-                  className="sil-mark min-h-11 px-4 text-[12px] transition-colors duration-200 disabled:opacity-60"
+                  className="sil-mark min-h-11 px-4 text-meta transition-colors duration-200 disabled:opacity-60"
                   style={
                     active
                       ? {
@@ -128,7 +128,7 @@ export function SessionCollisionStage({
               );
             })}
           </div>
-          <p className="mt-2.5 text-[10px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
+          <p className="mt-2.5 text-micro leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
             这只是你接下来想重点观察的东西 —— 不是结论，也不改变任何数值。
           </p>
         </div>

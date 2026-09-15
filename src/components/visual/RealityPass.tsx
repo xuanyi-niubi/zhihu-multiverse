@@ -235,7 +235,7 @@ export function RealityPass({
         <p className="sil-label" style={{ color: INK_FAINT }}>
           观察点
         </p>
-        <p className="mt-2 text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>
+        <p className="mt-2 text-body leading-relaxed" style={{ color: INK_SOFT }}>
           {observation}
         </p>
 
@@ -246,7 +246,7 @@ export function RealityPass({
                 <dt className="sil-label" style={{ color: INK_FAINT }}>
                   会留下什么
                 </dt>
-                <dd className="mt-1 text-[13px] leading-relaxed" style={{ color: INK_SOFT }}>
+                <dd className="mt-1 text-meta leading-relaxed" style={{ color: INK_SOFT }}>
                   {artifact}
                 </dd>
               </div>
@@ -256,7 +256,7 @@ export function RealityPass({
                 <dt className="sil-label" style={{ color: INK_FAINT }}>
                   什么时候停
                 </dt>
-                <dd className="mt-1 text-[13px] leading-relaxed" style={{ color: INK_SOFT }}>
+                <dd className="mt-1 text-meta leading-relaxed" style={{ color: INK_SOFT }}>
                   {stopSignal}
                 </dd>
               </div>
@@ -275,15 +275,15 @@ export function RealityPass({
             <ObserverAvatar
               name={identity.name}
               avatarUrl={identity.avatarUrl}
-              className="h-8 w-8 text-[13px]"
+              className="h-8 w-8 text-meta"
               imageClassName="bg-[color:var(--sil-paper)]"
               style={{ borderColor: INK_RULE, color: INK_SOFT }}
             />
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold" style={{ color: INK }}>
+              <p className="truncate text-meta font-semibold" style={{ color: INK }}>
                 {identity.name}
               </p>
-              <p className="mt-0.5 text-[11px]" style={{ color: INK_FAINT }}>
+              <p className="mt-0.5 text-label" style={{ color: INK_FAINT }}>
                 本次推演的观测者
               </p>
             </div>
@@ -299,7 +299,7 @@ export function RealityPass({
           <button
             type="button"
             onClick={onBringBack}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-[2px] border px-5 text-[14px] font-semibold transition-transform duration-200 active:translate-y-px"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-[2px] border px-5 text-body font-semibold transition-transform duration-200 active:translate-y-px"
             style={{
               borderColor: 'rgb(31 27 22 / 0.52)',
               background: 'rgb(31 27 22 / 0.06)',
@@ -308,7 +308,7 @@ export function RealityPass({
           >
             {broughtBack ? '已带回现实' : '带回现实'}
           </button>
-          <p className="mt-2 text-[11px] leading-relaxed" style={{ color: INK_FAINT }}>
+          <p className="mt-2 text-label leading-relaxed" style={{ color: INK_FAINT }}>
             不需要注册、也不需要在站内打卡：复制、保存、截图都行。
           </p>
         </div>

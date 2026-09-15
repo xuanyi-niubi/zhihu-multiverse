@@ -1136,6 +1136,16 @@ function PlayScreen() {
    * 且内容不会因为一次搜索抖动而变化 —— 这正是黄金 Case 需要的行为。
    */
   React.useEffect(() => {
+    /**
+     * Session 模式**不拉证据网格**。
+     *
+     * 那条链路的 DM 语料来自世界蓝图（`blueprintSnippets` 优先级更高），
+     * 网格在这里是冗余的；而 `/api/mesh` 已随「产品减法」一起下线，
+     * 继续请求只会在对局屏每次加载时留下一条 404（双端实测九档全部复现）。
+     */
+    if (sessionParam.length > 0) {
+      return;
+    }
     if (state.scenarioId !== AI_DM_SCENARIO_ID || effectiveGoal.trim().length === 0) {
       return;
     }
@@ -1153,7 +1163,7 @@ function PlayScreen() {
     })();
 
     return () => controller.abort();
-  }, [caseParam, effectiveGoal, state.scenarioId]);
+  }, [caseParam, effectiveGoal, sessionParam, state.scenarioId]);
 
   /* AI DM：当前回合尚无动态关卡时拉取 */
   const needsAiTurn =
@@ -1884,7 +1894,7 @@ function PlayScreen() {
       <div className="sil-panel w-full max-w-[520px] px-6 py-8 text-center">
         <p className="sil-label">Session Required</p>
         <h1 className="sil-title sil-title--act mt-4">这一屏需要一个会话</h1>
-        <p className="sil-prose mt-4 text-[14px]">
+        <p className="sil-prose mt-4 text-body">
           推演从你的问题开始 —— 先在首页写下一个真正困扰你的问题，
           系统会编译出这一局的世界，再把你送到这里。
         </p>

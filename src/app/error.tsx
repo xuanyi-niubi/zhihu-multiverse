@@ -36,7 +36,7 @@ export default function RouteError({
         <p className="sil-label">Observation Interrupted</p>
         <Link
           href="/"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-meta tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
         >
           回到观测台
         </Link>
@@ -54,7 +54,7 @@ export default function RouteError({
           className="h-[64px] w-[64px] shrink-0"
           alt="刘看山"
         />
-        <p className="sil-prose text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
+        <p className="sil-prose text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
           ……刚才那一下，不算数。
         </p>
       </section>

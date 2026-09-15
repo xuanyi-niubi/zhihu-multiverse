@@ -74,10 +74,10 @@ export function CounterOrbit({
       </svg>
 
       {/* §29：左遗物 / 中央轴 / 右遗物（移动端自动变成上下） */}
-      <div className="sil-coordinate mt-4">
+      <div className="sil-cases">
         <article className="sil-panel px-4 py-3.5">
           <p className="sil-label">前一条经验</p>
-          <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[color:var(--sil-ink-200)]">
+          <p className="mt-2 text-meta font-semibold leading-relaxed text-[color:var(--sil-ink-200)]">
             {previousLabel}
           </p>
         </article>
@@ -87,7 +87,7 @@ export function CounterOrbit({
         <article className="sil-panel sil-panel--counter relative overflow-hidden px-4 py-3.5">
           <span aria-hidden="true" className="sil-panel__dust" />
           <p className="sil-label text-[color:var(--sil-counter)]">结果完全相反的人</p>
-          <p className="mt-2 text-[13px] font-semibold leading-relaxed text-[color:var(--sil-counter-soft)]">
+          <p className="mt-2 text-meta font-semibold leading-relaxed text-[color:var(--sil-counter-soft)]">
             {counterLabel}
           </p>
         </article>
@@ -104,18 +104,18 @@ export function CounterOrbit({
                 style={{ animation: 'fragment-materialize 480ms var(--sil-ease) both', animationDelay: `${index * 110}ms` }}
               >
                 <span
-                  className={`mt-px shrink-0 border px-2 py-0.5 text-[10px] tracking-[0.12em] ${meta.className}`}
+                  className={`mt-px shrink-0 border px-2 py-0.5 text-micro tracking-[0.12em] ${meta.className}`}
                 >
                   {meta.label}
                 </span>
-                <span className="text-[12px] leading-relaxed text-[color:var(--sil-ink-200)]">{row.text}</span>
+                <span className="text-meta leading-relaxed text-[color:var(--sil-ink-200)]">{row.text}</span>
               </li>
             );
           })}
         </ul>
       ) : null}
 
-      <p className="mt-3 text-[10px] leading-relaxed text-[color:var(--sil-ink-300)]">
+      <p className="mt-3 text-micro leading-relaxed text-[color:var(--sil-ink-300)]">
         只比较这三件事 —— 不显示匹配度、百分比或评分。他的课程压力是否和你一样，原文没说，就是未知。
       </p>
     </section>

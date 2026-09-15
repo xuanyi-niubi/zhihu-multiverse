@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -237,10 +237,22 @@ describe('§4.1 / §4.5 组件规范', () => {
     expect(read('src/components/visual/FateProjectionConsole.tsx')).toContain('sil-input');
   });
 
-  it('§4.1 移动端可点性：交互元素至少 44px', () => {
-    expect(SILVER_CSS).toContain('min-height: 44px');
-    // 触摸设备上全局兜底
-    expect(SILVER_CSS).toContain('@media (pointer: coarse)');
+  it('§4.1 移动端可点性：交互元素至少 44px，且规则真的生效', () => {
+    /*
+      旧断言只查「字符串在不在」，于是两条失效的写法都能全绿：
+        1. 行内 <a> 上写 min-height —— 对 inline 元素无效，链接实测仍 15px 高；
+        2. 选择器漏了 input —— 设置页文本框实测 35px、复选框 14×14。
+      所以要查「覆盖范围」和「让 min-height 生效的那一行」。
+    */
+    const coarse = /@media \(pointer: coarse\) \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(coarse, '触摸设备要有全局兜底').not.toBe('');
+    expect(coarse).toContain('min-height: 44px');
+    // 行内元素必须变成 flex，否则 min-height 不生效
+    expect(coarse).toContain('display: inline-flex');
+    // 输入类不能漏
+    for (const selector of ['input', 'select', 'textarea']) {
+      expect(coarse, `pointer: coarse 兜底漏了 ${selector}`).toContain(selector);
+    }
   });
 
   it('§1 圆角一律 2–4px（脱离 SaaS 感）', () => {
@@ -257,6 +269,53 @@ describe('§4.1 / §4.5 组件规范', () => {
   });
 });
 
+describe('§29 碰撞台三栏：布局只有一处事实源', () => {
+  it('三栏布局由 .sil-cases 提供，桌面是 1fr / 1px / 1fr', () => {
+    const cases = /\.sil-cases \{[\s\S]*?\n\}/.exec(SIL)?.[0] ?? '';
+    expect(cases, '.sil-cases 必须存在').not.toBe('');
+    expect(cases).toContain('display: grid');
+    expect(cases).toContain('grid-template-columns: 1fr');
+    expect(SIL).toContain('grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr)');
+  });
+
+  it('globals.css 不再重复定义 .session-collision 的布局（布局/视觉分家会打架）', () => {
+    /*
+      线上实测的事故：globals.css 给 `.session-collision` 写了
+      `display:grid; 1fr 1px 1fr`，而 `CounterOrbit` 把该类放在**外层 section**
+      （`1px` 的中间列于是落在包裹两个 article 的 div 上），
+      内层文字被压进 1px → 中文逐字竖排。
+
+      同时，`.sil-coordinate`（单行元数据条，display:flex）盖掉 grid，
+      两处各管一半、谁生效取决于打包顺序 —— 现在布局只归 `.sil-cases`。
+    */
+    const globals = stripComments(GLOBALS_CSS);
+    expect(globals).not.toMatch(/\.session-collision\s*\{[^}]*display:\s*grid/);
+    expect(globals).not.toContain('1fr 1px 1fr');
+  });
+
+  it('没有组件把「碰撞台」和「单行元数据条」两个类摞在同一个元素上', () => {
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!/\.tsx$/.test(entry.name)) continue;
+        for (const m of readFileSync(full, 'utf8').matchAll(/className="([^"]*)"/g)) {
+          const cls = m[1];
+          if (cls.includes('session-collision') && cls.includes('sil-coordinate')) {
+            offenders.push(`${full.replace(root, '')}  →  ${cls}`);
+          }
+        }
+      }
+    };
+    walk(`${root}src`);
+    expect(offenders, `布局类请用 sil-cases：\n${offenders.join('\n')}`).toEqual([]);
+  });
+});
+
 describe('§3 Type Scale', () => {
   it('Display 用 clamp 且首屏标题用到它', () => {
     expect(SILVER_CSS).toContain('font-size: clamp(28px, 7.2vw, 56px)');
@@ -265,25 +324,71 @@ describe('§3 Type Scale', () => {
     expect(read('src/app/page.tsx')).toContain('sil-title--display');
   });
 
-  it('仪器铭牌不小于 11px（mono 疏排标签的可读下限）', () => {
+  it('小字阶梯由 clamp 定义，移动端下限 ≥12px（手机与电脑各有对应尺寸）', () => {
     /*
-      这一条是**实测驱动的**：原来 `.sil-label` 是 10px、`--sm` 是 9px，
-      双端测量（.private/audit/measure.mjs）都报"过小文字"。
-      10px 的等宽字在小屏上会被系统和浏览器缩放打碎，
-      读不清的仪器铭牌就只剩噪音了。
+      ## 这一条守的是「双端各有尺寸」
+
+      大字号一直是流体的（`--display` / `--act` 用 clamp），但 ≤15px 这一档
+      曾经是固定 px —— 九档视口实测（360→2560）的结果是
+      **最小字号恒为 10px**：手机上读不清，2560 桌面上又小得像灰尘。
+
+      现在这一档也是 clamp：移动端有下限、宽屏缓增。
+      改动前请先跑 `.private/audit/measure-viewports.mjs` 看实测。
     */
-    const label = /\.sil-label \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
-    expect(label).toContain('font-size: 11px');
-    const small = /\.sil-label--sm \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
-    expect(small).toContain('font-size: 10px');
+    const tokens = ['--sil-text-micro', '--sil-text-label', '--sil-text-meta', '--sil-text-body'];
+    for (const token of tokens) {
+      const decl = new RegExp(`${token}:\\s*clamp\\([^)]*\\)`).exec(SIL)?.[0] ?? '';
+      expect(decl, `${token} 必须用 clamp() 定义`).not.toBe('');
+      const floor = Number(/clamp\(\s*([\d.]+)px/.exec(decl)?.[1] ?? '0');
+      expect(floor, `${token} 的移动端下限必须 ≥12px`).toBeGreaterThanOrEqual(12);
+    }
   });
 
-  it('§3 中文正文硬约束：≥15px、行高 ≥1.7', () => {
+  it('铭牌与正文都吃小字阶梯，不再写死 px', () => {
+    /*
+      这一条是**实测驱动的**：原来 `.sil-label` 是 10px、`--sm` 是 9px，
+      双端测量都报「过小文字」；后来把 CSS 提到 11/10px，
+      但组件里仍有 200+ 处 `text-[9/10/11px]` 绕过它们。
+    */
+    const label = /\.sil-label \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(label).toContain('font-size: var(--sil-text-label)');
+    const small = /\.sil-label--sm \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
+    expect(small).toContain('font-size: var(--sil-text-micro)');
+  });
+
+  it('§3 中文正文硬约束：吃阶梯、行高 ≥1.7、行长受限', () => {
     const prose = /\.sil-prose \{[\s\S]*?\n\}/.exec(SILVER_CSS)?.[0] ?? '';
-    expect(prose).toContain('font-size: 15px');
+    expect(prose).toContain('font-size: var(--sil-text-body)');
     expect(prose).toContain('line-height: 1.85');
     // 行长必须被限制（不然宽屏上会拉成一行读不完的长句）
     expect(prose).toContain('max-width: var(--sil-measure)');
+  });
+
+  it('组件里不许再出现 <12px 的硬编码字号（本次漂移的直接原因）', () => {
+    /*
+      旧测试只扫 `silver.css`，所以组件里的 `text-[10px]` 一路漂移了 200+ 处
+      而始终全绿。「CSS 合规范」不等于「页面合规范」—— 这条补上组件侧。
+    */
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!/\.(tsx|ts)$/.test(entry.name)) continue;
+        const source = stripComments(readFileSync(full, 'utf8'));
+        for (const m of source.matchAll(/text-\[(\d+(?:\.\d+)?)px\]/g)) {
+          if (Number(m[1]) < 12) offenders.push(`${full.replace(root, '')}  ${m[0]}`);
+        }
+      }
+    };
+    walk(`${root}src`);
+    expect(
+      offenders,
+      `硬编码小字号请改用 text-micro / text-label / text-meta / text-body：\n${offenders.join('\n')}`,
+    ).toEqual([]);
   });
 
   it('§3 数字与坐标一律等宽 + 表格数字', () => {

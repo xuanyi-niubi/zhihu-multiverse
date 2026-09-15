@@ -45,7 +45,7 @@ export function SentenceReforge({ original, rewritten, className = '' }: Sentenc
       aria-label="问题重写"
     >
       {/* 原问题：小号，并渐渐淡下去（它是背景，不是结论） */}
-      <p className="sil-reforged__old max-w-[42ch] text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
+      <p className="sil-reforged__old max-w-[42ch] text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
         {original}
       </p>
 
@@ -61,7 +61,7 @@ export function SentenceReforge({ original, rewritten, className = '' }: Sentenc
          * 没有收敛出未知：如实说，并保留原问题。
          * 这里刻意不给一个「更好听的问题」——那会是编造。
          */
-        <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-[color:var(--sil-ink-200)]">
+        <p className="mt-4 max-w-[34ch] text-body leading-relaxed text-[color:var(--sil-ink-200)]">
           这一局没有收敛出一个新的问题 —— 但你已经看见了别人怎么走过它。
         </p>
       )}

@@ -91,6 +91,26 @@ const config: Config = {
           'monospace',
         ],
       },
+      /**
+       * §3 小字阶梯：手机与电脑各有对应尺寸。
+       *
+       * 值来自 `src/app/silver.css` 的 `--sil-text-*`，那里用 `clamp()` 做成流体：
+       * 移动端有可读下限（≥12px），宽屏随视口缓增。
+       *
+       * ## 为什么要有这一组
+       *
+       * 大字号早就是流体的（`--display` / `--act` 用 clamp），但 ≤15px 这一档
+       * 一度全是组件里的 `text-[10px]` / `text-[11px]` 硬编码 —— 双端实测的
+       * 后果是「手机 10px，2560 桌面也 10px」。组件请用
+       * `text-micro / text-label / text-meta / text-body`，
+       * `tests/designSystem.test.ts` 会拦住新增的硬编码小字号。
+       */
+      fontSize: {
+        micro: 'var(--sil-text-micro)',
+        label: 'var(--sil-text-label)',
+        meta: 'var(--sil-text-meta)',
+        body: 'var(--sil-text-body)',
+      },
       boxShadow: {
         glow: '0 0 0 1px rgba(0,132,255,0.25), 0 24px 60px -28px rgba(0,132,255,0.65)',
         relic: '0 18px 40px -16px rgba(245,184,65,0.5)',

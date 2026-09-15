@@ -139,20 +139,20 @@ export function SessionSourceDialog({ data, onClose }: SessionSourceDialogProps)
             type="button"
             onClick={onClose}
             aria-label="关闭"
-            className="shrink-0 border border-[color:rgb(var(--sil-rgb-ink-100)/0.16)] px-2 py-0.5 text-[11px] text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:border-[color:rgb(var(--sil-rgb-ink-100)/0.32)] hover:text-[color:var(--sil-ink-100)]"
+            className="shrink-0 border border-[color:rgb(var(--sil-rgb-ink-100)/0.16)] px-2 py-0.5 text-label text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:border-[color:rgb(var(--sil-rgb-ink-100)/0.32)] hover:text-[color:var(--sil-ink-100)]"
           >
             ✕
           </button>
         </header>
 
         {data.title ? (
-          <h4 className="mt-3 text-[15px] font-semibold leading-relaxed text-[color:var(--sil-ink-100)]">
+          <h4 className="mt-3 text-body font-semibold leading-relaxed text-[color:var(--sil-ink-100)]">
             {data.title}
           </h4>
         ) : null}
 
         {data.qualification ? (
-          <div className="mt-3 border-l border-[color:rgb(var(--sil-rgb-counter-soft)/0.45)] pl-3 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+          <div className="mt-3 border-l border-[color:rgb(var(--sil-rgb-counter-soft)/0.45)] pl-3 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
             <p>相似层级：{similarityTierLabel(data.qualification.similarityTier)}</p>
             {data.qualification.matchedOriginTerms.length > 0 ? (
               <p>起点命中：{data.qualification.matchedOriginTerms.join('、')}</p>
@@ -175,22 +175,22 @@ export function SessionSourceDialog({ data, onClose }: SessionSourceDialogProps)
         ) : null}
 
         {/* 纪律写在界面上：「逐字」不是我们的润色，是校验过的事实 */}
-        <p className="mt-3 border border-[color:rgb(var(--sil-rgb-alternate-soft)/0.28)] bg-[color:rgb(var(--sil-rgb-alternate-soft)/0.06)] px-3 py-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-200)]">
+        <p className="mt-3 border border-[color:rgb(var(--sil-rgb-alternate-soft)/0.28)] bg-[color:rgb(var(--sil-rgb-alternate-soft)/0.06)] px-3 py-2 text-label leading-relaxed text-[color:var(--sil-ink-200)]">
           这段话<strong className="font-semibold text-[color:var(--sil-ink-100)]">逐字</strong>
           来自知乎原文 —— AI 只负责挑选，不负责改写。
-          <span className="mt-1 block font-mono text-[10px] text-[color:var(--sil-alternate-soft)]">
+          <span className="mt-1 block font-mono text-micro text-[color:var(--sil-alternate-soft)]">
             校验：exactQuote ∈ source.quote ✓
           </span>
         </p>
 
         {/* 完整逐字片段：编译页上只露两行，这里给它应有的位置 */}
         <figure className="mt-4 border-l border-[color:rgb(var(--sil-rgb-zhihu)/0.5)] pl-3">
-          <blockquote className="text-[13px] leading-relaxed text-[color:var(--sil-ink-200)]">
+          <blockquote className="text-meta leading-relaxed text-[color:var(--sil-ink-200)]">
             <span className="mr-0.5 text-[color:var(--sil-ink-300)]">“</span>
             {data.quote}
             <span className="ml-0.5 text-[color:var(--sil-ink-300)]">”</span>
           </blockquote>
-          <figcaption className="mt-2 flex flex-wrap items-baseline gap-x-2 text-[10px] text-[color:var(--sil-ink-300)]">
+          <figcaption className="mt-2 flex flex-wrap items-baseline gap-x-2 text-micro text-[color:var(--sil-ink-300)]">
             <span className={`sil-mark sil-mark--${TRACK_MODIFIER[data.track]}`}>
               {TRACK_LABEL[data.track]}
             </span>
@@ -215,12 +215,12 @@ export function SessionSourceDialog({ data, onClose }: SessionSourceDialogProps)
             去知乎看原回答 ↗
           </a>
         ) : (
-          <p className="mt-4 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+          <p className="mt-4 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
             这一段没有带回可点开的原链接 —— 我们不会伪造一个。
           </p>
         )}
 
-        <p className="mt-4 border-t border-[color:rgb(var(--sil-rgb-ink-100)/0.08)] pt-2.5 text-[10px] leading-relaxed text-[color:var(--sil-ink-300)]">
+        <p className="mt-4 border-t border-[color:rgb(var(--sil-rgb-ink-100)/0.08)] pt-2.5 text-micro leading-relaxed text-[color:var(--sil-ink-300)]">
           它说明有人这样做过，不说明这样做会得到什么结果 —— 那需要你自己去验证。
         </p>
       </div>

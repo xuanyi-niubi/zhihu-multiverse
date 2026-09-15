@@ -63,7 +63,7 @@ export default function AboutPage() {
         <p className="sil-label">The Observatory of Borrowed Lives</p>
         <Link
           href="/"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-meta tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
         >
           回到首页
         </Link>
@@ -74,7 +74,7 @@ export default function AboutPage() {
         <p className="sil-prose sil-prose--lead mt-4">
           把别人真实走过的人生，变成你原本没看见的行动。
         </p>
-        <p className="sil-prose mt-3 text-[14px] text-[color:var(--sil-ink-300)]">
+        <p className="sil-prose mt-3 text-body text-[color:var(--sil-ink-300)]">
           从知乎找到真正走过相似、不同、甚至相反道路的人，把他们真实做过的事编译成一局属于你的互动人生实验。
         </p>
       </section>
@@ -86,7 +86,7 @@ export default function AboutPage() {
           {CORE_LOOP.map((line) => (
             <li
               key={line}
-              className="flex items-baseline gap-2.5 text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]"
+              className="flex items-baseline gap-2.5 text-body leading-relaxed text-[color:var(--sil-ink-200)]"
             >
               <span aria-hidden="true" className="text-[color:var(--sil-alternate)]">
                 ·
@@ -117,10 +117,10 @@ export default function AboutPage() {
               key={item.title}
               className="border-l border-[color:var(--sil-rule-strong)] pl-4"
             >
-              <p className="text-[15px] font-semibold leading-relaxed text-[color:var(--sil-ink-100)]">
+              <p className="text-body font-semibold leading-relaxed text-[color:var(--sil-ink-100)]">
                 {item.title}
               </p>
-              <p className="sil-prose mt-1.5 text-[14px]">{item.body}</p>
+              <p className="sil-prose mt-1.5 text-body">{item.body}</p>
             </li>
           ))}
         </ul>
@@ -149,28 +149,28 @@ export default function AboutPage() {
           手机端一行一个比「用竖线挤成一行」更好读，也更好点。
         */}
         <div className="mt-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-6">
-          <span className="text-[13px] text-[color:var(--sil-ink-400)]">
+          <span className="text-meta text-[color:var(--sil-ink-400)]">
             在线体验
           </span>
           <a
             href="https://zhihu.xuanyi888.cloud:8443"
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex min-h-11 items-center text-[13px] text-[color:var(--sil-zhihu-soft)] underline decoration-dotted underline-offset-4 transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+            className="inline-flex min-h-11 items-center text-meta text-[color:var(--sil-zhihu-soft)] underline decoration-dotted underline-offset-4 transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
           >
             zhihu.xuanyi888.cloud:8443
           </a>
-          <span className="text-[13px] text-[color:var(--sil-ink-400)]">仓库</span>
+          <span className="text-meta text-[color:var(--sil-ink-400)]">仓库</span>
           <a
             href="https://github.com/xuanyi-niubi/zhihu-multiverse"
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex min-h-11 items-center text-[13px] text-[color:var(--sil-zhihu-soft)] underline decoration-dotted underline-offset-4 transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+            className="inline-flex min-h-11 items-center text-meta text-[color:var(--sil-zhihu-soft)] underline decoration-dotted underline-offset-4 transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
           >
             xuanyi-niubi/zhihu-multiverse
           </a>
         </div>
-        <p className="mt-3 text-[13px] leading-relaxed text-[color:var(--sil-ink-400)]">
+        <p className="mt-3 text-meta leading-relaxed text-[color:var(--sil-ink-400)]">
           真实来源 · 真实经历 · 可追溯 · 不替你判断。
         </p>
       </footer>

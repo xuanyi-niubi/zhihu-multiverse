@@ -28,7 +28,7 @@ export default function NotFound() {
         <p className="sil-label">Worldline Not Observed</p>
         <Link
           href="/"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[13px] tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-meta tracking-wide text-[color:var(--sil-ink-300)] transition-colors duration-200 hover:text-[color:var(--sil-ink-100)]"
         >
           回到观测台
         </Link>
@@ -51,7 +51,7 @@ export default function NotFound() {
           className="h-[64px] w-[64px] shrink-0"
           alt="刘看山的虚影"
         />
-        <p className="sil-prose text-[13px] leading-relaxed text-[color:var(--sil-ink-300)]">
+        <p className="sil-prose text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
           ……这里没有人走过。
         </p>
       </section>

@@ -136,14 +136,14 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
             <button
               type="button"
               onClick={() => setPaused((current) => !current)}
-              className="min-h-11 px-1 text-[12px] text-[color:var(--sil-ink-300)] transition-colors hover:text-[color:var(--sil-ink-100)]"
+              className="min-h-11 px-1 text-meta text-[color:var(--sil-ink-300)] transition-colors hover:text-[color:var(--sil-ink-100)]"
               aria-pressed={paused}
             >
               {paused ? '继续显影' : '暂停'}
             </button>
           </div>
 
-          <p className="mt-5 text-[15px] font-semibold leading-relaxed" style={{ color: 'var(--sil-ink-100)' }}>
+          <p className="mt-5 text-body font-semibold leading-relaxed" style={{ color: 'var(--sil-ink-100)' }}>
             {displayLead}
           </p>
 
@@ -159,7 +159,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
                 </h3>
               ) : null}
               {qualification ? (
-                <div className="mb-3 space-y-1 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                <div className="mb-3 space-y-1 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
                   <p>相似层级：{similarityTierLabel(qualification.similarityTier)}</p>
                   {qualification.matchedOriginTerms.length > 0 ? (
                     <p>起点命中：{qualification.matchedOriginTerms.join('、')}</p>
@@ -181,7 +181,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
                 </div>
               ) : null}
               <blockquote
-                className="max-h-[8.8em] overflow-hidden text-[15px] leading-[1.82] text-[color:var(--sil-ink-200)]"
+                className="max-h-[8.8em] overflow-hidden text-body leading-[1.82] text-[color:var(--sil-ink-200)]"
               >
                 “{representative.quote}”
               </blockquote>
@@ -189,7 +189,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
                 <span className="sil-mark" style={{ color: chapter.tone }}>
                   {displayLabel}
                 </span>
-                <span className="text-[12px] text-[color:var(--sil-ink-300)]">
+                <span className="text-meta text-[color:var(--sil-ink-300)]">
                   {representative.sourceLabel}{sourceYear ? ` · ${sourceYear}` : ''}
                 </span>
                 <button
@@ -198,7 +198,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
                     setPaused(true);
                     onInspect(representative.id);
                   }}
-                  className="min-h-11 text-[12px] underline decoration-dotted underline-offset-4 transition-colors hover:text-[color:var(--sil-ink-100)]"
+                  className="min-h-11 text-meta underline decoration-dotted underline-offset-4 transition-colors hover:text-[color:var(--sil-ink-100)]"
                   style={{ color: chapter.tone }}
                 >
                   看完整原文
@@ -207,13 +207,13 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
             </article>
           ) : (
             <div className="mt-5 border-l border-[color:var(--sil-undev-line)] pl-4">
-              <p className="text-[14px] leading-relaxed text-[color:var(--sil-ink-300)]">
+              <p className="text-body leading-relaxed text-[color:var(--sil-ink-300)]">
                 这一类暂时没找到可靠经历。我们不会为了让故事完整，编一个人出来。
               </p>
             </div>
           )}
 
-          <p className="mt-5 text-[13px] leading-relaxed" style={{ color: chapter.tone }}>
+          <p className="mt-5 text-meta leading-relaxed" style={{ color: chapter.tone }}>
             {chapter.note}
           </p>
 
@@ -235,12 +235,12 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
                 <button
                   type="button"
                   onClick={previous}
-                  className="min-h-11 px-1 text-[12px] text-[color:var(--sil-ink-300)] transition-colors hover:text-[color:var(--sil-ink-100)]"
+                  className="min-h-11 px-1 text-meta text-[color:var(--sil-ink-300)] transition-colors hover:text-[color:var(--sil-ink-100)]"
                 >
                   上一条
                 </button>
               ) : null}
-              <button type="button" onClick={next} className="sil-btn min-h-11 px-4 text-[13px]">
+              <button type="button" onClick={next} className="sil-btn min-h-11 px-4 text-meta">
                 {chapterIndex === CHAPTERS.length - 1 ? '看见了' : '下一段'}
               </button>
             </div>
@@ -250,7 +250,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
         <div className="sil-panel sil-brackets px-5 py-6 sm:px-8 sm:py-8">
           <p className="sil-label">WORLD READY</p>
           <h2 className="sil-title mt-3 text-[25px] leading-tight sm:text-[30px]">这些经历不是你的答案。</h2>
-          <p className="mt-3 max-w-[38ch] text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]">
+          <p className="mt-3 max-w-[38ch] text-body leading-relaxed text-[color:var(--sil-ink-200)]">
             它们会成为接下来那个世界的地形。你可以先核对原文，也可以把它们带进自己的推演。
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -283,7 +283,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
                   />
                 ))}
               </div>
-              <p className="mt-4 text-[12px] leading-relaxed text-[color:var(--sil-ink-300)]">
+              <p className="mt-4 text-meta leading-relaxed text-[color:var(--sil-ink-300)]">
                 每一段都能打开查看完整逐字原文，并回到知乎来源。
               </p>
             </div>

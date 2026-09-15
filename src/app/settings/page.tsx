@@ -140,7 +140,7 @@ function ConfirmButton({
         setArmed(true);
       }}
       className={[
-        'rounded-[3px] border px-3 py-2 text-[11px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45',
+        'rounded-[3px] border px-3 py-2 text-label font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45',
         armed
           ? 'border-[color:color-mix(in_srgb,var(--sil-counter)_60%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-counter)_15%,transparent)] text-[color:var(--sil-counter-soft)]'
           : 'border-[color:var(--sil-rule)] text-[color:var(--sil-ink-300)] hover:border-[color:color-mix(in_srgb,var(--sil-counter)_40%,transparent)] hover:text-[color:var(--sil-counter-soft)]',
@@ -293,14 +293,14 @@ export default function SettingsPage() {
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold text-[color:var(--sil-ink-100)]">设置</h1>
-          <p className="mt-1 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+          <p className="mt-1 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
             普通使用不需要配置任何 Key：AI 与知乎能力默认由服务器提供。
             想用自己的模型额度或凭据时，才需要打开下面的高级设置。
           </p>
         </div>
         <Link
           href="/"
-          className="rounded-[3px] border border-[color:var(--sil-rule)] px-3 py-2 text-[11px] text-[color:var(--sil-ink-200)] transition-colors duration-150 hover:border-[color:var(--sil-rule-strong)] hover:text-[color:var(--sil-ink-100)]"
+          className="rounded-[3px] border border-[color:var(--sil-rule)] px-3 py-2 text-label text-[color:var(--sil-ink-200)] transition-colors duration-150 hover:border-[color:var(--sil-rule-strong)] hover:text-[color:var(--sil-ink-100)]"
         >
           返回首页
         </Link>
@@ -310,7 +310,7 @@ export default function SettingsPage() {
         <p
           role="status"
           className={[
-            'mt-4 rounded-[3px] border px-3 py-2 text-[11px]',
+            'mt-4 rounded-[3px] border px-3 py-2 text-label',
             message.tone === 'ok'
               ? 'border-[color:color-mix(in_srgb,var(--sil-alternate)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-alternate)_8%,transparent)] text-[color:var(--sil-alternate-soft)]'
               : 'border-[color:color-mix(in_srgb,var(--sil-counter)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-counter)_8%,transparent)] text-[color:var(--sil-counter-soft)]',
@@ -321,7 +321,7 @@ export default function SettingsPage() {
       ) : null}
 
       {loading ? (
-        <p className="mt-6 font-mono text-[11px] text-[color:var(--sil-ink-400)]">读取中…</p>
+        <p className="mt-6 font-mono text-label text-[color:var(--sil-ink-400)]">读取中…</p>
       ) : (
         <div className="mt-8 space-y-4">
           {/* ---------- 当前使用（§6：只说结论，不说 Key / baseUrl / Secret 细节） ---------- */}
@@ -331,8 +331,8 @@ export default function SettingsPage() {
                 <StatusDot ok={(health?.secretOrigin?.model ?? 'none') !== 'none'} />
                 <h2 className="text-sm font-semibold text-[color:var(--sil-ink-100)]">{usage.title}</h2>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-200)]">{usage.hint}</p>
-              <p className="mt-2 font-mono text-[10px] text-[color:var(--sil-ink-300)]">
+              <p className="mt-2 text-label leading-relaxed text-[color:var(--sil-ink-200)]">{usage.hint}</p>
+              <p className="mt-2 font-mono text-micro text-[color:var(--sil-ink-300)]">
                 真实来源：{zhihuOnline ? '在线（知乎站内检索）' : '已落盘快照'}
               </p>
             </section>
@@ -341,7 +341,7 @@ export default function SettingsPage() {
           {/* ---------- 体验（§5：普通部分只放真正生效的开关） ---------- */}
           <section className="rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:rgb(6_7_11_/_0.62)] p-4">
             <h2 className="text-sm font-semibold text-[color:var(--sil-ink-100)]">体验</h2>
-            <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+            <p className="mt-2 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
               只放真正生效的偏好。目前这一项：动画量。
             </p>
 
@@ -360,8 +360,8 @@ export default function SettingsPage() {
                     className="mt-0.5 h-3.5 w-3.5 border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-900)]"
                   />
                   <span className="min-w-0">
-                    <span className="block text-[12px] font-medium text-[color:var(--sil-ink-100)]">{option.label}</span>
-                    <span className="mt-0.5 block text-[11px] leading-relaxed text-[color:var(--sil-ink-400)]">{option.hint}</span>
+                    <span className="block text-meta font-medium text-[color:var(--sil-ink-100)]">{option.label}</span>
+                    <span className="mt-0.5 block text-label leading-relaxed text-[color:var(--sil-ink-400)]">{option.hint}</span>
                   </span>
                 </label>
               ))}
@@ -376,7 +376,7 @@ export default function SettingsPage() {
           <details className="group">
             <summary className="flex cursor-pointer select-none items-center justify-between gap-2 rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:rgb(6_7_11_/_0.62)] px-4 py-3 text-sm font-semibold text-[color:var(--sil-ink-100)] transition-colors duration-150 hover:border-[color:var(--sil-rule-strong)]">
               <span>高级 · 自带模型</span>
-              <span className="font-mono text-[10px] font-normal text-[color:var(--sil-ink-400)]">
+              <span className="font-mono text-micro font-normal text-[color:var(--sil-ink-400)]">
                 {configuredCount > 0 ? `已配置 ${configuredCount} 项` : '未配置 · 使用服务器默认'}
               </span>
             </summary>
@@ -394,13 +394,13 @@ export default function SettingsPage() {
               与能否配置 key 无关。
             */}
             <div className="mt-3 space-y-4">
-              <p className="text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+              <p className="text-label leading-relaxed text-[color:var(--sil-ink-300)]">
                 你也可以使用自己的兼容模型配置。<strong className="text-[color:var(--sil-ink-200)]">这不会影响默认体验</strong>：
                 填了就优先用你自己的（花你自己的额度），不填时继续使用服务器默认能力。
               </p>
 
               {!authenticated ? (
-                <p className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--sil-zhihu)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-zhihu)_8%,transparent)] px-4 py-2.5 text-[11px] leading-relaxed text-zhihu-100">
+                <p className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--sil-zhihu)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--sil-zhihu)_8%,transparent)] px-4 py-2.5 text-label leading-relaxed text-zhihu-100">
                   你在这里填的凭据只保存在这台浏览器对应的匿名身份下，换设备需要重填。
                   <Link href="/oauth" className="ml-1 font-semibold underline decoration-zhihu-300/60 hover:text-[color:var(--sil-ink-100)]">
                     登录知乎
@@ -413,19 +413,19 @@ export default function SettingsPage() {
               <section className="rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:rgb(6_7_11_/_0.62)] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-sm font-semibold text-[color:var(--sil-ink-100)]">模型 key（默认 DeepSeek）</h2>
-                  <span className="flex items-center gap-1.5 font-mono text-[10px] text-[color:var(--sil-ink-300)]">
+                  <span className="flex items-center gap-1.5 font-mono text-micro text-[color:var(--sil-ink-300)]">
                     <StatusDot ok={Boolean(settings?.model.apiKey.configured)} />
                     {settings ? secretStatusText(settings.model.apiKey, settings.envFallback.model) : ''}
                   </span>
                 </div>
 
-                <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                <p className="mt-2 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
                   用于世界编译与逐幕叙事。默认走 DeepSeek，也可以填任意{' '}
                   <span className="font-mono">OpenAI 兼容</span> 端点（自建网关、其他厂商都行）。
                   不填也能玩：服务器默认能力会接住，额度用完时自动退回离线叙事。
                 </p>
 
-                <ol className="mt-2 space-y-1 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                <ol className="mt-2 space-y-1 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
                   <li>
                     1. 打开{' '}
                     <a
@@ -443,23 +443,23 @@ export default function SettingsPage() {
 
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <label className="block">
-                    <span className="font-mono text-[10px] text-[color:var(--sil-ink-400)]">BASE URL</span>
+                    <span className="font-mono text-micro text-[color:var(--sil-ink-400)]">BASE URL</span>
                     <input
                       type="text"
                       value={baseUrl}
                       onChange={(event) => setBaseUrl(event.target.value)}
                       placeholder={DEFAULT_MODEL_BASE_URL}
-                      className="mt-1 w-full rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-[11px] text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
+                      className="mt-1 w-full rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-label text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
                     />
                   </label>
                   <label className="block">
-                    <span className="font-mono text-[10px] text-[color:var(--sil-ink-400)]">MODEL</span>
+                    <span className="font-mono text-micro text-[color:var(--sil-ink-400)]">MODEL</span>
                     <input
                       type="text"
                       value={modelName}
                       onChange={(event) => setModelName(event.target.value)}
                       placeholder={DEFAULT_MODEL_NAME}
-                      className="mt-1 w-full rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-[11px] text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
+                      className="mt-1 w-full rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-label text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
                     />
                   </label>
                 </div>
@@ -471,7 +471,7 @@ export default function SettingsPage() {
                     onChange={(event) => setModelKey(event.target.value)}
                     placeholder="粘贴 API Key"
                     autoComplete="off"
-                    className="min-w-0 flex-1 rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-[11px] text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
+                    className="min-w-0 flex-1 rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-label text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
                   />
                   <button
                     type="button"
@@ -496,7 +496,7 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <label className="mt-2 flex items-center gap-2 text-[11px] text-[color:var(--sil-ink-300)]">
+                <label className="mt-2 flex items-center gap-2 text-label text-[color:var(--sil-ink-300)]">
                   <input
                     type="checkbox"
                     checked={jsonMode}
@@ -513,9 +513,9 @@ export default function SettingsPage() {
                 而不是和模型 key 并排放在第一屏。
               */}
               <details className="rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:rgb(6_7_11_/_0.42)]">
-                <summary className="flex cursor-pointer select-none items-center justify-between gap-2 px-4 py-3 text-[12px] font-semibold text-[color:var(--sil-ink-200)] transition-colors duration-150 hover:text-[color:var(--sil-ink-100)]">
+                <summary className="flex cursor-pointer select-none items-center justify-between gap-2 px-4 py-3 text-meta font-semibold text-[color:var(--sil-ink-200)] transition-colors duration-150 hover:text-[color:var(--sil-ink-100)]">
                   <span>自托管 / 开发设置 · 知乎开放平台凭据</span>
-                  <span className="font-mono text-[10px] font-normal text-[color:var(--sil-ink-400)]">
+                  <span className="font-mono text-micro font-normal text-[color:var(--sil-ink-400)]">
                     {settings?.zhihuAccessSecret.configured ? '已配置' : '普通使用不需要'}
                   </span>
                 </summary>
@@ -523,20 +523,20 @@ export default function SettingsPage() {
                 <div className="px-4 pb-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-sm font-semibold text-[color:var(--sil-ink-100)]">知乎开放平台 Access Secret</h2>
-                    <span className="flex items-center gap-1.5 font-mono text-[10px] text-[color:var(--sil-ink-300)]">
+                    <span className="flex items-center gap-1.5 font-mono text-micro text-[color:var(--sil-ink-300)]">
                       <StatusDot ok={Boolean(settings?.zhihuAccessSecret.configured)} />
                       {settings ? secretStatusText(settings.zhihuAccessSecret, settings.envFallback.zhihu) : ''}
                     </span>
                   </div>
 
-                  <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                  <p className="mt-2 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
                     只有自托管部署才需要：调用官方 <span className="font-mono">/content/zhihu_search</span> 与{' '}
                     <span className="font-mono">/content/hot_list</span>，把真实站内回答编译进世界，
                     并让每一幕引用的经历都能点回原回答。配额约 搜索 1000 次/天、热榜 100 次/天。
                     服务器已经提供默认能力时，这里留空即可。
                   </p>
 
-                  <ol className="mt-2 space-y-1 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                  <ol className="mt-2 space-y-1 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
                     <li>
                       1. 打开{' '}
                       <a
@@ -560,7 +560,7 @@ export default function SettingsPage() {
                       onChange={(event) => setZhihuSecret(event.target.value)}
                       placeholder="粘贴 Access Secret"
                       autoComplete="off"
-                      className="min-w-0 flex-1 rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-[11px] text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
+                      className="min-w-0 flex-1 rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:var(--sil-void-900)]/70 px-3 py-2 font-mono text-label text-[color:var(--sil-ink-100)] placeholder:text-[color:var(--sil-ink-400)] focus:border-zhihu-500/60 focus:outline-none"
                     />
                     <button
                       type="button"
@@ -583,7 +583,7 @@ export default function SettingsPage() {
               {/* ---------- 安全与清空 ---------- */}
               <section className="rounded-[3px] border border-[color:var(--sil-rule)] bg-[color:rgb(6_7_11_/_0.62)] p-4">
                 <h2 className="text-sm font-semibold text-[color:var(--sil-ink-100)]">这些密钥怎么存的</h2>
-                <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-[color:var(--sil-ink-300)]">
+                <ul className="mt-2 space-y-1 text-label leading-relaxed text-[color:var(--sil-ink-300)]">
                   <li>· 明文只写在服务器磁盘（权限 0600），<strong className="text-[color:var(--sil-ink-200)]">接口永不返回明文</strong> —— 本页只看得到指纹；</li>
                   <li>· 按知乎账号隔离，退出账号后这些 key 仍属于该账号，不会被别人读到；</li>
                   <li>· 不写日志：鉴权失败只会记录错误码，不会打印 key；</li>
@@ -598,7 +598,7 @@ export default function SettingsPage() {
                     onConfirm={() => void remove('全部配置', 'all')}
                   />
                   {settings?.updatedAt ? (
-                    <span className="font-mono text-[10px] text-[color:var(--sil-ink-400)]">
+                    <span className="font-mono text-micro text-[color:var(--sil-ink-400)]">
                       最近更新：{settings.updatedAt.slice(0, 19).replace('T', ' ')} UTC
                     </span>
                   ) : null}

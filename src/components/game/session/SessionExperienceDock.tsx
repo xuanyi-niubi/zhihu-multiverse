@@ -56,7 +56,7 @@ export function SessionExperienceDock({
         onClick={onOpen}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="min-h-11 font-mono text-[11px] text-unlock/90 transition-colors duration-200 hover:text-unlock"
+        className="min-h-11 font-mono text-label text-unlock/90 transition-colors duration-200 hover:text-unlock"
       >
         借来的经验 · {experiences.length}
       </button>
@@ -75,11 +75,11 @@ export function SessionExperienceDock({
             className="h-full w-full overflow-y-auto border-l border-white/10 bg-archive-900/95 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-5 sm:max-w-[420px]"
           >
             <header className="flex items-center justify-between gap-3">
-              <h2 className="text-[14px] font-semibold text-archive-100">借来的经验</h2>
+              <h2 className="text-body font-semibold text-archive-100">借来的经验</h2>
               <button
                 type="button"
                 onClick={onClose}
-                className="min-h-11 font-mono text-[11px] text-archive-600 transition-colors duration-200 hover:text-archive-200"
+                className="min-h-11 font-mono text-label text-archive-600 transition-colors duration-200 hover:text-archive-200"
               >
                 关闭
               </button>
@@ -89,9 +89,9 @@ export function SessionExperienceDock({
             <ul className="mt-4 flex flex-col gap-2">
               {summaries.map((item) => (
                 <li key={item.id} className="flex flex-col gap-0.5">
-                  <span className="text-[12px] font-semibold text-archive-200">{item.title}</span>
+                  <span className="text-meta font-semibold text-archive-200">{item.title}</span>
                   {item.summary ? (
-                    <span className="line-clamp-2 text-[11px] leading-relaxed text-archive-600">
+                    <span className="line-clamp-2 text-label leading-relaxed text-archive-600">
                       {item.summary}
                     </span>
                   ) : null}

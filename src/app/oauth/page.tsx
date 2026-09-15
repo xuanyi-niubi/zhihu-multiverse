@@ -117,7 +117,7 @@ function OAuthPanel() {
         <div>
           <p className="sil-label">AUTH BRIDGE</p>
           <h1 className="sil-title mt-3 text-[26px] sm:text-[32px]">观测者登录</h1>
-          <p className="mt-3 max-w-[46ch] text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]">
+          <p className="mt-3 max-w-[46ch] text-body leading-relaxed text-[color:var(--sil-ink-200)]">
             知乎是本站的一种登录方式。登录后可显示头像昵称、保存推演记忆，并在终局报告上署名。
           </p>
         </div>
@@ -132,7 +132,7 @@ function OAuthPanel() {
           style={{ borderColor: 'color-mix(in srgb, var(--sil-alternate) 42%, transparent)' }}
         >
           <p className="sil-label--sm font-mono text-[color:var(--sil-alternate)]">AUTHORIZED</p>
-          <p className="mt-1.5 text-[14px] text-[color:var(--sil-ink-200)]">
+          <p className="mt-1.5 text-body text-[color:var(--sil-ink-200)]">
             登录成功，已获取知乎身份。
           </p>
         </div>
@@ -144,10 +144,10 @@ function OAuthPanel() {
           style={{ borderColor: 'color-mix(in srgb, var(--sil-counter) 45%, transparent)' }}
         >
           <p className="sil-label--sm font-mono text-[color:var(--sil-counter)]">AUTH FAILED</p>
-          <p className="mt-1.5 text-[14px] text-[color:var(--sil-ink-200)]">
+          <p className="mt-1.5 text-body text-[color:var(--sil-ink-200)]">
             {session?.error?.message ?? '授权未完成。'}
             {reason ? (
-              <span className="ml-2 font-mono text-[11px] text-[color:var(--sil-ink-400)]">
+              <span className="ml-2 font-mono text-label text-[color:var(--sil-ink-400)]">
                 {reason}
               </span>
             ) : null}
@@ -163,22 +163,22 @@ function OAuthPanel() {
             <ObserverAvatar
               name={session.profile?.name ?? '知乎用户'}
               avatarUrl={session.profile?.avatarUrl ?? null}
-              className="h-11 w-11 border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-[15px] text-[color:var(--sil-ink-200)]"
+              className="h-11 w-11 border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-body text-[color:var(--sil-ink-200)]"
             />
             <div className="min-w-0">
-              <p className="truncate text-[14px] font-semibold text-[color:var(--sil-ink-100)]">
+              <p className="truncate text-body font-semibold text-[color:var(--sil-ink-100)]">
                 {session.profile?.name ?? '已授权（账号资料未返回）'}
               </p>
-              <p className="truncate text-[12px] text-[color:var(--sil-ink-300)]">
+              <p className="truncate text-meta text-[color:var(--sil-ink-300)]">
                 {session.profile?.headline ?? '—'}
               </p>
-              <p className="mt-0.5 font-mono text-[10px] text-[color:var(--sil-ink-400)]">
+              <p className="mt-0.5 font-mono text-micro text-[color:var(--sil-ink-400)]">
                 过期时间 {session.expiresAt ?? '未知'}
               </p>
             </div>
           </div>
         ) : (
-          <p className="mt-3 text-[14px] leading-relaxed text-[color:var(--sil-ink-200)]">
+          <p className="mt-3 text-body leading-relaxed text-[color:var(--sil-ink-200)]">
             尚未登录知乎。登录后，你的推演记忆会跟着账号保留。
           </p>
         )}
@@ -220,7 +220,7 @@ function OAuthPanel() {
         </div>
 
         {!canLogin ? (
-          <p className="mt-3 text-[11px] text-[color:var(--sil-ink-400)]">
+          <p className="mt-3 text-label text-[color:var(--sil-ink-400)]">
             登录当前未开放。可以先用游客身份体验推演。
           </p>
         ) : null}
@@ -238,14 +238,14 @@ function OAuthPanel() {
                   key={result.id}
                   className="flex items-baseline justify-between gap-4 border-b border-[color:var(--sil-rule)] py-2 last:border-b-0"
                 >
-                  <span className="shrink-0 text-[12px] text-[color:var(--sil-ink-200)]">
+                  <span className="shrink-0 text-meta text-[color:var(--sil-ink-200)]">
                     {result.name}
                   </span>
                   <span className="flex items-baseline gap-3 truncate">
-                    <span className="truncate font-mono text-[10px] text-[color:var(--sil-ink-400)]">
+                    <span className="truncate font-mono text-micro text-[color:var(--sil-ink-400)]">
                       {result.message ?? result.endpoint}
                     </span>
-                    <span className={`shrink-0 font-mono text-[11px] ${status.cls}`}>
+                    <span className={`shrink-0 font-mono text-label ${status.cls}`}>
                       {status.text}
                     </span>
                   </span>
@@ -254,13 +254,13 @@ function OAuthPanel() {
             })}
           </div>
 
-          <p className="mt-3 text-[11px] leading-relaxed text-[color:var(--sil-ink-400)]">
+          <p className="mt-3 text-label leading-relaxed text-[color:var(--sil-ink-400)]">
             收藏内容依赖第一个收藏夹的 UrlToken；账号没有收藏夹算空数据，不算失败。
           </p>
         </section>
       ) : null}
 
-      <footer className="pb-2 text-[11px] leading-relaxed text-[color:var(--sil-ink-400)]">
+      <footer className="pb-2 text-label leading-relaxed text-[color:var(--sil-ink-400)]">
         知乎登录为黑客松演示能力：尚未接入 PKCE、scope 与 refresh token，
         请勿直接用于生产环境。
       </footer>

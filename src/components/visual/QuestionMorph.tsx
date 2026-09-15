@@ -37,9 +37,9 @@ export function QuestionMorph({
 
   return (
     <section className={['flex flex-col', className].filter(Boolean).join(' ')} aria-label="问题重写">
-      <p className="font-mono text-[10px] tracking-[0.28em] text-archive-600">你进来时问：</p>
+      <p className="font-mono text-micro tracking-[0.28em] text-archive-600">你进来时问：</p>
       <p
-        className="mt-1.5 text-[15px] leading-relaxed text-archive-400"
+        className="mt-1.5 text-body leading-relaxed text-archive-400"
         style={
           changed && active
             ? { animation: 'sil-morph-fade 900ms var(--sil-ease) both', animationDelay: '320ms' }
@@ -57,7 +57,7 @@ export function QuestionMorph({
               : undefined
           }
         >
-          <p className="mt-5 font-mono text-[10px] tracking-[0.28em] text-zhihu-300">
+          <p className="mt-5 font-mono text-micro tracking-[0.28em] text-zhihu-300">
             现在真正值得验证的是：
           </p>
           <p className="mt-2 text-[18px] font-bold leading-[1.7] text-archive-100 sm:text-[21px]">
@@ -65,7 +65,7 @@ export function QuestionMorph({
           </p>
         </div>
       ) : (
-        <p className="mt-4 text-[12px] leading-relaxed text-archive-600">
+        <p className="mt-4 text-meta leading-relaxed text-archive-600">
           这一局没有收敛出一个更精确的问题 —— 我们不会替你编一个。
         </p>
       )}
