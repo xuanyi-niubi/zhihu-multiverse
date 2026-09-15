@@ -675,9 +675,11 @@ export function normalizeAvatarUrl(value: unknown): string | null {
     return null;
   }
 
+  // 知乎返回的模板不只一种：{size}、{size_xl}、%7Bsize%7D 都要先展开，
+  // 否则浏览器会请求一个带花括号的无效 CDN 地址，代理只能得到 502。
   const expanded = value
     .trim()
-    .replace(/\{size\}|%7Bsize%7D/gi, 'xl');
+    .replace(/\\?\{size(?:_[^}]+)?\}|%7Bsize(?:_[^%]+)?%7D/gi, 'xl');
   const absolute = expanded.startsWith('//') ? `https:${expanded}` : expanded;
 
   try {
@@ -692,6 +694,38 @@ export function normalizeAvatarUrl(value: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+/** 在不确定 schema 的知乎资料响应中递归寻找头像字段。 */
+function nestedAvatarUrl(value: unknown, depth = 0): string | null {
+  if (depth > 5 || !isRecord(value)) {
+    return null;
+  }
+
+  for (const [key, candidate] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z]/g, '');
+    const looksLikeAvatar =
+      normalizedKey.includes('avatar') ||
+      normalizedKey === 'picture' ||
+      normalizedKey === 'pictureurl' ||
+      normalizedKey === 'imageurl';
+
+    if (looksLikeAvatar) {
+      if (typeof candidate === 'string') {
+        const normalized = normalizeAvatarUrl(candidate);
+        if (normalized) return normalized;
+      }
+      const nested = nestedAvatarUrl(candidate, depth + 1);
+      if (nested) return nested;
+    }
+
+    if (isRecord(candidate)) {
+      const nested = nestedAvatarUrl(candidate, depth + 1);
+      if (nested) return nested;
+    }
+  }
+
+  return null;
 }
 export async function fetchProfile(
   deps: OAuthDeps,
@@ -777,7 +811,7 @@ export async function fetchProfile(
     }
   }
 
-  const avatarUrl = normalizeAvatarUrl(rawAvatar);
+  const avatarUrl = normalizeAvatarUrl(rawAvatar) ?? nestedAvatarUrl(payload);
   const headline = pick('headline', 'Headline', 'description', 'Description');
   const profileUrl = pick('url', 'Url', 'profile_url', 'profileUrl');
   const urlToken = pick('url_token', 'UrlToken');

@@ -335,11 +335,26 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
         </Block>
 
         {!view.realityPass ? (
-          <section className="border-t pt-4" style={{ borderColor: 'var(--sil-rule)' }}>
-            <p className="sil-label">还没有现实支线</p>
-            <p className="mt-2 text-[12px] leading-relaxed" style={{ color: 'var(--sil-ink-300)' }}>
-              这一局还没有设计出现实实验 —— 我们不凭空给一个「未来 7 天」的计划。
-            </p>
+          <section
+            className="sil-paper sil-develop relative px-5 py-5 sm:px-6"
+            aria-label="现实支线尚未显影"
+          >
+            <div className="relative z-[1]">
+              <p className="sil-label">REALITY PASS · 现实支线</p>
+              <h3
+                className="mt-3 text-[22px] font-black leading-tight"
+                style={{ color: 'var(--sil-paper-ink)' }}
+              >
+                现实支线尚未显影
+              </h3>
+              <p
+                className="mt-3 text-[13px] leading-relaxed"
+                style={{ color: 'var(--sil-paper-muted)' }}
+              >
+                这局没有足够的已核验条件来设计一个诚实的实验。我们保留空白，
+                不替你写一个看起来完整、却无法验证的计划。
+              </p>
+            </div>
           </section>
         ) : null}
       </div>

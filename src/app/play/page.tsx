@@ -65,6 +65,7 @@ import {
 import { fetchDmTurn, fetchProfile } from '@/core/dmClient';
 import { unlockForTurn, worldContextForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
 import { realityQuestViewOf } from '@/features/game-world/questView';
+import { experimentFromUnknown } from '@/features/decision-session/experiment';
 import { cardTitlesFrom } from '@/features/game-world/cardTitles';
 import type { WorldBlueprint } from '@/features/game-world/domain';
 import type { ExperienceFact } from '@/features/experience/domain';
@@ -1072,7 +1073,7 @@ function PlayScreen() {
           setSessionLoadFailed(true);
           return;
         }
-        const payload = (await response.json()) as { data?: { id?: unknown; question?: unknown; profile?: unknown; profileAnalysis?: unknown; worldBlueprint?: unknown; experiment?: unknown } };
+        const payload = (await response.json()) as { data?: { id?: unknown; question?: unknown; userContext?: unknown; profile?: unknown; profileAnalysis?: unknown; worldBlueprint?: unknown; experiment?: unknown } };
         const data = payload?.data;
         const blueprint = data?.worldBlueprint as WorldBlueprint | undefined;
         if (!blueprint || typeof data?.id !== 'string' || typeof data?.question !== 'string') {
@@ -1097,6 +1098,10 @@ function PlayScreen() {
           question: data.question,
           profile: (data.profile as PlayerProfile | null) ?? null,
           profileAnalysis: typeof data.profileAnalysis === 'string' ? data.profileAnalysis : null,
+          userContext:
+            data.userContext && typeof data.userContext === 'object'
+              ? (data.userContext as PlaySessionView['userContext'])
+              : undefined,
           worldBlueprint: blueprint,
           experiment,
         };
@@ -1676,6 +1681,25 @@ function PlayScreen() {
     const displayAct = displayActNumber(blueprintIndex);
     const objective = actObjectiveAt(blueprint, blueprintIndex);
     const actSpec = blueprint.acts[blueprintIndex] ?? blueprint.acts[blueprint.acts.length - 1];
+    /*
+     * 终局 Reality Pass 的最后一道接线：旧会话可能只有蓝图、尚未调用
+     * design-experiment。实验仍然从同一个未知、问题框架、路径差异与用户
+     * 原始约束确定性生成，不调用模型，也不替玩家下结论。
+     */
+    const endgameExperiment =
+      sessionView.experiment ??
+      (blueprint.keyUnknown
+        ? experimentFromUnknown({
+            unknown: blueprint.keyUnknown,
+            frame: blueprint.problemFrame,
+            differences: blueprint.paths.flatMap((path) => path.differencesFromUser),
+            context: sessionView.userContext ?? {
+              goal: sessionView.question,
+              nonNegotiables: [],
+              existingResources: [],
+            },
+          })
+        : null);
 
     return sessionPlayViewOf({
       sessionId: sessionView.id,
@@ -1724,7 +1748,7 @@ function PlayScreen() {
             // 原问题**只**来自 DecisionSession，不允许被模型润色覆盖（§二十）
             originalQuestion: sessionView.question,
             keyUnknown: blueprint.keyUnknown?.label ?? null,
-            experiment: sessionView.experiment ?? null,
+            experiment: endgameExperiment,
             steps: sessionSteps,
             unlockedActions: sessionCards,
             highlights: realityQuest?.seen ?? [],

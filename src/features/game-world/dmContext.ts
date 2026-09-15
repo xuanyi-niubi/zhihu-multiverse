@@ -1,4 +1,4 @@
-import type { RealityExperiment } from '@/features/decision-session/domain';
+import type { RealityExperiment, UserContext } from '@/features/decision-session/domain';
 import type { WorldBlueprint } from '@/features/game-world/domain';
 import type { PlayerProfile } from '@/core/dm/profile';
 
@@ -18,6 +18,8 @@ export interface PlaySessionView {
   readonly question: string;
   readonly profile: PlayerProfile | null;
   readonly profileAnalysis: string | null;
+  /** 澄清阶段的原始处境约束；用于终局在未持久化实验时生成同源 Reality Pass。 */
+  readonly userContext?: UserContext;
   readonly worldBlueprint: WorldBlueprint;
   /**
    * 会话里已经设计好的现实实验（P1-2）。
