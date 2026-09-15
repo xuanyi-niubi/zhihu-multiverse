@@ -43,7 +43,7 @@ const FAKE_SOURCES: Record<string, readonly KnowledgeSource[]> = {
     {
       id: 'live:sim-1',
       author: '拿过省二的人',
-      quote: '我当时大二，基础一般，报名参加了比赛，边做边学，每周大概花十个小时，最后拿了省二。',
+      quote: '我当时大二，基础一般，报名参加了比赛，边做边学，每周大概花十个小时。最后拿了省二，课程成绩没有明显下降，这段经历后来也帮我拿到了实习面试。',
       upvotes: 421,
       url: 'https://www.zhihu.com/question/1/answer/11',
       retrievedAt: '2026-09-01T00:00:00.000Z',
@@ -56,7 +56,7 @@ const FAKE_SOURCES: Record<string, readonly KnowledgeSource[]> = {
     {
       id: 'live:alt-1',
       author: '先做项目的人',
-      quote: '我建议先做一个能交付的项目再决定报不报名，用工程实践打基础，而不是竞赛。',
+      quote: '我当时没有直接报名比赛，而是先做了一个能交付的小项目，用工程实践补基础。项目做完后我更清楚自己的短板，下一学期再参赛时没有那么慌。',
       upvotes: 233,
       url: 'https://www.zhihu.com/question/1/answer/12',
       retrievedAt: '2026-09-01T00:00:00.000Z',
@@ -69,7 +69,7 @@ const FAKE_SOURCES: Record<string, readonly KnowledgeSource[]> = {
     {
       id: 'live:cx-1',
       author: '中途退出的人',
-      quote: '我报名了但没时间，还挂科了，精力有限只能中途退出，现在挺后悔的。',
+      quote: '我当时也报名了比赛，但没有提前核算课程时间，连续熬夜后还是跟不上进度。后来我中途退出，还挂了一门课，现在回头看最欠缺的是停止条件。',
       upvotes: 98,
       url: 'https://www.zhihu.com/question/1/answer/13',
       retrievedAt: '2026-09-01T00:00:00.000Z',
