@@ -66,8 +66,9 @@ describe('scripts/test-stats.json 自身', () => {
 });
 
 describe('文档引用的数字与统计源一致', () => {
-  it('README 引用当前的「N 个测试文件 · M 个用例」', () => {
-    expect(readme).toContain(`${stats.files} 个测试文件 · ${stats.tests} 个用例`);
+  it('README 把自动统计文件作为唯一事实源，不再手写易漂移数字', () => {
+    expect(readme).toContain('以 `scripts/test-stats.json` 为准 · CI 全部通过');
+    expect(readme).not.toMatch(/\\d+ 个测试文件 · \\d+ 个用例/);
   });
 
   it('产品说明计划书引用同一组数字（文件不在时跳过）', () => {
