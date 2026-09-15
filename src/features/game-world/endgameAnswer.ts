@@ -94,6 +94,34 @@ const TIER_RANK: Readonly<Record<string, number>> = {
 const COUNTER_HINT = /(后悔|退出|放弃|失败|踩坑|踩了坑|劝退|崩溃|腰斩|亏|赔|白费|没坚持|撑不下去)/;
 
 /**
+ * 槽位合理性。
+ *
+ * ## 为什么不能只信 `fact.type`
+ *
+ * 线上实测：被抽取层标成 `action` 的片段里，有一句是
+ * 「后来遇到疫情爆发，旅游业收到了重创」—— 它是**处境**，不是谁做了什么。
+ * 若照抄类型，纸面上就会出现「真实的人是怎么做的：疫情重创旅游业」，
+ * 标签当场撒谎。所以每个槽位都再要求一次**语义词**：
+ *
+ * - 行动：必须出现一个真做过的动作词；
+ * - 代价：必须真的在讲投入或损失；
+ * - 反例：必须真的在讲走坏。
+ *
+ * 不满足就**留空**（留空是诚实的，标错是撒谎）。全程零模型、可复现。
+ */
+const ACTION_TELL =
+  /(考了|考证|考过|报名|辞职|辞了|搬|投递|投了|联系|学了|学习|做了|做|开始|决定|去找|试了|练习|练|写了|申请|准备|转了|转行|换了|进了|加入|干了|坚持|选|去|兼职)/;
+
+const COST_TELL =
+  /(代价|成本|花了|用了|投入|熬|压力|耽误|失去|亏|赔|收入|积蓄|焦虑|崩溃|后悔|没收入|借钱|透支|存款|时间)/;
+
+const COUNTER_TELL =
+  /(失败|退出|放弃|后悔|腰斩|亏|赔|没坚持|撑不下去|劝退|重创|消失|倒闭|不建议|踩坑|白费|裁员|回去了|转回)/;
+
+/** 排版噪音：字幕式括号说明、图片注脚 —— 不是经历本身。 */
+const NOT_EVIDENCE = /^(（|\(|《|\[)|左边是我|右边是我|图源|图片|字幕/;
+
+/**
  * 逐字片段 → 纸面上可读的一句。
  *
  * **只做前缀截断**：绝不改写、绝不拼接。这是"可点回原文"的前提。
@@ -129,28 +157,44 @@ function compareEvidence(left: ExperienceFact, right: ExperienceFact): number {
   return left.id.localeCompare(right.id);
 }
 
-function usableFacts(facts: readonly ExperienceFact[], types: readonly ExperienceFact['type'][]): readonly ExperienceFact[] {
+function usableFacts(
+  facts: readonly ExperienceFact[],
+  types: readonly ExperienceFact['type'][],
+  mustMatch: RegExp,
+): readonly ExperienceFact[] {
   return facts
     .filter((fact) => types.includes(fact.type))
     .filter((fact) => fact.exactQuote.replace(/\s+/g, '').length >= 12)
+    .filter((fact) => !NOT_EVIDENCE.test(fact.exactQuote.trim()))
+    .filter((fact) => mustMatch.test(fact.exactQuote))
     .filter((fact) => fact.author.trim().length > 0 && fact.sourceUrl.trim().length > 0)
     .slice()
     .sort(compareEvidence);
 }
 
-/** 反例：优先带"走坏"信号的片段，其次反例查询/失败查询捞到的片段。 */
+/**
+ * 反例：优先带"走坏"信号的片段，其次反例查询/失败查询捞到的片段。
+ *
+ * 但**必须真的在讲走坏**（`COUNTER_TELL`）—— 否则宁可返回 null。
+ * 线上实测过：不加这一道，第三幕会拿一句「（小时候舞蹈班，左边是我）
+ * 不过，家庭中的爱却如同温暖的阳光」当反例，那是彻底的撒谎。
+ */
 function counterEvidenceOf(
   facts: readonly ExperienceFact[],
   counterFactIds: ReadonlySet<string>,
 ): EndgameEvidence | null {
-  const hinted = facts.find((fact) => COUNTER_HINT.test(fact.exactQuote));
-  if (hinted) return evidenceOf(hinted, 'counter');
-  const fromAct = facts.find((fact) => counterFactIds.has(fact.id));
-  if (fromAct) return evidenceOf(fromAct, 'counter');
-  const byPurpose = facts.find((fact) =>
-    fact.purposes.some((purpose) => purpose === 'counterexample' || purpose === 'failure'),
-  );
-  return byPurpose ? evidenceOf(byPurpose, 'counter') : null;
+  const candidates = facts
+    .filter((fact) => fact.author.trim().length > 0 && fact.sourceUrl.trim().length > 0)
+    .filter((fact) => !NOT_EVIDENCE.test(fact.exactQuote.trim()))
+    .filter((fact) => COUNTER_TELL.test(fact.exactQuote));
+  if (candidates.length === 0) return null;
+  const scored = candidates.slice().sort((left, right) => {
+    const leftWeight = (counterFactIds.has(left.id) ? 0 : 1) + (COUNTER_HINT.test(left.exactQuote) ? 0 : 1);
+    const rightWeight = (counterFactIds.has(right.id) ? 0 : 1) + (COUNTER_HINT.test(right.exactQuote) ? 0 : 1);
+    if (leftWeight !== rightWeight) return leftWeight - rightWeight;
+    return compareEvidence(left, right);
+  });
+  return evidenceOf(scored[0]!, 'counter');
 }
 
 export interface EndgameAnswerInput {
@@ -185,17 +229,20 @@ export function endgameAnswerOf(input: EndgameAnswerInput): EndgameAnswer {
       unlock.sourceFactIds
         .map((id) => factById.get(id))
         .filter((fact): fact is ExperienceFact => Boolean(fact))
+        // 只有"确实像他做过的一步"的片段才配出现在这里
+        .filter((fact) => ACTION_TELL.test(fact.exactQuote))
+        .filter((fact) => !NOT_EVIDENCE.test(fact.exactQuote.trim()))
         .slice(0, 1)
         .map((fact) => evidenceOf(fact, 'taken')),
     )
     .slice(0, 2);
 
-  const actions = usableFacts(facts, ['action']);
-  const borrowed = (actions.length > 0 ? actions : usableFacts(facts, ['outcome']))
+  const actions = usableFacts(facts, ['action'], ACTION_TELL);
+  const borrowed = (actions.length > 0 ? actions : usableFacts(facts, ['outcome'], ACTION_TELL))
     .slice(0, 2)
     .map((fact) => evidenceOf(fact, 'step'));
 
-  const costs = usableFacts(facts, ['cost'])
+  const costs = usableFacts(facts, ['cost'], COST_TELL)
     .slice(0, 1)
     .map((fact) => evidenceOf(fact, 'cost'));
 

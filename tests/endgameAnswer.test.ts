@@ -245,4 +245,57 @@ describe('终局答案：把本局真实发生过的事凝练成答案', () => {
     const input = { frame: FRAME, blueprint: withFacts, walked: ['a'], usedUnlockIds: ['unlock-1'], experiment: EXPERIMENT };
     expect(JSON.stringify(endgameAnswerOf(input))).toBe(JSON.stringify(endgameAnswerOf(input)));
   });
+
+  /**
+   * 槽位合理性：**类型标错时不能跟着撒谎**。
+   *
+   * 线上实测：被标成 `action` 的片段里有一句「后来遇到疫情爆发，旅游业
+   * 收到了重创」—— 那是处境，不是谁做了什么。照抄类型就会在纸上写
+   * 「真实的人是怎么做的：疫情重创旅游业」。
+   */
+  it('被标成 action 但不是行动叙事的片段不会进「怎么做的」', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({
+        experienceFacts: [
+          fact({ id: 'f-fake-action', type: 'action', exactQuote: '后来遇到疫情爆发，旅游业收到了重创，导游一线的人员就更是像消失的职业。' }),
+        ],
+      }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+    expect(answer.borrowed).toHaveLength(0);
+  });
+
+  it('字幕式/图片注脚不会被当成反例', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({
+        experienceFacts: [
+          fact({ id: 'f-scene', type: 'reflection', exactQuote: '（小时候舞蹈班，左边是我）不过，家庭中的爱却如同温暖的阳光。' }),
+        ],
+      }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+    expect(answer.counter).toBeNull();
+  });
+
+  it('反例槽位只收真的在讲走坏的片段', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({
+        experienceFacts: [
+          fact({ id: 'f-neutral', type: 'reflection', exactQuote: '我身边有太多导游喜欢夜生活，各种宵夜，各种啤酒加烧烤。' }),
+        ],
+      }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+    expect(answer.counter).toBeNull();
+    expect(answer.costs).toHaveLength(0);
+  });
 });
