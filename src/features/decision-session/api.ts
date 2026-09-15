@@ -157,9 +157,15 @@ export function newTrace() {
 }
 
 /** 安全解析 JSON body。 */
+const MAX_BODY_BYTES = 256 * 1024;
+
 export async function readBody(request: Request): Promise<Record<string, unknown> | null> {
+  const declaredLength = Number(request.headers.get('content-length') ?? 0);
+  if (declaredLength > MAX_BODY_BYTES) return null;
   try {
-    const parsed: unknown = await request.json();
+    const raw = await request.text();
+    if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return null;
+    const parsed: unknown = JSON.parse(raw);
     return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : null;

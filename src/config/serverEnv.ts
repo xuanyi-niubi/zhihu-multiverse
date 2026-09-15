@@ -173,3 +173,15 @@ export function appProviderStatus(
     zhihu: appZhihuSecretFromEnv(env) !== null,
   };
 }
+
+
+/** OAuth 应用凭证的唯一服务端入口；浏览器导入会立即失败。 */
+export function oauthCredentialsFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): { readonly appKey: string; readonly accessSecret: string } {
+  assertServerOnly();
+  return {
+    appKey: readEnv(env, 'ZHIHU_OAUTH_APP_KEY') ?? '',
+    accessSecret: readEnv(env, 'ZHIHU_ACCESS_SECRET') ?? '',
+  };
+}

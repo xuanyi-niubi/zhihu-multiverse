@@ -32,8 +32,13 @@
 
 import { usageLimitsFromEnv } from './limits';
 
-/** 从请求头解析客户端 IP：XFF 首跳优先，X-Real-IP 兜底，都没有进共享桶。 */
+/** 从请求头解析客户端 IP：优先使用反代提供的真实地址，无法确认时进入共享桶。 */
 export function clientIpFromHeaders(headers: Headers): string {
+  const cloudflareIp = headers.get('cf-connecting-ip')?.trim();
+  if (cloudflareIp) {
+    return cloudflareIp;
+  }
+
   const forwarded = headers.get('x-forwarded-for');
   if (forwarded) {
     // XFF 可能是 "client, proxy1, proxy2"：首跳才是客户端（nginx 覆写前提下可信）

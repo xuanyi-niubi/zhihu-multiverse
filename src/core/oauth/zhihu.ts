@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import { extractUrlToken } from '@/core/memoryStore';
+import { oauthCredentialsFromEnv } from '@/config/serverEnv';
 
 /**
  * 知乎开放平台 OAuth 协议核心。
@@ -97,12 +98,12 @@ function readEnv(env: Record<string, string | undefined>, key: string): string {
 
 /** 从环境变量读三类凭证（只读，不落盘、不输出明文）。 */
 export function resolveOAuthCredentials(
-  env: Record<string, string | undefined> = process.env,
+  env?: Record<string, string | undefined>,
 ): { appKey: string; accessSecret: string } {
-  return {
+  return env ? {
     appKey: readEnv(env, 'ZHIHU_OAUTH_APP_KEY'),
     accessSecret: readEnv(env, 'ZHIHU_ACCESS_SECRET'),
-  };
+  } : oauthCredentialsFromEnv();
 }
 
 export function describeCredential(value: string, envName: string): CredentialDetail {
@@ -272,16 +273,20 @@ function readCookie(cookieHeader: string | null, name: string): string | null {
 }
 
 function pruneExpiredSessions(): void {
-  if (sessions.size < 512) {
-    return;
-  }
-
   const now = Date.now();
   sessions.forEach((session, id) => {
     if (session.expiresAt !== null && session.expiresAt <= now) {
       sessions.delete(id);
     }
   });
+
+  // 即使没有过期项也必须有硬上限，避免攻击者用未完成的 OAuth 会话耗尽内存并驱逐正常用户。
+  const MAX_SESSIONS = 512;
+  while (sessions.size >= MAX_SESSIONS) {
+    const oldest = sessions.keys().next().value;
+    if (typeof oldest !== 'string') break;
+    sessions.delete(oldest);
+  }
 }
 
 const emptySession = (): OAuthSessionState => ({

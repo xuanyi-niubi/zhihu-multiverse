@@ -229,6 +229,13 @@ async function search(query, count = 10) {
 }
 
 /** 把官方条目映射成落盘来源；没有 https 链接或作者就丢弃。 */
+function truncateAtSentence(text, maxLength = 200) {
+  if (text.length <= maxLength) return text;
+  const slice = text.slice(0, maxLength);
+  const boundary = Math.max(slice.lastIndexOf('。'), slice.lastIndexOf('！'), slice.lastIndexOf('？'), slice.lastIndexOf('；'));
+  return boundary >= Math.floor(maxLength * 0.55) ? slice.slice(0, boundary + 1) : `${slice.slice(0, maxLength - 1)}…`;
+}
+
 function toSource(id, item, retrievedAt) {
   const author = String(item?.AuthorName ?? item?.author ?? '').trim();
   const title = String(item?.Title ?? item?.title ?? '').trim();
@@ -265,7 +272,7 @@ function toSource(id, item, retrievedAt) {
     title: title ? title.slice(0, 160) : null,
     authorBadge: authorBadge ? authorBadge.slice(0, 120) : null,
     contentType: contentType ? contentType.slice(0, 32) : null,
-    quote: quote.slice(0, 200),
+    quote: truncateAtSentence(quote),
     upvotes,
     url,
     retrievedAt,

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
 import { createZhihuClient } from '@/core/zhihu/client';
-import { resolveZhihuConfigForRequest } from '@/features/run/keyResolution';
+import { appIpLlmWindow, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
+import { resolveZhihuConfigForRequest, secretOriginFor } from '@/features/run/keyResolution';
 
 /**
  * 知乎热榜代理。
@@ -28,6 +29,20 @@ export async function GET(request: Request): Promise<Response> {
     return NextResponse.json(
       { ok: true, items: [], configured: false },
       { status: 200, headers: { 'cache-control': 'no-store' } },
+    );
+  }
+
+  // 服务器 App key 是共享资源：在真正访问知乎前按 IP 限制，避免轮换 limit 参数绕过缓存烧光配额。
+  // 用户自己的 key 不计入 App 闸门，保持“自带 key 自己承担配额”的语义。
+  const origin = secretOriginFor(request).zhihu;
+  const ipDecision = origin === 'app'
+    ? appIpLlmWindow.consume(clientIpFromHeaders(request.headers))
+    : { allowed: true, retryAfterMs: null }; 
+  if (!ipDecision.allowed) {
+    const retryAfter = ipDecision.retryAfterMs ? Math.ceil(ipDecision.retryAfterMs / 1000) : 3600;
+    return NextResponse.json(
+      { ok: true, items: [], configured: true, error: 'rate-limit' },
+      { status: 200, headers: { 'cache-control': 'no-store', 'retry-after': String(retryAfter) } },
     );
   }
 

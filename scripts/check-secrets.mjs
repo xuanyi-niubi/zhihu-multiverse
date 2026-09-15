@@ -62,7 +62,7 @@ const TEXT_EXT = new Set([
 const ALLOWLIST = [
   /^\.env\.example$/,
   /^\.env\.production\.example$/,
-  /^tests\//, // 测试夹具里会有故意构造的假 token
+  /^tests\/publicRuntimeSafety\.test\.ts$/, // 仅允许专门验证“不泄漏”的假值测试
   /^\.private\//, // 本地审计脚本与备份（已被 gitignore，不会提交）
 ];
 
@@ -90,6 +90,19 @@ const PATTERNS = [
 const HEX_FALSE_POSITIVES = new Set([
   // 文档里引用的提交号、内容哈希等由调用处动态判断长度与上下文
 ]);
+
+/** 检查文本中可解码的 base64 片段，拦截把 key 编码后藏进源码的常见绕过。 */
+function decodedSecretHits(text) {
+  const hits = [];
+  const candidates = text.match(/(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{24,}={0,2}(?![A-Za-z0-9+/])/g) ?? [];
+  for (const candidate of candidates) {
+    try {
+      const decoded = Buffer.from(candidate, 'base64').toString('utf8');
+      if (PATTERNS.some(({ re }) => { re.lastIndex = 0; return re.test(decoded); })) hits.push(candidate);
+    } catch { /* 非法 base64 忽略 */ }
+  }
+  return hits;
+}
 
 /* ============================================================ 收集文件 */
 
