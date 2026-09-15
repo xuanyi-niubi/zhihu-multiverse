@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 
 import { removeFile } from '@/core/fsSafe';
 import { createHash, randomUUID } from 'node:crypto';
@@ -29,6 +29,9 @@ import type { DecisionSession } from '@/features/decision-session/domain';
  * 与会话/记忆存储一致：**只把哈希写进文件名**，磁盘上不出现身份原文，
  * 也不存在路径穿越。命名空间独立（`decision-session`），不与旧存储混用 ——
  * 旧的是「游戏记忆」，新的是「决策会话」，删除语义与生命周期都不同。
+ *
+ * 文件写入统一采用临时文件 + rename：进程中断或容器重启时不会留下半个 JSON。
+ * 参赛部署仍是单实例；若未来横向扩容，应把 Repository 换成数据库并启用版本锁。
  */
 
 export interface DecisionSessionRepository {
@@ -67,7 +70,9 @@ function readJson<T>(path: string): T | null {
 
 function writeJson(path: string, value: unknown): void {
   mkdirSync(baseDir(), { recursive: true });
-  writeFileSync(path, JSON.stringify(value, null, 2), 'utf8');
+  const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  writeFileSync(temporaryPath, JSON.stringify(value, null, 2), 'utf8');
+  renameSync(temporaryPath, path);
 }
 
 /**
