@@ -138,15 +138,11 @@ describe('路由只在真的花服务器 key 时才扣 App 预算', () => {
     return readFileSync(join(process.cwd(), relative), 'utf8');
   }
 
-  it('sessions 路由：按 origin.model === app 记账，且每日上限会先暂停 App provider', () => {
+  it('sessions 路由：开局只做确定性框定，不花模型预算', () => {
     const text = source('src/app/api/sessions/route.ts');
-    /**
-     * 旧写法 `usesAppProvider && modelConfig` 会把「自己配了模型 key、
-     * 只是借用了 App 知乎」的访客也扣一轮服务器的账。
-     */
-    expect(text).not.toContain('usesAppProvider && modelConfig');
-    expect(text).toContain("origin.model === 'app' && modelConfig");
-    expect(text).toContain('appDailyLlmBudget.peek()');
+    expect(text).toContain("trace.note('profile-deterministic-fast-path')");
+    expect(text).not.toContain('await generateProfile');
+    expect(text).not.toContain('allocateAppLlmCall');
     expect(text).toContain('retryAfterMs: quota.retryAfterMs');
   });
 
