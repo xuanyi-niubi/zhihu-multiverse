@@ -9,20 +9,16 @@
 **知乎黑客松 2026 · 校园新锐季** | 主赛道：跨次元游乐场 | 关联方向：知识炼金场
 
 <p align="center">
-  <img src="./public/screenshots/home.jpg" width="360" alt="手机端首页 · 命运观象厅" />
+  <a href="./public/screenshots/home.jpg"><img src="./public/screenshots/home.jpg" width="32%" alt="首页 · 命运观象厅" /></a>
+  <a href="./public/screenshots/session-clarify.jpg"><img src="./public/screenshots/session-clarify.jpg" width="32%" alt="动态澄清 · 只问会改变结论的事" /></a>
+  <a href="./public/screenshots/world-forge.jpg"><img src="./public/screenshots/world-forge.jpg" width="32%" alt="World Forge · 三条轨道" /></a>
 </p>
 <p align="center">
-  <img src="./public/screenshots/session-clarify.jpg" width="360" alt="手机端 · 动态澄清" />
+  <a href="./public/screenshots/play-act1.jpg"><img src="./public/screenshots/play-act1.jpg" width="32%" alt="推演 · 第一幕" /></a>
+  <a href="./public/screenshots/endgame.jpg"><img src="./public/screenshots/endgame.jpg" width="32%" alt="终局 · 交还现实" /></a>
 </p>
-<p align="center">
-  <img src="./public/screenshots/world-forge.jpg" width="360" alt="手机端 · World Forge 三条轨道" />
-</p>
-<p align="center">
-  <img src="./public/screenshots/play-act1.jpg" width="360" alt="手机端 · 对局第一幕" />
-</p>
-<p align="center">
-  <img src="./public/screenshots/endgame.jpg" width="360" alt="手机端 · 终局现实支线" />
-</p>
+
+<p align="center"><sub>桌面端截图（1440×900）· 点击任意一张可看原图 · 首页 → 动态澄清 → World Forge → 推演 → 终局</sub></p>
 
 ---
 
