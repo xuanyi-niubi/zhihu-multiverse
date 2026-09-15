@@ -128,9 +128,10 @@ src/
 │   ├── game-mechanics/       # 行动空间 / 遭遇 / 未知锁定
 │   └── decision-session/ · reality-memory/ · run/
 ├── components/
-│   ├── visual/               # 观象厅：AstralDial / OrbitField / WorldForge / RealityPass …
+│   ├── visual/               # 观象厅：AstralDial / WorldForge / CelestialBackdrop / RealityPass …
 │   ├── game/                 # 经验卡 / 来源角标 / session 推演屏
-│   ├── characters/ · scenes/ · effects/ · worldline/ · archive/
+│   ├── characters/ · scenes/ · session/
+│   # 注：visual/ 里的 OrbitField 与 Kanshan 是设计留档（不再挂载，由 observatory 契约守护）
 │   └── AppearanceBootstrap.tsx
 ├── config/serverEnv.ts       # APP_* 的唯读入口（浏览器里调用会直接抛错）
 ├── data/                     # 角色 / 场景 / 黄金案例 / 知乎来源快照
