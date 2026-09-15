@@ -779,6 +779,10 @@ export async function fetchProfile(
     'AvatarURLTemplate',
     'AvatarUrlTemplate',
     'avatar',
+    'image_url',
+    'imageUrl',
+    'picture',
+    'pictureUrl',
   );
 
   if (!rawAvatar) {

@@ -168,7 +168,12 @@ function OAuthPanel() {
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="h-11 w-11 rounded-full border border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)]" />
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[color:var(--sil-rule-strong)] bg-[color:var(--sil-void-600)] text-[15px] font-semibold text-[color:var(--sil-ink-200)]"
+                aria-label="知乎头像暂不可用"
+              >
+                {(session.profile?.name?.trim().charAt(0) || '知')}
+              </div>
             )}
             <div className="min-w-0">
               <p className="truncate text-[14px] font-semibold text-[color:var(--sil-ink-100)]">
