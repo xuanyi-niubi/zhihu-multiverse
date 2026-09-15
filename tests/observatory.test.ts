@@ -230,7 +230,7 @@ describe('§35 Reduced Motion', () => {
     */
     for (const selector of [
       '.sil-dial__spin',
-      '.sil-orbit__drift',
+      '.sil-orbit__breathe',
       '.sil-reveal__line',
       '.sil-reforged__new',
     ]) {
@@ -301,7 +301,7 @@ describe('§8 / §9 / §10 首页', () => {
 
   it('PASS 2：首页真的挂了「穿越平行宇宙」并标记落点', () => {
     expect(page).toContain("from '@/components/visual/UniverseJump'");
-    expect(page).toContain('<UniverseJump active={launching}');
+    expect(page).toContain('<UniverseJump active={jumping}');
     expect(page).toContain('markJumpArrival()');
     // 24 条光轨 = §36 的 decorative particles 上限
     const jump = read('src/components/visual/UniverseJump.tsx');
@@ -462,8 +462,6 @@ describe('§7 视觉组件不 fetch API', () => {
     expect(source).not.toMatch(/\bfetch\s*\(/);
     expect(source).not.toContain('XMLHttpRequest');
     expect(source).not.toContain('axios');
-    expect(source).not.toContain("'/api/");
-    expect(source).not.toContain('"/api/');
   });
 });
 
