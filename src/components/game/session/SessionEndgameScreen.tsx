@@ -9,6 +9,7 @@ import { SentenceReforge } from '@/components/visual/SentenceReforge';
 import { observerDisplayName } from '@/features/run/observer';
 import { useObserver } from '@/features/run/useObserver';
 
+import type { EndgameEvidence } from '@/features/game-world/endgameAnswer';
 import type { SessionEndgameView } from '@/components/game/session/types';
 
 /**
@@ -125,8 +126,30 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
     if (!pass) {
       return '';
     }
+    /**
+     * 带走的必须包含**真实经历本身**（逐字 + 答主 + 原文链接）：
+     * 用户带走的是一份有出处的答案，而不是一段我们写的话。
+     */
+    const answer = view.answer;
+    const evidenceLines = (label: string, items: readonly EndgameEvidence[]): string[] =>
+      items.length > 0
+        ? [
+            `${label}：`,
+            ...items.map((item) => `  「${item.quote}」—— ${item.author} ${item.sourceUrl}`),
+          ]
+        : [];
     return [
       '现实支线',
+      answer ? `你问的是：${answer.question}` : '',
+      answer && answer.conditions.length > 0 ? `你补上的条件：${answer.conditions.join(' · ')}` : '',
+      answer && answer.walked.length > 0 ? `你走过的路：${answer.walked.join(' → ')}` : '',
+      ...(answer ? evidenceLines('你采用了谁的经验', answer.taken) : []),
+      ...(answer ? evidenceLines('真实的人是怎么做的', answer.borrowed) : []),
+      ...(answer ? evidenceLines('他们付出的代价', answer.costs) : []),
+      ...(answer && answer.counter
+        ? [`走坏的那条路：「${answer.counter.quote}」—— ${answer.counter.author} ${answer.counter.sourceUrl}`]
+        : []),
+      answer && answer.unknown ? `仍然不知道：${answer.unknown}` : '',
       view.rewrittenQuestion ? `我要验证的问题：${view.rewrittenQuestion}` : '',
       `时间盒：${pass.timebox}`,
       `要做的事：${pass.action}`,
@@ -136,7 +159,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
     ]
       .filter((line) => line.length > 0)
       .join('\n');
-  }, [view.realityPass, view.rewrittenQuestion]);
+  }, [view.realityPass, view.answer, view.rewrittenQuestion]);
 
   const onCopy = React.useCallback(async () => {
     try {
@@ -231,6 +254,7 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
             observation={view.realityPass.successSignal}
             artifact={view.realityPass.artifact}
             stopSignal={view.realityPass.stopSignal}
+            answer={view.answer}
             identity={reportIdentity}
             onBringBack={() => void onCopy()}
             broughtBack={copied}

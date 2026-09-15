@@ -81,7 +81,7 @@ describe('新问题：只能来自 keyUnknown（§二十一）', () => {
 });
 
 describe('五块结构：顺序就是字段顺序（§十九）', () => {
-  it('原问题 → 新问题 → 多看见的行动 → 经验回顾 → Reality Pass', () => {
+  it('原问题 → 新问题 → 多看见的行动 → 经验回顾 → 终局答案 → Reality Pass', () => {
     expect(Object.keys(view())).toEqual([
       'originalQuestion',
       'rewrittenQuestion',
@@ -89,8 +89,13 @@ describe('五块结构：顺序就是字段顺序（§十九）', () => {
       'unlockedActions',
       'highlights',
       'experiences',
+      'answer',
       'realityPass',
     ]);
+  });
+
+  it('没有传答案时如实为 null（旧调用零回归）', () => {
+    expect(view().answer).toBeNull();
   });
 
   it('不给任何判定数字', () => {

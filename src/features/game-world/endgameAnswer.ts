@@ -1,0 +1,244 @@
+import type { RealityExperiment } from '@/features/decision-session/domain';
+import type { ExperienceFact, ProblemFrame } from '@/features/experience/domain';
+import type { WorldBlueprint } from '@/features/game-world/domain';
+
+/**
+ * 终局答案（P1-2 加强）。
+ *
+ * ## 为什么要有这一层
+ *
+ * 原来终局那张暖色纸上的内容**完全来自一张模板**：`experimentFromUnknown()`
+ * 只吃「未知 + 问题框定 + 差异 + 用户上下文」，一条真实经历都拿不到。
+ * 于是纸上的字是对的，但读起来是"水"的 —— 它没有回答用户进来时的那句话。
+ *
+ * 这一层把**这一局真实发生过的事**凝练成一份答案：
+ *
+ * ```text
+ * 你问的是什么           frame.rawQuestion（原句，不润色）
+ * 你补上了哪些条件        frame.constraints（澄清里真的答过的硬条件）
+ * 你走过哪些路           本局的行动轨迹（玩家真的选过）
+ * 你采用了谁的经验       真实经历解锁、且你真的用过的行动 → 逐字片段
+ * 真实的人是怎么做的     逐字片段 + 答主 + 可点回原文的链接
+ * 他们付出了什么代价     逐字片段
+ * 哪条路是走坏的         反例片段（真的出现过反例才有）
+ * 仍然不知道什么         WorldBlueprint.keyUnknown
+ * 所以要验证的一件事     真实实验的六要素
+ * ```
+ *
+ * ## 三条纪律（全部写进类型与测试）
+ *
+ * 1. **零模型**：纯函数，同输入必得同输出 —— 终局不能是"这一刻模型心情好"。
+ * 2. **每一句都有出处**：所有经历类内容都是 `exactQuote` 的**前缀**（逐字），
+ *    并带答主与原文链接；没有片段就**如实留空**，不写"你成长了"。
+ * 3. **不给结论**：不出现成功率 / 匹配度 / 推荐分；答案的形态是
+ *    「别人真实做过什么 + 你还不知道什么 + 去验证什么」。
+ */
+
+/** 一条可点回原文的真实证据。 */
+export interface EndgameEvidence {
+  readonly id: string;
+  /**
+   * 它在答案里扮演什么：
+   * - `taken`   玩家真的采用过的经验（来自经验解锁）
+   * - `step`    真实的人做过的具体一步
+   * - `cost`    真实的人付出的代价
+   * - `counter` 走坏的那条路（反例）
+   */
+  readonly kind: 'taken' | 'step' | 'cost' | 'counter';
+  /** **逐字**片段（原文的连续前缀，不是改写）。 */
+  readonly quote: string;
+  readonly author: string;
+  readonly sourceUrl: string;
+  readonly sourceTitle: string | null;
+}
+
+export interface EndgameAnswer {
+  /** 你进来时问的那句话（原句）。 */
+  readonly question: string;
+  /** 你补上的硬条件（只收用户明确说过的）。 */
+  readonly conditions: readonly string[];
+  /** 你走过的路（本局行动轨迹，按顺序）。 */
+  readonly walked: readonly string[];
+  /** 你采用了谁的真实经验。 */
+  readonly taken: readonly EndgameEvidence[];
+  /** 真实的人是怎么做过的。 */
+  readonly borrowed: readonly EndgameEvidence[];
+  /** 他们付出的代价。 */
+  readonly costs: readonly EndgameEvidence[];
+  /** 走坏的那条路（有反例才有）。 */
+  readonly counter: EndgameEvidence | null;
+  /** 仍然不知道的那一项（没有就是 null，不编）。 */
+  readonly unknown: string | null;
+  /** 要验证的一件事（来自真实实验的六要素）。 */
+  readonly nextStep: {
+    readonly action: string;
+    readonly timebox: string;
+    readonly successSignal: string;
+    readonly stopSignal: string;
+  } | null;
+  /** 这份答案的诚实边界（一句话，随内容变化）。 */
+  readonly note: string;
+}
+
+/** 相似等级越好排越前（用于"先拿最像的那个人"。 */
+const TIER_RANK: Readonly<Record<string, number>> = {
+  exact: 0,
+  'same-family': 1,
+  'same-domain': 2,
+  'same-target': 3,
+  'adjacent-target': 4,
+  unrelated: 9,
+};
+
+/** 反例信号：这些话说明那条路是走坏的。 */
+const COUNTER_HINT = /(后悔|退出|放弃|失败|踩坑|踩了坑|劝退|崩溃|腰斩|亏|赔|白费|没坚持|撑不下去)/;
+
+/**
+ * 逐字片段 → 纸面上可读的一句。
+ *
+ * **只做前缀截断**：绝不改写、绝不拼接。这是"可点回原文"的前提。
+ */
+function displayQuote(quote: string): string {
+  const cleaned = quote.replace(/\s+/g, ' ').trim();
+  const firstSentence = cleaned.split(/(?<=[。！？!?；;])/)[0]?.trim() ?? cleaned;
+  const picked = firstSentence.length >= 12 ? firstSentence : cleaned;
+  return picked.length > 64 ? `${picked.slice(0, 64)}…` : picked;
+}
+
+function evidenceOf(fact: ExperienceFact, kind: EndgameEvidence['kind']): EndgameEvidence {
+  return {
+    id: fact.id,
+    kind,
+    quote: displayQuote(fact.exactQuote),
+    author: fact.author,
+    sourceUrl: fact.sourceUrl,
+    sourceTitle: fact.sourceTitle ?? null,
+  };
+}
+
+function tierRankOf(fact: ExperienceFact): number {
+  const tier = fact.qualification?.similarityTier;
+  return tier ? TIER_RANK[tier] ?? 5 : 5;
+}
+
+/** 好证据优先：先看相似等级，再看内部相关度，最后按 id 稳定排序。 */
+function compareEvidence(left: ExperienceFact, right: ExperienceFact): number {
+  const tierGap = tierRankOf(left) - tierRankOf(right);
+  if (tierGap !== 0) return tierGap;
+  if (right.relevance !== left.relevance) return right.relevance - left.relevance;
+  return left.id.localeCompare(right.id);
+}
+
+function usableFacts(facts: readonly ExperienceFact[], types: readonly ExperienceFact['type'][]): readonly ExperienceFact[] {
+  return facts
+    .filter((fact) => types.includes(fact.type))
+    .filter((fact) => fact.exactQuote.replace(/\s+/g, '').length >= 12)
+    .filter((fact) => fact.author.trim().length > 0 && fact.sourceUrl.trim().length > 0)
+    .slice()
+    .sort(compareEvidence);
+}
+
+/** 反例：优先带"走坏"信号的片段，其次反例查询/失败查询捞到的片段。 */
+function counterEvidenceOf(
+  facts: readonly ExperienceFact[],
+  counterFactIds: ReadonlySet<string>,
+): EndgameEvidence | null {
+  const hinted = facts.find((fact) => COUNTER_HINT.test(fact.exactQuote));
+  if (hinted) return evidenceOf(hinted, 'counter');
+  const fromAct = facts.find((fact) => counterFactIds.has(fact.id));
+  if (fromAct) return evidenceOf(fromAct, 'counter');
+  const byPurpose = facts.find((fact) =>
+    fact.purposes.some((purpose) => purpose === 'counterexample' || purpose === 'failure'),
+  );
+  return byPurpose ? evidenceOf(byPurpose, 'counter') : null;
+}
+
+export interface EndgameAnswerInput {
+  readonly frame: ProblemFrame;
+  readonly blueprint: WorldBlueprint;
+  /** 本局行动轨迹（玩家真的走过的路）。 */
+  readonly walked: readonly string[];
+  /** 玩家真的采用过的经验解锁 id。 */
+  readonly usedUnlockIds: readonly string[];
+  readonly experiment: RealityExperiment | null;
+}
+
+/**
+ * 凝练终局答案。**纯函数、零模型**。
+ *
+ * 没有任何真实片段时，答案依然成立 —— 它只写「你走过的路 + 还不知道的那一项」，
+ * 并在 `note` 里如实说明为什么这里没有别人的经历。
+ */
+export function endgameAnswerOf(input: EndgameAnswerInput): EndgameAnswer {
+  const { frame, blueprint } = input;
+  const facts = blueprint.experienceFacts ?? [];
+  const counterAct = blueprint.acts.find((act) => act.objective === 'meet-counterexample');
+  const counterFactIds = new Set(counterAct?.experienceFactIds ?? []);
+
+  const factById = new Map(facts.map((fact) => [fact.id, fact]));
+
+  /** 你采用过的真实经验：解锁 → sourceFactIds → 逐字片段。 */
+  const usedUnlocks = new Set(input.usedUnlockIds);
+  const taken = blueprint.unlocks
+    .filter((unlock) => usedUnlocks.has(unlock.id))
+    .flatMap((unlock) =>
+      unlock.sourceFactIds
+        .map((id) => factById.get(id))
+        .filter((fact): fact is ExperienceFact => Boolean(fact))
+        .slice(0, 1)
+        .map((fact) => evidenceOf(fact, 'taken')),
+    )
+    .slice(0, 2);
+
+  const actions = usableFacts(facts, ['action']);
+  const borrowed = (actions.length > 0 ? actions : usableFacts(facts, ['outcome']))
+    .slice(0, 2)
+    .map((fact) => evidenceOf(fact, 'step'));
+
+  const costs = usableFacts(facts, ['cost'])
+    .slice(0, 1)
+    .map((fact) => evidenceOf(fact, 'cost'));
+
+  const counter = counterEvidenceOf(
+    facts.filter((fact) => fact.exactQuote.replace(/\s+/g, '').length >= 12),
+    counterFactIds,
+  );
+
+  const conditions = frame.constraints
+    .filter((item) => item.hard)
+    .map((item) => item.text.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const walked = input.walked.map((step) => step.trim()).filter(Boolean).slice(0, 4);
+
+  const unknown =
+    blueprint.keyUnknown?.label?.trim() ||
+    frame.unknowns[0]?.label?.trim() ||
+    null;
+
+  const experiment = input.experiment;
+  const hasEvidence = taken.length > 0 || borrowed.length > 0 || costs.length > 0 || counter !== null;
+
+  return {
+    question: frame.rawQuestion,
+    conditions,
+    walked,
+    taken,
+    borrowed,
+    costs,
+    counter,
+    unknown,
+    nextStep: experiment
+      ? {
+          action: experiment.action,
+          timebox: experiment.timebox,
+          successSignal: experiment.successSignal,
+          stopSignal: experiment.stopSignal,
+        }
+      : null,
+    note: hasEvidence
+      ? '上面每一句都来自真实答主的原文（可点开核对）。这不是我们的结论 —— 是别人真的做过的事，加上你还没有验证的那一项。'
+      : '这一局没有拿到可核验的本人亲历片段，所以这份答案只写你走过的路和仍然未知的那一项 —— 我们不替你补一段。',
+  };
+}

@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { ObserverAvatar } from '@/components/session/ObserverAvatar';
 
+import type { EndgameAnswer, EndgameEvidence } from '@/features/game-world/endgameAnswer';
+
 /**
  * Reality Pass —— 现实层票据（DESIGN-SYSTEM §4.9 / 04_AGENT §32）。
  *
@@ -43,6 +45,14 @@ export interface RealityPassProps {
   readonly artifact?: string | null;
   /** 停止信号（可选）。 */
   readonly stopSignal?: string | null;
+  /**
+   * 凝练好的终局答案（P1-2）：你问的、你走过的、你采用过的真实经验、
+   * 他们的逐字片段与代价、仍不知道的那一项。
+   *
+   * 有它就渲染在纸上（这张纸因此是**一份答案**，而不是一张任务卡）；
+   * 没有就退回原来的四段式。所有经历类内容都是原文前缀 + 可点回原文。
+   */
+  readonly answer?: EndgameAnswer | null;
   /** 已登录的知乎身份；只用于终局相纸署名，不参与推演。 */
   readonly identity?: RealityPassIdentity | null;
   readonly onBringBack?: () => void;
@@ -56,12 +66,60 @@ const INK_SOFT = 'rgb(31 27 22 / 0.74)';
 const INK_FAINT = 'rgb(31 27 22 / 0.56)';
 const INK_RULE = 'rgb(31 27 22 / 0.18)';
 
+/** 纸质答案里的一小节：标签 + 内容。 */
+function AnswerRow({
+  label,
+  children,
+}: {
+  readonly label: string;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <section className="border-t pt-3" style={{ borderColor: INK_RULE }}>
+      <p className="sil-label" style={{ color: INK_FAINT }}>
+        {label}
+      </p>
+      <div className="mt-1.5">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * 逐字引用：原文前缀 + 答主 + 可点回原文。
+ *
+ * 引号是排版，不是内容 —— `quote` 本身只能是原文的连续前缀。
+ */
+function EvidenceQuote({ item }: { readonly item: EndgameEvidence }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-body leading-relaxed" style={{ color: INK }}>
+        「{item.quote}」
+      </p>
+      <p className="flex flex-wrap items-center gap-2 text-label" style={{ color: INK_FAINT }}>
+        <span>{item.author}</span>
+        {item.sourceUrl ? (
+          <a
+            href={item.sourceUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline decoration-dotted underline-offset-4"
+            style={{ color: INK_SOFT }}
+          >
+            查看知乎原回答 ↗
+          </a>
+        ) : null}
+      </p>
+    </div>
+  );
+}
+
 export function RealityPass({
   timebox,
   action,
   observation,
   artifact,
   stopSignal,
+  answer,
   identity,
   onBringBack,
   broughtBack = false,
@@ -79,7 +137,89 @@ export function RealityPass({
           Reality Pass
         </p>
 
-        <p className="mt-4 text-[13px] leading-relaxed" style={{ color: INK_FAINT }}>
+        {answer ? (
+          <div className="mt-4 flex flex-col gap-4">
+            <AnswerRow label="你问的是">
+              <p className="text-body leading-relaxed" style={{ color: INK }}>
+                {answer.question}
+              </p>
+              {answer.conditions.length > 0 ? (
+                <p className="mt-1.5 text-meta leading-relaxed" style={{ color: INK_SOFT }}>
+                  你补上的条件：{answer.conditions.join(' · ')}
+                </p>
+              ) : null}
+            </AnswerRow>
+
+            {answer.walked.length > 0 ? (
+              <AnswerRow label="你走过的路">
+                <ol className="flex flex-col gap-1">
+                  {answer.walked.map((step, index) => (
+                    <li
+                      key={`${step}-${index}`}
+                      className="flex gap-2 text-meta leading-relaxed"
+                      style={{ color: INK_SOFT }}
+                    >
+                      <span aria-hidden="true" style={{ color: INK_FAINT }}>
+                        {index + 1}
+                      </span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </AnswerRow>
+            ) : null}
+
+            {answer.taken.length > 0 ? (
+              <AnswerRow label="你采用了谁的经验">
+                <div className="flex flex-col gap-3">
+                  {answer.taken.map((item) => (
+                    <EvidenceQuote key={item.id} item={item} />
+                  ))}
+                </div>
+              </AnswerRow>
+            ) : null}
+
+            {answer.borrowed.length > 0 ? (
+              <AnswerRow label="真实的人是怎么做的">
+                <div className="flex flex-col gap-3">
+                  {answer.borrowed.map((item) => (
+                    <EvidenceQuote key={item.id} item={item} />
+                  ))}
+                </div>
+              </AnswerRow>
+            ) : null}
+
+            {answer.costs.length > 0 ? (
+              <AnswerRow label="他们付出的代价">
+                <div className="flex flex-col gap-3">
+                  {answer.costs.map((item) => (
+                    <EvidenceQuote key={item.id} item={item} />
+                  ))}
+                </div>
+              </AnswerRow>
+            ) : null}
+
+            {answer.counter ? (
+              <AnswerRow label="走坏的那条路">
+                <EvidenceQuote item={answer.counter} />
+              </AnswerRow>
+            ) : null}
+
+            {answer.unknown ? (
+              <AnswerRow label="仍然不知道">
+                <p className="text-body leading-relaxed" style={{ color: INK }}>
+                  {answer.unknown}
+                </p>
+              </AnswerRow>
+            ) : null}
+
+            <p className="text-label leading-relaxed" style={{ color: INK_FAINT }}>
+              {answer.note}
+            </p>
+          </div>
+        ) : null}
+
+        <p className="mt-4 text-meta leading-relaxed" style={{ color: INK_FAINT }}>
           未来 <span style={{ color: INK }}>{timebox}</span>
         </p>
 

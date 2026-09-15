@@ -64,6 +64,7 @@ import {
 } from '@/data/prebuiltScenarios';
 import { fetchDmTurn, fetchProfile } from '@/core/dmClient';
 import { unlockForTurn, worldContextForTurn, type PlaySessionView } from '@/features/game-world/dmContext';
+import { endgameAnswerOf } from '@/features/game-world/endgameAnswer';
 import { realityQuestViewOf } from '@/features/game-world/questView';
 import { experimentFromUnknown } from '@/features/decision-session/experiment';
 import { cardTitlesFrom } from '@/features/game-world/cardTitles';
@@ -1325,6 +1326,27 @@ function PlayScreen() {
   }, [sessionView?.worldBlueprint, usedUnlockIds]);
 
   /**
+   * 终局答案（P1-2 加强）：把本局真实发生过的事凝练成一份答案。
+   *
+   * 纯函数、零模型（`game-world/endgameAnswer.ts`）：你问的原句、你补的硬条件、
+   * 你走过的路（`sessionSteps`）、你采用过的真实经验、他们的逐字片段与代价、
+   * 仍不知道的那一项。一条片段都没拿到时如实留空 —— 这正是原来那张纸"水"的地方。
+   */
+  const endgameAnswer = React.useMemo(() => {
+    const blueprint = sessionView?.worldBlueprint;
+    if (!blueprint) {
+      return null;
+    }
+    return endgameAnswerOf({
+      frame: blueprint.problemFrame,
+      blueprint,
+      walked: sessionSteps,
+      usedUnlockIds,
+      experiment: sessionView?.experiment ?? null,
+    });
+  }, [sessionView?.worldBlueprint, sessionView?.experiment, sessionSteps, usedUnlockIds]);
+
+  /**
    * 记忆是否已加载完成。
    *
    * 这个门闩是必需的：`MEMORY_ECHO` 与 AI DM 拉取在同一次渲染里都会触发，
@@ -1753,6 +1775,7 @@ function PlayScreen() {
             unlockedActions: sessionCards,
             highlights: realityQuest?.seen ?? [],
             experiences: experienceSummariesOf(sessionExperienceCards, sessionCardTitles),
+            answer: endgameAnswer,
           })
         : null,
       source: {
@@ -1765,6 +1788,7 @@ function PlayScreen() {
     currentTurn.choices,
     currentTurn.storyText,
     currentTurn.title,
+    endgameAnswer,
     isEnded,
     isSessionMode,
     realityQuest,

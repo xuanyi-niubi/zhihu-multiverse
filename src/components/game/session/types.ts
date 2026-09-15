@@ -1,5 +1,6 @@
 import type { RealityExperiment } from '@/features/decision-session/domain';
 import type { ExperienceFact } from '@/features/experience/domain';
+import type { EndgameAnswer } from '@/features/game-world/endgameAnswer';
 import type { ExperienceCardData } from '@/components/game/ExperienceCardPanel';
 import { AI_UNAVAILABLE } from '@/features/run/errorCopy';
 import type { CharacterOnStage, SceneId, SpeakerId } from '@/types/narrative';
@@ -253,6 +254,15 @@ export interface SessionEndgameView {
   readonly highlights: readonly string[];
   /** 真实经验回顾（§十九 第 4 项）。 */
   readonly experiences: readonly SessionExperienceView[];
+  /**
+   * 凝练出来的终局答案（P1-2 加强）。
+   *
+   * 由**本局真实发生过的事**编译：你问的原句、你补的硬条件、你走过的路、
+   * 你采用过的真实经验、他们的逐字片段与代价、仍不知道的那一项、以及
+   * 要验证的一件事。纯函数产出（`game-world/endgameAnswer.ts`），零模型。
+   * 旧会话没有这一层时为 null，页面按「只有现实支线」降级。
+   */
+  readonly answer: EndgameAnswer | null;
   /** 带回现实的票；没有实验时为 null（不编一个七天计划）。 */
   readonly realityPass: SessionRealityPassView | null;
 }

@@ -2,6 +2,7 @@ import type { ActionSpace, EncounterPlan, PlayAction } from '@/features/game-mec
 import type { RealityExperiment } from '@/features/decision-session/domain';
 import type { ExperienceCase } from '@/features/experience/domain';
 import type { WorldBlueprint } from '@/features/game-world/domain';
+import type { EndgameAnswer } from '@/features/game-world/endgameAnswer';
 import type { ExperienceCardData } from '@/components/game/ExperienceCardPanel';
 import type { ScenarioChoice } from '@/data/prebuiltScenarios';
 import type { CharacterOnStage, SceneId, SpeakerId } from '@/types/narrative';
@@ -475,6 +476,8 @@ export function sessionEndgameViewOf(input: {
   readonly unlockedActions: readonly string[];
   readonly highlights: readonly string[];
   readonly experiences: readonly SessionExperienceView[];
+  /** 由本局真实经历凝练的答案；省略时按 null 降级（旧调用不变）。 */
+  readonly answer?: EndgameAnswer | null;
 }): SessionEndgameView {
   const keyUnknown = input.keyUnknown?.trim() ?? '';
   return {
@@ -484,6 +487,7 @@ export function sessionEndgameViewOf(input: {
     unlockedActions: [...input.unlockedActions],
     highlights: [...input.highlights],
     experiences: [...input.experiences],
+    answer: input.answer ?? null,
     realityPass: realityPassViewOf(input.experiment),
   };
 }
