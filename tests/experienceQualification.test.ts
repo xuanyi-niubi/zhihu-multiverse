@@ -158,3 +158,74 @@ describe('跨行业经历相似等级', () => {
     expect(result.assignedTrack).not.toBe('similar');
   });
 });
+
+/**
+ * 二手转述（P1，精度修复）。
+ *
+ * 起因：「我朋友原来是电工，后来转行做导游」被当成完整亲历，甚至判成
+ * 最高等级 exact —— 它讲的是别人的人生。产品卖点是「别人真实走过的路」，
+ * 把转述当本人经历等于把二手总结冒充第一手经验。
+ */
+describe('二手转述不能冒充亲历', () => {
+  it('讲朋友的经历降级为无法确认，不进经验层', () => {
+    const result = tierOf('我朋友原来是电工，后来转行做导游，第一年收入很低，现在带团稳定了。');
+
+    // 等级仍按正文事实判定（它确实讲的是电工转导游这条路）
+    expect(result.similarityTier).toBe('exact');
+    // 但亲历身份降级 → 不进经验层
+    expect(result.firsthand).toBe('uncertain');
+    expect(result.eligibleAsCase).toBe(false);
+    expect(result.reasons.join(' ')).toContain('别人的经历');
+  });
+
+  it('同一句里的第三方转变也能识别', () => {
+    const result = tierOf('我身边有个朋友从电工转行做导游，他说旺季累到崩溃。');
+    expect(result.firsthand).toBe('uncertain');
+    expect(result.eligibleAsCase).toBe(false);
+  });
+
+  it('朋友出现但本人是动作发出者，仍然是亲历', () => {
+    const result = tierOf('我朋友劝我别转行，但我后来还是转行做了导游，现在带团两年了。');
+    expect(result.firsthand).toBe('yes');
+    expect(result.eligibleAsCase).toBe(true);
+  });
+
+  it('本人亲历不受影响（回归）', () => {
+    const result = tierOf('我原来是电工，后来转行做了导游，最后留在旅行社工作。');
+    expect(result.firsthand).toBe('yes');
+    expect(result.eligibleAsCase).toBe(true);
+  });
+});
+
+/**
+ * 反例强度：只用于「反例轨补位时先补谁」的排序，不是用户可见分数。
+ */
+describe('反例强度', () => {
+  it('后悔/退出类经历的反例强度明显高于顺利经历', () => {
+    const regret = tierOf('我原来做销售，后来转行做导游，第一年收入腰斩，我现在很后悔，准备退出。');
+    const smooth = tierOf('我原来是教师，后来转行做导游，现在过得挺好。');
+
+    expect(regret.counterStrength).toBeGreaterThan(smooth.counterStrength);
+    expect(regret.counterStrength).toBeGreaterThanOrEqual(0.5);
+    expect(smooth.counterStrength).toBeLessThan(0.5);
+    // 它不改变等级判定
+    expect(regret.similarityTier).toBe(smooth.similarityTier);
+  });
+
+  it('被反例查询捞到会小幅加分，但正文信号仍然是主要依据', () => {
+    const quote = '我原来是教师，后来转行做导游，现在过得挺好。';
+    const viaSimilar = qualifyExperienceSource({
+      source: transitionSource(quote),
+      frame: transitionFrame,
+      purposes: ['similar-person'],
+    });
+    const viaCounter = qualifyExperienceSource({
+      source: transitionSource(quote),
+      frame: transitionFrame,
+      purposes: ['similar-person', 'counterexample'],
+    });
+
+    expect(viaCounter.counterStrength).toBeGreaterThan(viaSimilar.counterStrength);
+    expect(viaCounter.counterStrength).toBeLessThan(0.5);
+  });
+});

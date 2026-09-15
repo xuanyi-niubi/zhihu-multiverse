@@ -231,6 +231,16 @@ export interface SourceQualification {
   readonly matchedOriginTerms: readonly string[];
   readonly matchedTargetTerms: readonly string[];
   readonly assignedTrack: QualificationTrack;
+  /**
+   * 0..1，**反例强度**：这条经历读起来有多像「失败 / 退出 / 后悔 / 代价」。
+   *
+   * 只用来决定「反例轨补位时先补谁」，不参与相似等级判定，
+   * 也不允许展示成任何用户可见的分数。
+   *
+   * 起因：一条后悔经历常常同时被相似查询与反例查询捞到。只按查询目的补位时，
+   * 可能补进来一条其实走得很顺的故事，反例轨就名不副实了。
+   */
+  readonly counterStrength: number;
   readonly reasons: readonly string[];
 }
 

@@ -4,13 +4,14 @@ import type {
   RetrievedExperienceSource,
   SearchPlan,
   SearchPurpose,
+  SearchQuery,
   SimilaritySummary,
   SimilarityTier,
   SourceQualification,
   TransitionIntent,
 } from '@/features/experience/domain';
 import { qualifyExperienceSource } from '@/features/experience/qualification';
-import { buildSearchPlan, MAX_SEARCH_REQUESTS } from '@/features/experience/queryPlan';
+import { buildSameTargetQuery, buildSearchPlan, MAX_SEARCH_REQUESTS } from '@/features/experience/queryPlan';
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
@@ -58,6 +59,35 @@ const TRACK_CAP: Readonly<Record<QualificationTrack, number>> = {
   alternative: 2,
   counter: 2,
 };
+
+/**
+ * 补位依据：某条轨道还有名额时，还能拿**什么查询目的**捞到的人来补。
+ *
+ * 相邻路径没有专门的查询目的（它由等级判定得出），所以不参与补位。
+ */
+const TRACK_BACKFILL_PURPOSES: Readonly<Record<QualificationTrack, readonly SearchPurpose[]>> = {
+  similar: ['similar-person'],
+  alternative: ['alternative'],
+  counter: ['counterexample', 'failure'],
+  adjacent: [],
+};
+
+/** 能坐相似轨的等级 —— 补位时同样要求，不能拿相邻路径去填相似轨。 */
+const SIMILAR_SEAT_TIERS: readonly SimilarityTier[] = [
+  'exact',
+  'same-family',
+  'same-domain',
+  'same-target',
+];
+
+/**
+ * 补位顺序：**反例优先于替代**。
+ *
+ * 一条「转行之后后悔、收入腰斩」的经历同时会被替代查询与反例查询捞到。
+ * 它显然属于反例叙事；如果让替代轨先补位，反例轨就永远补不上，
+ * 而「主动去找失败与后悔」正是这个产品最不可替代的地方。
+ */
+const BACKFILL_ORDER: readonly QualificationTrack[] = ['similar', 'counter', 'alternative', 'adjacent'];
 
 const TIER_ORDER: readonly SimilarityTier[] = [
   'exact',
@@ -112,17 +142,62 @@ function selectBalanced(items: readonly QualifiedAccumulator[]): readonly Qualif
   const seenAuthors = new Set<string>();
   const order: readonly QualificationTrack[] = ['similar', 'alternative', 'counter', 'adjacent'];
 
+  /** 收一个人；如果他是为别的轨道补位来的，就按那条轨道记（展示层才不会串位）。 */
+  const take = (item: QualifiedAccumulator, track: QualificationTrack): boolean => {
+    const author = authorKey(item.source);
+    if (seenAuthors.has(author)) return false;
+    seenAuthors.add(author);
+    selected.push(
+      item.qualification.assignedTrack === track
+        ? item
+        : { ...item, qualification: { ...item.qualification, assignedTrack: track } },
+    );
+    return true;
+  };
+
+  // 第一轮：每条轨道按自己的名额收人（`items` 已按等级排好序，等级高的先坐）
   for (const track of order) {
     let count = 0;
     for (const item of items) {
-      if (item.qualification.assignedTrack !== track || count >= TRACK_CAP[track]) continue;
-      const author = authorKey(item.source);
-      if (seenAuthors.has(author)) continue;
-      selected.push(item);
-      seenAuthors.add(author);
-      count += 1;
+      if (count >= TRACK_CAP[track]) break;
+      if (item.qualification.assignedTrack !== track) continue;
+      if (take(item, track)) count += 1;
     }
   }
+
+  /**
+   * 第二轮：补位（P1）。
+   *
+   * 一条真实经历可能同时像「相似」和「反例」：它被判进相似轨之后，
+   * 反例轨就空着 —— 而「主动找反例」是这个产品最不该缺席的视角。
+   * 旧实现下，这种来源会被相似轨的 3 个名额挤掉，用户看不到任何反例。
+   *
+   * 只补「查询目的确实对得上」的人（反例查询 / 失败查询 / 替代查询捞到的），
+   * 相似轨仍然只收够强的等级。找不到就不补，绝不编。
+   */
+  for (const track of BACKFILL_ORDER) {
+    const purposes = TRACK_BACKFILL_PURPOSES[track];
+    if (purposes.length === 0) continue;
+    /**
+     * 反例轨按**反例强度**挑人：补进来的必须是读起来像失败/退出/后悔的那条，
+     * 而不是因为排序碰巧空出来的顺利故事（否则反例轨名不副实，比空着更糟）。
+     */
+    const pool =
+      track === 'counter'
+        ? [...items].sort(
+            (left, right) => right.qualification.counterStrength - left.qualification.counterStrength,
+          )
+        : items;
+    let count = selected.filter((item) => item.qualification.assignedTrack === track).length;
+    for (const item of pool) {
+      if (count >= TRACK_CAP[track]) break;
+      if (item.qualification.assignedTrack === track) continue;
+      if (!item.purposes.some((purpose) => purposes.includes(purpose))) continue;
+      if (track === 'similar' && !SIMILAR_SEAT_TIERS.includes(item.qualification.similarityTier)) continue;
+      if (take(item, track)) count += 1;
+    }
+  }
+
   return selected.slice(0, MAX_EXPERIENCE_SOURCES);
 }
 
@@ -178,29 +253,74 @@ export async function retrieveExperienceSources(input: {
     }
   };
 
-  let queries = input.plan.queries;
-  if (input.frame && input.expandIntent && queries.length > 0) {
-    const exactQuery = queries.find((query) => query.id === 'q-similar-exact') ?? queries[0]!;
-    await mergeResults([exactQuery]);
-    const exactQualified = merged.filter((item) => {
+  /**
+   * 「够好了，不用再花钱」的等级：exact / 同族 / 同域。
+   *
+   * 刻意**不含** `same-target`：如果手上只有「其他背景进入同一目标」，
+   * 那正是该再花一次扩展去够「相似起点 / 同类背景」的时候 ——
+   * 产品优先级是「先找得准，找不到才找类似」，不是「有人就行」。
+   * 相邻路径（`adjacent-target`）是弱证据，同样不算够好。
+   */
+  const GOOD_ENOUGH_TIERS: readonly SimilarityTier[] = ['exact', 'same-family', 'same-domain'];
+
+  const goodEnoughCount = (): number =>
+    merged.filter((item) => {
       const qualification = qualifyExperienceSource({
         source: item.source,
         frame: input.frame!,
         purposes: item.purposes,
         intent,
       });
-      return qualification.eligibleAsCase && qualification.similarityTier === 'exact';
+      return qualification.eligibleAsCase && GOOD_ENOUGH_TIERS.includes(qualification.similarityTier);
     }).length;
 
-    if (exactQualified < 2) {
-      intent = await input.expandIntent(input.frame);
-      queries = buildSearchPlan({ frame: input.frame, intent, maxRequests: MAX_SEARCH_REQUESTS }).queries;
-    }
+  /** 总请求数永远不超过预算（配额纪律与设计文档 §5 一致）。 */
+  const runWithinBudget = async (list: readonly SearchQuery[]): Promise<void> => {
+    const room = Math.max(0, MAX_SEARCH_REQUESTS - runs.length);
+    if (room === 0 || list.length === 0) return;
+    await mergeResults(list.slice(0, room));
+  };
+
+  const notYetRun = (list: readonly SearchQuery[]): readonly SearchQuery[] => {
     const seenQueries = new Set(runs.map((run) => run.query.replace(/\s+/g, '')));
-    const remaining = queries
-      .filter((query) => !seenQueries.has(query.query.replace(/\s+/g, '')))
-      .slice(0, MAX_SEARCH_REQUESTS - runs.length);
-    await mergeResults(remaining);
+    return list.filter((query) => !seenQueries.has(query.query.replace(/\s+/g, '')));
+  };
+
+  const queries = input.plan.queries;
+  if (input.frame && queries.length > 0) {
+    /**
+     * 三层阶梯，只有「上一层不足」才走下一层：
+     *
+     * 1. 精确起点 + 精确目标（找得准）；
+     * 2. 还没拿到「完全同路 / 相似起点 / 同类背景」时放宽一层 —— **有模型**
+     *    就调一次语义扩展（同族/同域/相邻词），**没有模型**就用零成本的
+     *    「丢起点保目标」查询（`buildSameTargetQuery`），先保证「其他背景
+     *    进入同一目标」的真实经历不会缺席；
+     * 3. 补齐替代与反例两条强制视角。
+     */
+    const exactQuery = queries.find((query) => query.id === 'q-similar-exact') ?? queries[0]!;
+    await runWithinBudget([exactQuery]);
+
+    if (goodEnoughCount() < 2) {
+      if (input.expandIntent) {
+        intent = await input.expandIntent(input.frame);
+        const expanded = buildSearchPlan({
+          frame: input.frame,
+          intent,
+          maxRequests: MAX_SEARCH_REQUESTS,
+        }).queries;
+        await runWithinBudget(notYetRun(expanded));
+      } else {
+        const fallback = buildSameTargetQuery({
+          frame: input.frame,
+          ...(intent ? { intent } : {}),
+        });
+        if (fallback) await runWithinBudget([fallback]);
+        await runWithinBudget(notYetRun(queries));
+      }
+    } else {
+      await runWithinBudget(notYetRun(queries));
+    }
   } else {
     await mergeResults(queries);
   }
