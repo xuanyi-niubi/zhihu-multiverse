@@ -301,7 +301,7 @@ describe('Session 编译体验', () => {
     expect(source).toContain('NO_RELIABLE_EXPERIENCE.actions[1]');
     expect(NO_RELIABLE_EXPERIENCE.actions).toEqual(['修改问题', '重新尝试']);
     // 仍然留着一条明确出路：先进入这一局（世界照常走完）
-    expect(source).toContain('这一局没有别人的经验，世界仍然会走完');
+    expect(source).toContain('进入假设推演（不含真实人物经验）');
     // 错误态只出人话：服务端消息先经 playerFacingError 翻译
     expect(source).toContain('playerFacingError');
     expect(source).not.toContain('这一步没有成功');
