@@ -95,7 +95,7 @@ export function ExperienceReveal({ fragments, onInspect, onEnterWorld }: Experie
     }
     const timer = window.setTimeout(() => {
       setChapterIndex((current) => Math.min(current + 1, CHAPTERS.length));
-    }, 3600);
+    }, 2200);
     return () => window.clearTimeout(timer);
   }, [chapterIndex, lastChapter, paused]);
 
