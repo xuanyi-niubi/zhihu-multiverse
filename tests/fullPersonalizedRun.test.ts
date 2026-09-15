@@ -81,9 +81,9 @@ const FAKE_SOURCES: Record<string, readonly KnowledgeSource[]> = {
 };
 
 const fakeSearch: ExperienceSearch = async (query) => {
-  if (query.includes('经历')) return FAKE_SOURCES.similar!;
-  if (query.includes('另一种选择')) return FAKE_SOURCES.alternative!;
+  if (query.includes('换一种做法')) return FAKE_SOURCES.alternative!;
   if (query.includes('失败') || query.includes('后悔')) return FAKE_SOURCES.counterexample!;
+  if (query.includes('亲身经历')) return FAKE_SOURCES.similar!;
   return [];
 };
 
@@ -96,7 +96,8 @@ async function runFullChain() {
   const plan = buildSearchPlan({ frame });
   const retrieved = await retrieveExperienceSources({ plan, search: fakeSearch });
   const extracted = await extractExperienceFacts({
-    sources: retrieved.sources.map((item) => item.source),
+    // 保留检索阶段已经核验的用途与亲历资格，不能在层间把证据语义丢掉。
+    sources: retrieved.sources,
     question: QUESTION,
     router: null, // 零模型：fallback 提取，链路仍须完整
   });
