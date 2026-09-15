@@ -3,8 +3,8 @@ import type { Config } from 'tailwindcss';
 /**
  * 知乎平行宇宙 · 设计令牌
  *
- * 视觉基线：暗黑赛博 + 知乎蓝（#0084FF），遗物用琥珀金区分主动/稀有品质。
- * 所有动效都在 globals.css 的 prefers-reduced-motion 分支里被强制降级。
+ * 当前视觉基线由 `src/app/silver.css` 的 --sil-* token 统一维护；此配置仅保留
+ * Tailwind 兼容类与旧页面仍在使用的动画别名。所有动效都在 reduced-motion 分支降级。
  */
 const config: Config = {
   content: [

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 
 import { removeFile } from '@/core/fsSafe';
 import { createHash, randomUUID } from 'node:crypto';
@@ -67,7 +67,9 @@ function readJson<T>(path: string): T | null {
 
 function writeJson(path: string, value: unknown): void {
   mkdirSync(baseDir(), { recursive: true });
-  writeFileSync(path, JSON.stringify(value, null, 2), 'utf8');
+  const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  writeFileSync(temporaryPath, JSON.stringify(value, null, 2), 'utf8');
+  renameSync(temporaryPath, path);
 }
 
 /**
