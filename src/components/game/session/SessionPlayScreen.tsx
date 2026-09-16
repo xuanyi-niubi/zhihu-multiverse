@@ -414,7 +414,7 @@ export function SessionPlayScreen({
 
             {/* 终局（§十九 - §二十二） */}
             {view.phase === 'ended' && view.endgame ? (
-              <SessionEndgameScreen view={view.endgame} />
+              <SessionEndgameScreen view={view.endgame} sessionId={view.sessionId} />
             ) : null}
           </>
         )}

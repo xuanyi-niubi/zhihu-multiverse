@@ -6,8 +6,10 @@ import { KanshanSprite } from '@/components/characters/KanshanSprite';
 import { CelestialBackdrop } from '@/components/visual/CelestialBackdrop';
 import { RealityPass } from '@/components/visual/RealityPass';
 import { SentenceReforge } from '@/components/visual/SentenceReforge';
+import { WorldlineCardPanel } from '@/components/game/session/WorldlineCardPanel';
 import { observerDisplayName } from '@/features/run/observer';
 import { useObserver } from '@/features/run/useObserver';
+import { worldlineCardOf } from '@/features/zhihu-loop/worldlineCard';
 
 import type { EndgameEvidence } from '@/features/game-world/endgameAnswer';
 import type { SessionEndgameView } from '@/components/game/session/types';
@@ -44,6 +46,11 @@ import type { SessionEndgameView } from '@/components/game/session/types';
 export interface SessionEndgameScreenProps {
   readonly view: SessionEndgameView;
   readonly className?: string;
+  /**
+   * 会话 id。世界线存档卡的卡号由它派生（同 sessionId 必得同卡号）。
+   * 缺省为空串 —— 那样卡号退化成 WL-00000000，卡片其余内容照常。
+   */
+  readonly sessionId?: string;
 }
 
 function Block({
@@ -65,7 +72,11 @@ function Block({
   );
 }
 
-export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScreenProps) {
+export function SessionEndgameScreen({
+  view,
+  className = '',
+  sessionId = '',
+}: SessionEndgameScreenProps) {
   const [copied, setCopied] = React.useState(false);
   const { session } = useObserver();
   const reportIdentity = session?.authorized
@@ -176,6 +187,38 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
     }
   }, [passText]);
 
+  /**
+   * 世界线存档卡（纯函数派生，零模型）。
+   *
+   * 素材全部来自本局真实数据：缺一项就不写那一项，卡片不补内容。
+   * 玩家个人四栏在写作草稿里**留白**，绝不替他填 —— 替他写一句
+   * 「我脱产备考了三个月」就是制造一条假经历，而且他会真的粘到知乎上去。
+   */
+  const worldlineCard = React.useMemo(
+    () =>
+      worldlineCardOf({
+        sessionId,
+        originalQuestion: view.originalQuestion,
+        rewrittenQuestion: view.rewrittenQuestion,
+        walked: view.answer?.walked ?? [],
+        taken: view.answer?.taken ?? [],
+        borrowed: view.answer?.borrowed ?? [],
+        costs: view.answer?.costs ?? [],
+        counter: view.answer?.counter ?? null,
+        unknown: view.answer?.unknown ?? null,
+        realityPass: view.realityPass
+          ? {
+              timebox: view.realityPass.timebox,
+              action: view.realityPass.action,
+              successSignal: view.realityPass.successSignal,
+              stopSignal: view.realityPass.stopSignal,
+            }
+          : null,
+        highlights: view.highlights,
+      }),
+    [sessionId, view],
+  );
+
   return (
     <section
       className={['session-endgame relative mt-6', className].filter(Boolean).join(' ')}
@@ -285,6 +328,13 @@ export function SessionEndgameScreen({ view, className = '' }: SessionEndgameScr
           )}
         </div>
       </section>
+
+      {/*
+        世界线存档卡 + 回知乎写回答的出口（内容飞回路）。
+        位置刻意在 Reality Pass 之后：先把"要做什么"带走，再把"这一局有什么"存下。
+        这一屏是产品的**出口** —— 之前的终局把玩家送出现实就结束了。
+      */}
+      <WorldlineCardPanel card={worldlineCard} />
 
       <div className="mt-9 flex flex-col gap-5">
         <p className="sil-label">回看这一次推演</p>
