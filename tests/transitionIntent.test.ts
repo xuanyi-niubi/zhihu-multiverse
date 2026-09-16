@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -201,12 +201,13 @@ describe('转变意图', () => {
             '人生',
             '电气类',
             '技能型蓝领',
+            '持证技术工种',
             '电气自动化',
             '这是一段明显过长而且没有检索价值的完整句子',
           ],
           domainOrigins: '工科',
           adjacentTargets: ['工作', '领队'],
-          counterTerms: ['建议', '职业资格转型', '退出'],
+          counterTerms: ['建议', '跨行业转岗', '退出'],
         }),
         provider: 'fast',
         model: 'cheap-model',
@@ -245,7 +246,7 @@ describe('转变意图', () => {
     expect(result.origin.family).toEqual(['发型师']);
   });
 
-  it('扩展提示词明确要求"人们在回答原文里真的会打出来的说法"', async () => {
+  it('扩展提示词明确要求"能直接拿去检索的具体名称"', async () => {
     const complete = vi.fn(
       async (_purpose: string, messages: readonly { readonly role: string; readonly content: string }[]) => ({
         ok: true as const,
@@ -262,8 +263,22 @@ describe('转变意图', () => {
     );
 
     const systemPrompt = complete.mock.calls[0]?.[1]?.[0]?.content ?? '';
-    expect(systemPrompt).toContain('真的会打出来');
+    expect(systemPrompt).toContain('能直接拿去检索');
     expect(systemPrompt).toContain('不要给概括性的类别标签');
+    expect(systemPrompt).toContain('相邻工种');
     expect(systemPrompt).toContain('不要依赖任何特定行业的词表');
+  });
+
+  /**
+   * 改提示词必须能击穿缓存。
+   *
+   * 缓存键如果不带版本号，线上会继续吃旧提示词的缓存结果（TTL 24 小时），
+   * 改动看起来"完全没生效" —— 这个坑在真实部署里很隐蔽。
+   */
+  it('扩展缓存键带提示词版本号（改提示词能击穿旧缓存）', () => {
+    const source = readFileSync(new URL('../src/features/experience/transitionIntent.ts', import.meta.url), 'utf8');
+    expect(source).toContain('const EXPANSION_VERSION');
+    const keyBody = source.slice(source.indexOf('function cacheKey'), source.indexOf('function diskDir'));
+    expect(keyBody).toContain('EXPANSION_VERSION');
   });
 });
