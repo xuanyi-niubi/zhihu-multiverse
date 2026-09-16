@@ -666,14 +666,18 @@ export async function prepareExperienceSession(
       tracks.has('similar') && tracks.has('alternative') && tracks.has('counter');
     const onlyAdjacent = !tracks.has('similar') && tracks.has('adjacent');
     const anyFailed = retrieved.runs.some((run) => run.status === 'failed');
+    /** 当日检索额度用尽（我们自己停下）—— 与"上游失败"和"没人讨论"都不同。 */
+    const anyBudgetBlocked = retrieved.runs.some((run) => run.status === 'budget');
     const failureKind =
       retrieved.sources.length > 0
         ? 'none'
-        : anyFailed
-          ? 'upstream-error'
-          : retrieved.rawSourceCount > 0
-            ? 'no-qualified-person'
-            : 'no-result';
+        : anyBudgetBlocked
+          ? 'search-budget'
+          : anyFailed
+            ? 'upstream-error'
+            : retrieved.rawSourceCount > 0
+              ? 'no-qualified-person'
+              : 'no-result';
     const outcome =
       retrieved.sources.length === 0
         ? 'evidence-gap'
@@ -701,11 +705,13 @@ export async function prepareExperienceSession(
         ...(retrieved.similarity ? [similaritySummaryCopy(retrieved.similarity)] : []),
         retrieved.sources.length > 0
           ? `从 ${retrieved.rawSourceCount} 条候选中筛出 ${retrieved.sources.length} 位可核验亲历者，得到 ${facts.length} 条逐字片段。`
-          : failureKind === 'upstream-error'
-            ? '知乎检索暂时不可用；这不是“没有人讨论”，而是上游请求失败。'
-            : failureKind === 'no-qualified-person'
-              ? `搜到 ${retrieved.rawSourceCount} 条候选，但没有一条通过亲历者资格审查。`
-              : '这次检索没有返回候选来源。',
+          : failureKind === 'search-budget'
+            ? '今天的知乎检索额度已用完（为保护上游配额主动停下）；这既不是“没有人讨论”，也不是“没有合格的人”。'
+            : failureKind === 'upstream-error'
+              ? '知乎检索暂时不可用；这不是“没有人讨论”，而是上游请求失败。'
+              : failureKind === 'no-qualified-person'
+                ? `搜到 ${retrieved.rawSourceCount} 条候选，但没有一条通过亲历者资格审查。`
+                : '这次检索没有返回候选来源。',
         ...((extracted.proposed ?? 0) > 0
           ? [
               `模型提议 ${extracted.proposed} 条片段，${extracted.accepted ?? 0} 条通过逐字校验${

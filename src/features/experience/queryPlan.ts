@@ -95,14 +95,24 @@ export interface BuildSearchPlanInput {
   readonly frame: ProblemFrame;
   /** 已校验的语义扩展；省略时只使用用户原话里的明确端点。 */
   readonly intent?: TransitionIntent;
+  /**
+   * **只用于查询**的真实起点词（检索驱动，见 `originTerms.ts`）。
+   *
+   * 它们来自第一轮真实返回的标题与徽章，是"这批人从哪儿来"的语料证据，
+   * 但**不是**用户条件、也**不参与相似等级判定** —— 所以刻意放在这里，
+   * 而不是塞进 `intent.origin.family`（那样会让任何共现的身份词
+   * 都被冒领成"相似起点"）。抽错词只是白花一次查询。
+   */
+  readonly extraOriginTerms?: readonly string[];
   readonly maxRequests?: number;
 }
 
 export function buildSearchPlan(input: BuildSearchPlanInput): SearchPlan {
   const intent = input.intent ?? buildTransitionIntent(input.frame);
+  const extraOriginTerms = (input.extraOriginTerms ?? []).map((term) => term.trim()).filter(Boolean);
   const hasLayeredOrigin =
     intent.target.exact.length > 0 &&
-    (intent.origin.family.length > 0 || intent.origin.domain.length > 0);
+    (intent.origin.family.length > 0 || intent.origin.domain.length > 0 || extraOriginTerms.length > 0);
   const defaultBudget = hasLayeredOrigin ? MAX_SEARCH_REQUESTS : DEFAULT_MAX_REQUESTS;
   const budget = Math.min(MAX_SEARCH_REQUESTS, Math.max(3, Math.round(input.maxRequests ?? defaultBudget)));
   const identity = explicitIdentityTerms(input.frame);
@@ -162,9 +172,13 @@ export function buildSearchPlan(input: BuildSearchPlanInput): SearchPlan {
    * 「丢起点保目标」由检索执行层在第二步显式执行，不依赖计划里是否有它。
    */
   if (hasLayeredOrigin) {
-    const relaxedFamilyTerms = intent.origin.family
+    /**
+     * 第一层放宽的词：**先花真实语料学到的词**（`extraOriginTerms`），
+     * 再补模型给的同族词。等级判定不看这些词 —— 它们只决定"去搜什么"。
+     */
+    const relaxedFamilyTerms = [...new Set([...extraOriginTerms, ...intent.origin.family])]
       .filter((term) => !intent.origin.exact.includes(term))
-      .slice(0, 2);
+      .slice(0, 3);
     const relaxedDomainTerms = intent.origin.domain.slice(0, 2);
     if (relaxedFamilyTerms.length > 0) {
       extras.push({

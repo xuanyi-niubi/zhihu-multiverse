@@ -11,6 +11,8 @@ import type {
   TransitionIntent,
 } from '@/features/experience/domain';
 import { qualifyExperienceSource } from '@/features/experience/qualification';
+import { harvestOriginTerms } from '@/features/experience/originTerms';
+import { isSearchBudgetExhausted } from '@/core/usage/searchBudget';
 import { buildSameTargetQuery, buildSearchPlan, searchRequestBudget } from '@/features/experience/queryPlan';
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
@@ -35,7 +37,11 @@ export interface RetrieveRun {
   readonly query: string;
   readonly purpose: SearchPurpose;
   readonly sourceCount: number;
-  readonly status: 'ok' | 'empty' | 'failed';
+  /**
+   * `budget` = **我们自己停下了**（当日额度用尽），不是上游失败、也不是没有结果。
+   * 三者必须可区分，否则页面会把"今天不查了"说成"没人讨论"。
+   */
+  readonly status: 'ok' | 'empty' | 'failed' | 'budget';
 }
 
 export interface RetrieveExperienceResult {
@@ -245,20 +251,33 @@ export async function retrieveExperienceSources(input: {
         batch.map(async (query) => {
           try {
             const found = await input.search(query.query);
-            return { query, found, failed: false };
-          } catch {
-            return { query, found: [] as readonly KnowledgeSource[], failed: true };
+            return {
+              query,
+              found,
+              status: (found.length > 0 ? 'ok' : 'empty') as RetrieveRun['status'],
+            };
+          } catch (error) {
+            /**
+             * **区分"上游失败"与"我们自己停下"**：
+             * 额度用尽是我们主动停的，必须记成 `budget` ——
+             * 若混进 `failed`，页面就会说"上游请求失败"，而事实是"今天不查了"。
+             */
+            return {
+              query,
+              found: [] as readonly KnowledgeSource[],
+              status: (isSearchBudgetExhausted(error) ? 'budget' : 'failed') as RetrieveRun['status'],
+            };
           }
         }),
       );
 
-      for (const { query, found, failed } of results) {
+      for (const { query, found, status } of results) {
         runs.push({
           queryId: query.id,
           query: query.query,
           purpose: query.purpose,
           sourceCount: found.length,
-          status: failed ? 'failed' : found.length > 0 ? 'ok' : 'empty',
+          status,
         });
 
         for (const source of found) {
@@ -311,44 +330,56 @@ export async function retrieveExperienceSources(input: {
   };
 
   const queries = input.plan.queries;
+
   if (input.frame && queries.length > 0) {
     /**
      * 三层阶梯，只有「上一层不足」才走下一层：
      *
      * 1. 精确起点 + 精确目标（找得准）；
-     * 2. 还没拿到「完全同路 / 相似起点 / 同类背景」时放宽一层 —— **有模型**
-     *    就调一次语义扩展（同族/同域/相邻词），**没有模型**就用零成本的
-     *    「丢起点保目标」查询（`buildSameTargetQuery`），先保证「其他背景
-     *    进入同一目标」的真实经历不会缺席；
+     * 2. 还没拿到「完全同路 / 相似起点 / 同类背景」时放宽：
+     *    a. 先跑**零模型成本**的「丢起点保目标」（其他背景进入同一目标）；
+     *    b. 再从这一轮**真实返回**里学起点词并重建放宽查询；有模型时同时
+     *       调一次语义扩展，两者合并（真词优先、模型词退到第二层）；
      * 3. 补齐替代与反例两条强制视角。
      */
     const exactQuery = queries.find((query) => query.id === 'q-similar-exact') ?? queries[0]!;
     await runWithinBudget([exactQuery]);
 
     if (goodEnoughCount() < 2) {
-      /**
-       * 第一步永远是**零模型成本**的「丢起点保目标」："其他背景进入同一目标"
-       * 主要靠它捞 —— 以前它只在"没有模型可用"时兜底，现在只要有预算就先跑。
-       *
-       * 计划里通常已经有它（`q-similar-target`）；调用方若传了更小的计划，
-       * 这里就现场补一条，保证这一步永远存在。
-       */
+      /** a. 丢起点保目标（计划里通常已有；调用方给了更小的计划就现场补一条）。 */
       const plannedTarget = queries.find((query) => query.id === 'q-similar-target');
       const targetQuery =
         plannedTarget ?? buildSameTargetQuery({ frame: input.frame, ...(intent ? { intent } : {}) });
       if (targetQuery) await runWithinBudget([targetQuery]);
 
+      /** b. 有模型就扩展一次；同时从这一轮**真实返回**里学起点词，重建查询面。 */
+      let nextIntent: TransitionIntent = intent ?? buildTransitionIntent(input.frame);
       if (input.expandIntent) {
-        intent = await input.expandIntent(input.frame);
-        const expanded = buildSearchPlan({
-          frame: input.frame,
-          intent,
-          maxRequests: budget,
-        }).queries;
-        await runWithinBudget(notYetRun(expanded));
-      } else {
-        await runWithinBudget(notYetRun(queries));
+        nextIntent = await input.expandIntent(input.frame);
       }
+      intent = nextIntent;
+
+      /**
+       * 学到的词**只进查询**（`extraOriginTerms`），**不进 `intent`**。
+       *
+       * 这是刻意的：等级判定用的是"用户原话 + 已校验的模型词"，
+       * 而检索学到的词只是"这批人从哪儿来"的语料证据 —— 若把它塞进
+       * `origin.family`，任何共现的身份词（徽章写着"会计"）都会被冒领成
+       * "相似起点"。**查询可以放宽，等级声明不能冒领。**
+       */
+      const harvested = harvestOriginTerms({
+        sources: merged.map((item) => item.source),
+        target: intent.target.exact[0] ?? null,
+        origin: intent.origin.exact[0] ?? null,
+        limit: 3,
+      });
+      const rebuilt = buildSearchPlan({
+        frame: input.frame,
+        intent,
+        extraOriginTerms: harvested,
+        maxRequests: budget,
+      }).queries;
+      await runWithinBudget(notYetRun(rebuilt.length > 0 ? rebuilt : queries));
     } else {
       await runWithinBudget(notYetRun(queries));
     }

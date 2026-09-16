@@ -216,7 +216,14 @@ export interface RetrievalRun {
   readonly uniqueAuthorCount?: number;
   readonly rejectedCount?: number;
   readonly outcome?: 'full' | 'limited' | 'adjacent' | 'evidence-gap';
-  readonly failureKind?: 'none' | 'upstream-error' | 'no-result' | 'no-qualified-person';
+  /**
+   * 为什么没有来源。四档必须互不混淆：
+   * - `upstream-error` 上游请求失败；
+   * - `search-budget` **我们自己停下了**（当日额度用尽，见 `core/usage/searchBudget.ts`）；
+   * - `no-qualified-person` 搜到了但没人通过资格审查；
+   * - `no-result` 真的没返回候选。
+   */
+  readonly failureKind?: 'none' | 'upstream-error' | 'search-budget' | 'no-result' | 'no-qualified-person';
   readonly factCount: number;
   /**
    * 被过滤掉的来源数。

@@ -268,6 +268,42 @@ describe('「电工转导游」端到端：合格候选必须进经验层', () =
     expect(result.sources.length).toBeGreaterThanOrEqual(3);
     expect(searched.length).toBeLessThanOrEqual(searchRequestBudget());
   });
+
+  /**
+   * P0：放宽层的词源改成「检索驱动」。
+   *
+   * 线上实测：模型给的是「技能型蓝领 / 职业资格转型」这类抽象标签，
+   * 放宽查询一条都命中不了；而第一轮返回的候选里，标题与徽章本来就写着
+   * 「机械工程 / 电气自动化」这类真实起点词。
+   */
+  it('放宽层优先用从真实返回里学到的起点词，而不是模型给的抽象标签', async () => {
+    const frame = frameFor(question);
+    const searched: string[] = [];
+
+    const result = await retrieveExperienceSources({
+      plan: buildSearchPlan({ frame }),
+      frame,
+      // 模型给的就是线上那种抽象标签
+      expandIntent: async () =>
+        buildTransitionIntent(frame, {
+          familyOrigins: ['技能型蓝领'],
+          domainOrigins: ['职业资格转型'],
+          adjacentTargets: [],
+          counterTerms: [],
+        }),
+      search: async (query) => {
+        searched.push(query);
+        return query.includes('电工') ? [] : CANDIDATES;
+      },
+    });
+
+    // 第一层放宽查询里必须出现"从语料里学到"的真词（来自作者徽章）
+    const familyQuery = searched.find((query) => query.includes('机械工程') || query.includes('电气自动化'));
+    expect(familyQuery).toBeDefined();
+    // 抽象标签不该占据第一层放宽查询（退到第二层）
+    expect(familyQuery).not.toContain('技能型蓝领');
+    expect(result.sources.length).toBeGreaterThanOrEqual(3);
+  });
 });
 
 describe('相同终点的方向纪律', () => {

@@ -5,6 +5,7 @@ import {
   retrieveExperienceSources,
 } from '@/features/experience/retrieve';
 import { buildSearchPlan, searchRequestBudget } from '@/features/experience/queryPlan';
+import { SearchBudgetExhaustedError } from '@/core/usage/searchBudget';
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 
 import type { ExperienceSearch } from '@/features/experience/retrieve';
@@ -300,6 +301,25 @@ describe('按相似等级渐进选择', () => {
     expect(searched.length).toBeLessThanOrEqual(searchRequestBudget());
     expect(result.sources[0]?.source.id).toBe('family-expanded');
     expect(result.sources[0]?.qualification?.similarityTier).toBe('same-family');
+  });
+
+  it('当日检索额度用尽时记成 budget（既不是 failed，也不是 empty）', async () => {
+    const plan = buildSearchPlan({ frame: transitionFrame() });
+    const result = await retrieveExperienceSources({
+      plan,
+      frame: transitionFrame(),
+      search: async () => {
+        throw new SearchBudgetExhaustedError(900);
+      },
+    });
+
+    expect(result.runs.length).toBeGreaterThan(0);
+    // 我们主动停下 ≠ 上游失败 ≠ 没有结果：三档必须分得清，
+    // 否则页面会把"今天不查了"说成"没人讨论"。
+    expect(result.runs.every((run) => run.status === 'budget')).toBe(true);
+    expect(result.sources).toHaveLength(0);
+    // 查询记录仍然保留：页面要能解释"为什么没有来源"
+    expect(result.runs.map((run) => run.query).join(' ')).toContain('导游');
   });
 
   it('完全同路优先，并彻底淘汰与导游无关的转行故事', async () => {

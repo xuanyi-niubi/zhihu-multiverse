@@ -42,7 +42,7 @@
 
 | 机制 | 玩家能感觉到什么 | 代码落点 |
 |---|---|---|
-| **先找人，再谈相似** —— 先查精确起点；还没拿到「完全同路 / 相似起点 / 同类背景」时，才用一次短 AI 扩展，按相似起点 / 同类背景 / 相同终点 / 相邻路径逐层放宽（没有可用模型时，改用一条零成本的「丢起点保目标」查询） | 找不到完全相同的人时，也能看清“哪里相同、哪里不同”；同一问题 24 小时内复用扩展结果 | `features/experience/transitionIntent.ts` · `features/experience/qualification.ts` · `features/experience/retrieve.ts` |
+| **先找人，再谈相似** —— 先查精确起点；不够时先跑**零成本**的「丢起点保目标」，再从这一轮**真实返回的标题与作者徽章里学起点词**去放宽（有模型时额外做一次短语义扩展，真词优先），最后按相似起点 / 同类背景 / 相同终点 / 相邻路径逐层放宽。每局检索预算 8 条（`APP_MAX_SEARCH_REQUESTS` 可调，硬上限 12） | 找不到完全相同的人时，也能看清“哪里相同、哪里不同”；放宽用的是语料里的真词，不是模型编的行业大词 | `features/experience/originTerms.ts` · `features/experience/transitionIntent.ts` · `features/experience/qualification.ts` · `features/experience/retrieve.ts` |
 | **逐字引用** —— `exactQuote` 必须是原回答的连续子串，改一个字整条丢弃 | 每句话都能点回那一篇真实回答 | `features/experience/validate.ts` |
 | **Experience Unlock** —— 一条真实经历会在某一幕解锁一个此前不存在的行动 | 「他的做法我原来根本没想到」 | `features/game-world/experienceUnlock.ts` |
 | **反例驱动第三幕** —— 找不到真实反例就诚实留空，不编 | 「原来看起来对的路，有人是这样走坏的」 | `features/game-world/compileWorld.ts` |
@@ -63,6 +63,7 @@
 | **不给成功率 / 匹配度 / 推荐分** | 终局不判卷；内部相似等级只用于排序，从不展示成分数（`features/game-world/questView.ts` · `features/experience/similarityCopy.ts`） |
 | **不把旧快照伪装成实时结果** | 检索来源分 `live / snapshot / curated / offline` 四档并如实显示；没有 key 时走人工校验过的快照，界面标注来源（`features/decision-session/service.ts`） |
 | **不把「没人讨论」说成「查过了没有」** | 上游失败记 `upstream-error`、没有候选记 `no-result`、搜到但不合格记 `no-qualified-person`，三种文案互不相同（`features/decision-session/service.ts`） |
+| **不把「今天不查了」说成「没人讨论」** | 知乎检索有全站日预算（`APP_MAX_SEARCHES_PER_DAY`，默认 900）：用满**不报错**，只是停下并记成 `budget` 档，页面如实说「今天的检索额度已用完」——与「上游失败」「没搜到」「搜到但没人合格」三档互不混淆（`core/usage/searchBudget.ts`） |
 
 ### 上线前的一次实测调整（如实记录）
 

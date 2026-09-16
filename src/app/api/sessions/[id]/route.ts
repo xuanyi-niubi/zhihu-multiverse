@@ -27,6 +27,7 @@ import {
 } from '@/features/run/keyResolution';
 import { allocateAppLlmCall, appDailyLlmBudget, appSessionLlmBudget } from '@/core/usage/budget';
 import { appIpLlmWindow, clientIpFromHeaders } from '@/core/usage/ipRateLimit';
+import { withSearchBudget } from '@/core/usage/searchBudget';
 
 import type { DecisionSession } from '@/features/decision-session/domain';
 import type { ExperimentResult } from '@/features/reality-memory/domain';
@@ -221,8 +222,17 @@ export async function PATCH(request: Request, context: { params: { id: string } 
         : null;
 
       next = await prepareExperienceSession(session, {
-        // 多意图检索 + 持久化缓存：同一问题整局只搜一次（Phase 5）
-        ...(zhihu ? { search: withExperienceSearchCache(experienceSearchWith(zhihu)) } : {}),
+        /**
+         * 多意图检索 + 持久化缓存 + **全站日预算**（P2 护栏）。
+         *
+         * 包装顺序不能反：缓存在外层，`withSearchBudget` 在内层 ——
+         * 缓存命中不消耗额度（否则一次热命中也要记账，护栏会误伤自己）。
+         * 额度用尽时内层抛类型化错误，检索层记成 `budget` 并如实展示，
+         * **绝不把"今天不查了"说成"没人讨论"**。
+         */
+        ...(zhihu
+          ? { search: withExperienceSearchCache(withSearchBudget(experienceSearchWith(zhihu))) }
+          : {}),
         ...(router ? { router } : {}),
       });
       break;
