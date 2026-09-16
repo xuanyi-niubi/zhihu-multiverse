@@ -45,7 +45,6 @@ const GENERIC: ReadonlySet<string> = new Set([
 /** 切词用的分隔符（含全角标点与空白）。 */
 const SPLITTER = /[^\p{Script=Han}A-Za-z0-9]+/u;
 
-/** 中文片段里再切的步长：只在片段较长时切 2–4 字窗口。 */
 const MIN_TERM = 2;
 const MAX_TERM = 8;
 /** 同一个词至少出现在几条来源里才算"这一批人的共同起点"。 */
@@ -58,10 +57,11 @@ interface Candidate {
   fromBadge: boolean;
 }
 
+const HAS_HAN = /\p{Script=Han}/u;
+
 function isUsable(term: string): boolean {
   if (term.length < MIN_TERM || term.length > MAX_TERM) return false;
   if (GENERIC.has(term)) return false;
-  // 纯数字 / 纯标点不要
   if (!/[\p{Script=Han}A-Za-z]/u.test(term)) return false;
   return true;
 }
@@ -74,8 +74,13 @@ function phrasesOf(source: KnowledgeSource): readonly { readonly term: string; r
   for (const raw of badgeFields) {
     const text = raw.trim();
     if (text.length === 0) continue;
-    // 整段（例如「机械工程」「某银行职员」）
-    out.push({ term: text, badge: true });
+    /**
+     * 徽章整段只在**没有分隔符**时采用（「机械工程」是身份词）；
+     * 带空格的整段（「AI 从业」）要拆成片段，否则会把一整句话当词。
+     */
+    if (!SPLITTER.test(text)) {
+      out.push({ term: text, badge: true });
+    }
     for (const part of text.split(SPLITTER)) {
       if (part.length >= MIN_TERM) out.push({ term: part, badge: true });
     }
@@ -155,12 +160,23 @@ export function harvestOriginTerms(input: HarvestOriginTermsInput): readonly str
   }
 
   return [...stats.entries()]
-    .filter(([, value]) => value.fromBadge || value.count >= MIN_SOURCES)
+    /**
+     * 徽章词只要 1 条来源也采用 —— 但**只对中文词**生效。
+     *
+     * 实测教训：某条来源的签名里带 "wu fang zhen" 这类拼音，它的碎片被
+     * 当成身份词直接进了放宽查询（`wu fang zhen 导游 亲身经历 后来`），
+     * 白花一次检索还挤掉了真词。所以拉丁片段必须跨来源重复才算数。
+     */
+    .filter(([term, value]) => (value.fromBadge && HAS_HAN.test(term)) || value.count >= MIN_SOURCES)
     .sort((left, right) => {
       const [leftTerm, leftValue] = left;
       const [rightTerm, rightValue] = right;
       if (leftValue.fromBadge !== rightValue.fromBadge) return leftValue.fromBadge ? -1 : 1;
       if (rightValue.count !== leftValue.count) return rightValue.count - leftValue.count;
+      // 同频时中文优先：中文身份词比拉丁片段更可能是真实起点
+      const leftHan = HAS_HAN.test(leftTerm) ? 0 : 1;
+      const rightHan = HAS_HAN.test(rightTerm) ? 0 : 1;
+      if (leftHan !== rightHan) return leftHan - rightHan;
       if (rightTerm.length !== leftTerm.length) return rightTerm.length - leftTerm.length;
       return leftTerm.localeCompare(rightTerm);
     })

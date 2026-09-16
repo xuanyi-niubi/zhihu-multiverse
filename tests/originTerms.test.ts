@@ -125,6 +125,31 @@ describe('从真实来源里学「起点词」', () => {
     ).toEqual([]);
   });
 
+  it('纯拉丁碎片（拼音）不会因为出现在徽章里就被当成起点词', () => {
+    // 实测教训：线上真的抽出过 `wu fang zhen 导游 亲身经历 后来` 这种查询
+    const single = harvestOriginTerms({
+      sources: [source({ authorSignature: 'wu fang zhen' })],
+      target: '导游',
+    });
+    expect(single).toEqual([]);
+
+    // 跨来源重复的拉丁词才算数（说明它真的是这批人的共同标记）
+    const repeated = harvestOriginTerms({
+      sources: [source({ authorSignature: 'AI 从业' }), source({ authorSignature: 'AI 方向' })],
+      target: '导游',
+    });
+    expect(repeated).toContain('AI');
+  });
+
+  it('同频时中文词优先于拉丁词', () => {
+    const terms = harvestOriginTerms({
+      sources: [source({ authorBadge: 'AI' }), source({ authorBadge: '机械' })],
+      target: '导游',
+      limit: 1,
+    });
+    expect(terms).toEqual(['机械']);
+  });
+
   it('limit 生效，且同一输入两次结果一致（纯函数）', () => {
     const sources = [
       source({ authorBadge: '机械工程' }),
