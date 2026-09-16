@@ -47,6 +47,8 @@ const SPLITTER = /[^\p{Script=Han}A-Za-z0-9]+/u;
 
 const MIN_TERM = 2;
 const MAX_TERM = 8;
+/** 徽章到几个字以内就整体采用（「电气自动化」是完整的身份词，不该被截断）。 */
+const BADGE_WHOLE_MAX = 6;
 /** 同一个词至少出现在几条来源里才算"这一批人的共同起点"。 */
 const MIN_SOURCES = 2;
 
@@ -66,47 +68,45 @@ function isUsable(term: string): boolean {
   return true;
 }
 
-/** 一条来源里可用的短语：徽章/签名整段与其中的片段、标题里的片段。 */
+/**
+ * 一条来源里的个人身份短语。**只用 `authorBadge`**。
+ *
+ * ## 两个被真实数据否掉的词源（都写在这里，免得以后有人再加回来）
+ *
+ * 1. **`title` 不能用**：搜索返回的多是「同一个问题的多个回答」，
+ *    而标题是**问题级共享元数据** —— 任何标题 n-gram 都会"自动跨来源重复"。
+ *    实测抽出来的是 `什么` / `当的越久` / `工当的越` / `为什么电` 这种碎片：
+ *    频次规则量到的不是"这些人从哪儿来"，而是"这个问题有多热"。
+ * 2. **`authorSignature` 不能用**：它是账号 slug（`zhen-shi-ren-wu-cai-fang`、
+ *    `wu-zu-niao-64`），切出来是拼音碎片，且 slug 跨来源重复 → 也"自动通过"。
+ *    线上真抽出过 `wu fang zhen 导游 亲身经历 后来` 这种查询。
+ *
+ * 于是只剩 `authorBadge`（「机械工程」「特种作业操作证持证人」）——
+ * 它是**人写的、属于个人的**身份声明。长徽章只取**最前的 4 字词头**
+ * （中文复合词的头通常就是领域词：`特种作业操作证持证人` → `特种作业`），
+ * 避免同一徽章切出一堆互相重叠的前缀塞满查询。
+ */
 function phrasesOf(source: KnowledgeSource): readonly { readonly term: string; readonly badge: boolean }[] {
   const out: { term: string; badge: boolean }[] = [];
-  const badgeFields = [source.authorBadge ?? '', source.authorSignature ?? ''];
+  const badge = (source.authorBadge ?? '').trim();
+  if (badge.length === 0) {
+    return out;
+  }
 
-  for (const raw of badgeFields) {
-    const text = raw.trim();
-    if (text.length === 0) continue;
-    /**
-     * 徽章整段只在**没有分隔符**时采用（「机械工程」是身份词）；
-     * 带空格的整段（「AI 从业」）要拆成片段，否则会把一整句话当词。
-     */
-    if (!SPLITTER.test(text)) {
-      out.push({ term: text, badge: true });
-    }
-    for (const part of text.split(SPLITTER)) {
+  if (SPLITTER.test(badge)) {
+    // 含分隔符：拆成片段（「AI 从业」→ AI / 从业）
+    for (const part of badge.split(SPLITTER)) {
       if (part.length >= MIN_TERM) out.push({ term: part, badge: true });
     }
+    return out;
   }
 
-  const title = (source.title ?? '').trim();
-  if (title.length > 0) {
-    for (const part of title.split(SPLITTER)) {
-      if (part.length < MIN_TERM) continue;
-      /**
-       * 标题是句子，不是身份声明：**短片段**（≤4 字）本身可能就是词
-       * （"土木""会计"），长片段则要切窗 —— "机械工程专业毕业" 里真正
-       * 可复用的是"机械工程"这种 4 字词，整句不是词。
-       */
-      if (part.length <= 4) {
-        out.push({ term: part, badge: false });
-        continue;
-      }
-      for (const size of [4, 3, 2]) {
-        for (let index = 0; index + size <= part.length; index += 1) {
-          out.push({ term: part.slice(index, index + size), badge: false });
-        }
-      }
-    }
+  if (badge.length <= BADGE_WHOLE_MAX) {
+    out.push({ term: badge, badge: true });
+    return out;
   }
-
+  // 过长徽章（「特种作业操作证持证人」）只取最前 4 字词头
+  out.push({ term: badge.slice(0, 4), badge: true });
   return out;
 }
 

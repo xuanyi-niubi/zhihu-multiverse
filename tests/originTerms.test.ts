@@ -48,32 +48,18 @@ describe('从真实来源里学「起点词」', () => {
     expect(terms).toContain('教师');
   });
 
-  it('标题里的词必须跨来源重复才算共同起点', () => {
-    const once = harvestOriginTerms({
-      sources: [source({ title: '从土木到导游的真实经历' })],
-      target: '导游',
-    });
-    expect(once).not.toContain('土木');
-
-    const twice = harvestOriginTerms({
-      sources: [
-        source({ title: '从土木到导游的真实经历' }),
-        source({ title: '土木毕业以后我转行了' }),
-      ],
-      target: '导游',
-    });
-    expect(twice).toContain('土木');
-  });
-
-  it('长片段切窗：真实语料里长句也能切出起点词', () => {
+  it('同一个词在一条来源里重复出现只算一次，频次靠跨来源累积', () => {
     const terms = harvestOriginTerms({
       sources: [
-        source({ title: '机械工程专业毕业，后来我转行了' }),
-        source({ title: '机械工程毕业那年我做了决定' }),
+        source({ authorBadge: '会计' }),
+        source({ authorBadge: '会计' }),
+        source({ authorBadge: '法律' }),
       ],
       target: '导游',
+      limit: 1,
     });
-    expect(terms).toContain('机械工程');
+    // 会计在 2 条来源里出现 → 排在只出现 1 次的 法律 前面
+    expect(terms).toEqual(['会计']);
   });
 
   it('泛词、目标词、用户自己的起点词都不采用（行业无关）', () => {
@@ -93,29 +79,17 @@ describe('从真实来源里学「起点词」', () => {
     }
   });
 
-  it('同一个词在一条来源里重复出现只算一次，频次靠跨来源累积', () => {
-    const terms = harvestOriginTerms({
-      sources: [
-        source({ title: '会计会计会计，会计转行' }),
-        source({ title: '会计转行以后' }),
-        source({ title: '另一个故事' }),
-      ],
-      target: '导游',
-    });
-    expect(terms).toContain('会计');
-  });
-
-  it('徽章词排在标题词前面（身份声明比标题噪声更可信）', () => {
+  it('徽章词按（出现次数 → 词长）稳定排序', () => {
     const terms = harvestOriginTerms({
       sources: [
         source({ authorBadge: '会计' }),
-        source({ title: '会计转行实录' }),
-        source({ title: '会计转行第二年' }),
+        source({ authorBadge: '机械工程' }),
       ],
       target: '导游',
       limit: 1,
     });
-    expect(terms).toEqual(['会计']);
+    // 同频同为徽章词时，更长的身份词更具体 → 排在前面
+    expect(terms).toEqual(['机械工程']);
   });
 
   it('没有来源 / 全是泛词时返回空（不猜）', () => {
@@ -125,17 +99,57 @@ describe('从真实来源里学「起点词」', () => {
     ).toEqual([]);
   });
 
-  it('纯拉丁碎片（拼音）不会因为出现在徽章里就被当成起点词', () => {
-    // 实测教训：线上真的抽出过 `wu fang zhen 导游 亲身经历 后来` 这种查询
+  it('标题（问题级共享元数据）绝不能当词源', () => {
+    /**
+     * 实测：搜索返回的多是同一个问题的多个回答，标题在它们之间共享，
+     * 于是任何标题 n-gram 都"自动跨来源重复"。抽出来的会是
+     * `什么` / `当的越久` / `为什么电` 这种碎片 —— 量的不是起点，是问题热度。
+     */
+    const terms = harvestOriginTerms({
+      sources: [
+        source({ title: '为什么电工当的越久,越会怕电?' }),
+        source({ title: '为什么电工当的越久,越会怕电?' }),
+        source({ title: '做一名电工是什么体验?' }),
+      ],
+      target: '导游',
+      origin: '电工',
+    });
+    expect(terms).toEqual([]);
+  });
+
+  it('长徽章只取最前的 4 字词头（不切一堆重叠前缀）', () => {
+    const terms = harvestOriginTerms({
+      sources: [source({ authorBadge: '特种作业操作证持证人' })],
+      target: '导游',
+      origin: '电工',
+    });
+    expect(terms).toEqual(['特种作业']);
+  });
+
+  it('账号 slug（AuthorSignature）不是身份文本，绝不能当词源', () => {
+    // 实测：线上真抽出过 `wu fang zhen 导游 亲身经历 后来`，
+    // 根因就是 @ 名 slug（zhen-shi-ren-wu-cai-fang 这类）被切成了拼音碎片。
+    const terms = harvestOriginTerms({
+      sources: [
+        source({ authorSignature: 'zhen-shi-ren-wu-cai-fang' }),
+        source({ authorSignature: 'zhen-shi-ren-wu-cai-fang' }),
+        source({ authorSignature: 'wu-zu-niao-64' }),
+      ],
+      target: '导游',
+    });
+    expect(terms).toEqual([]);
+  });
+
+  it('纯拉丁碎片不会因为出现在徽章里就被当成起点词', () => {
     const single = harvestOriginTerms({
-      sources: [source({ authorSignature: 'wu fang zhen' })],
+      sources: [source({ authorBadge: 'wu fang zhen' })],
       target: '导游',
     });
     expect(single).toEqual([]);
 
     // 跨来源重复的拉丁词才算数（说明它真的是这批人的共同标记）
     const repeated = harvestOriginTerms({
-      sources: [source({ authorSignature: 'AI 从业' }), source({ authorSignature: 'AI 方向' })],
+      sources: [source({ authorBadge: 'AI 从业' }), source({ authorBadge: 'AI 方向' })],
       target: '导游',
     });
     expect(repeated).toContain('AI');
