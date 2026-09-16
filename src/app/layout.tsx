@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 
 import AppearanceBootstrap from '@/components/AppearanceBootstrap';
 import ObserverGate from '@/components/session/ObserverGate';
+import WechatHint from '@/components/WechatHint';
 
 import './globals.css';
 import './silver.css';
@@ -11,9 +12,15 @@ import './silver.css';
  *
  * 不能省。没有 `metadataBase` 时 Next 会把 OG 图输出成相对路径，
  * 微信 / 飞书 / 项目广场抓取时拿不到封面，分享出去就是一条纯文字链接。
+ *
+ * ## 为什么默认值从 `:8443` 改成标准 443
+ *
+ * 线上长期用 `https://<host>:8443`。**非标准端口在微信内置浏览器、
+ * 企业网与校园网里经常直接打不开** —— 而这条链接是要发到微信群、项目页、
+ * 答辩 PPT 里的。443 上同一个应用与同一张有效证书早已就绪，换掉端口没有任何代价。
  * 部署换域名时改 `NEXT_PUBLIC_SITE_URL`，不必动代码。
  */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zhihu.xuanyi888.cloud:8443';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zhihu.xuanyi888.cloud';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -81,6 +88,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="sil-darkroom sil-viewport min-h-full">
         {/* 设置页的「减少动画」：把用户偏好落到 <html data-reduce-motion>，全站生效 */}
         <AppearanceBootstrap />
+        {/*
+          微信内置浏览器兜底：非标准端口常被拦，明确告诉用户改用系统浏览器。
+          只在微信 UA 下出现（普通浏览器零打扰）。
+        */}
+        <WechatHint />
         {/*
           观测者登录引导。
           挂在根布局而不是首页，因为「一进站就该看到」—— 用户可能直接落在
