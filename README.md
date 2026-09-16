@@ -9,26 +9,30 @@
 **知乎黑客松 2026 · 校园新锐季** | 主赛道：跨次元游乐场 | 关联方向：知识炼金场
 
 <!--
-  截图按**画面内容**命名（文件名即内容），不要按历史沿用的旧名改图。
-  当前 5 张都是桌面端 1440×900 实拍：
-    home.jpg              首页 · 命运观象厅
-    session-clarify.jpg   动态澄清
-    world-forge.jpg       World Forge · 三条轨道
-    play-act1.jpg         推演 · 第一幕「走进去」
-    experience-card.jpg   借来的经验卡
-  仓库里没有真实的终局截图，所以这里也不摆一张冒充终局的图。
+  截图按**画面内容**命名（文件名即内容）。重拍请走真实主链：
+  建局 → 澄清 → 编译 → 对局，拍完自检文件哈希（防止两张拍到同一画面）。
+
+  桌面 1440×900 与手机 390×844 各一套，共 6 张：
+    home(.jpg / -mobile.jpg)               首页 · 命运观象厅
+    experience-reveal(...)                 体验揭示 · 筛出可核验亲历者后逐段看
+    play-act1(...)                         推演 · 第一幕「走进去」
+
+  仓库里没有真实可稳定复现的终局截图，所以这里不摆一张冒充终局的图。
 -->
 <p align="center">
+  <strong>桌面 1440×900</strong><br />
   <a href="./public/screenshots/home.jpg"><img src="./public/screenshots/home.jpg" width="32%" alt="首页 · 命运观象厅" /></a>
-  <a href="./public/screenshots/session-clarify.jpg"><img src="./public/screenshots/session-clarify.jpg" width="32%" alt="动态澄清 · 只问会改变结论的事" /></a>
-  <a href="./public/screenshots/world-forge.jpg"><img src="./public/screenshots/world-forge.jpg" width="32%" alt="World Forge · 相似 / 另一种走法 / 相反结果 三条轨道" /></a>
+  <a href="./public/screenshots/experience-reveal.jpg"><img src="./public/screenshots/experience-reveal.jpg" width="32%" alt="体验揭示 · 筛出可核验的亲历者，逐段看他们真正走过的部分" /></a>
+  <a href="./public/screenshots/play-act1.jpg"><img src="./public/screenshots/play-act1.jpg" width="32%" alt="推演 · 第一幕：走进去" /></a>
 </p>
 <p align="center">
-  <a href="./public/screenshots/play-act1.jpg"><img src="./public/screenshots/play-act1.jpg" width="32%" alt="推演 · 第一幕：走进去" /></a>
-  <a href="./public/screenshots/experience-card.jpg"><img src="./public/screenshots/experience-card.jpg" width="32%" alt="借来的经验 · 一条真实经历解锁一个原本不存在的行动" /></a>
+  <strong>手机 390×844</strong><br />
+  <a href="./public/screenshots/home-mobile.jpg"><img src="./public/screenshots/home-mobile.jpg" width="18%" alt="首页 · 手机" /></a>
+  <a href="./public/screenshots/experience-reveal-mobile.jpg"><img src="./public/screenshots/experience-reveal-mobile.jpg" width="18%" alt="体验揭示 · 手机" /></a>
+  <a href="./public/screenshots/play-act1-mobile.jpg"><img src="./public/screenshots/play-act1-mobile.jpg" width="18%" alt="推演第一幕 · 手机" /></a>
 </p>
 
-<p align="center"><sub>桌面端截图（1440×900）· 点击任意一张可看原图 · 首页 → 动态澄清 → World Forge → 第一幕 → 借来的经验</sub></p>
+<p align="center"><sub>桌面 1440×900 与手机 390×844 实拍，非静态拼图 · 点击任意一张可看原图</sub></p>
 
 ---
 
