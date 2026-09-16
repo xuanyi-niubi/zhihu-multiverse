@@ -13,14 +13,17 @@ import './silver.css';
  * 不能省。没有 `metadataBase` 时 Next 会把 OG 图输出成相对路径，
  * 微信 / 飞书 / 项目广场抓取时拿不到封面，分享出去就是一条纯文字链接。
  *
- * ## 为什么默认值从 `:8443` 改成标准 443
+ * ## 关于端口（2026-09-16 定：对外统一 `:8443`）
  *
- * 线上长期用 `https://<host>:8443`。**非标准端口在微信内置浏览器、
- * 企业网与校园网里经常直接打不开** —— 而这条链接是要发到微信群、项目页、
- * 答辩 PPT 里的。443 上同一个应用与同一张有效证书早已就绪，换掉端口没有任何代价。
- * 部署换域名时改 `NEXT_PUBLIC_SITE_URL`，不必动代码。
+ * 对外入口统一使用 `https://<host>:8443`。已知代价：**微信内置浏览器对
+ * 非标准端口限制较严**，微信里可能打不开 —— 这属于已接受的取舍
+ * （页面顶部有 `WechatHint` 兜底，引导用户改用系统浏览器打开）。
+ *
+ * 标准 443 上**同一个应用与同一张有效证书**早已就绪：如果哪天要让微信
+ * 也能直接点开，把这里、关于页链接与对外文案一起换成不带端口的 443 即可，
+ * **服务器与证书都不用动**。部署换域名时改 `NEXT_PUBLIC_SITE_URL`，不必动代码。
  */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zhihu.xuanyi888.cloud';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zhihu.xuanyi888.cloud:8443';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
