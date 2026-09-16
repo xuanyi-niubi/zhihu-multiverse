@@ -1,4 +1,5 @@
 import type { RealityExperiment } from '@/features/decision-session/domain';
+import { editedYearOf, eraTrackOf } from '@/features/experience/eraTrack';
 import type { ExperienceFact, ProblemFrame } from '@/features/experience/domain';
 import type { WorldBlueprint } from '@/features/game-world/domain';
 
@@ -21,6 +22,7 @@ import type { WorldBlueprint } from '@/features/game-world/domain';
  * 真实的人是怎么做的     逐字片段 + 答主 + 可点回原文的链接
  * 他们付出了什么代价     逐字片段
  * 哪条路是走坏的         反例片段（真的出现过反例才有）
+ * 同一个问题不同年代的人   有年份的片段按时代分组（**平行的时间**）
  * 仍然不知道什么         WorldBlueprint.keyUnknown
  * 所以要验证的一件事     真实实验的六要素
  * ```
@@ -43,13 +45,39 @@ export interface EndgameEvidence {
    * - `step`    真实的人做过的具体一步
    * - `cost`    真实的人付出的代价
    * - `counter` 走坏的那条路（反例）
+   * - `era`     时代对照里的片段（平行的时间）
    */
-  readonly kind: 'taken' | 'step' | 'cost' | 'counter';
+  readonly kind: 'taken' | 'step' | 'cost' | 'counter' | 'era';
   /** **逐字**片段（原文的连续前缀，不是改写）。 */
   readonly quote: string;
   readonly author: string;
   readonly sourceUrl: string;
   readonly sourceTitle: string | null;
+  /**
+   * 这条回答的**最后编辑年份**（不是首次发布时间；字段里没有那个）。
+   * 没有时间信息时为 null —— 页面必须当"不知道"处理。
+   */
+  readonly editedYear: number | null;
+}
+
+/** 时代对照里的一个年代。 */
+export interface EndgameEraGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly items: readonly EndgameEvidence[];
+}
+
+/**
+ * 平行的时间：同一个问题，不同年代的人说法不一样。
+ *
+ * 只有当**两个以上时代都有人**时 `comparable` 才为真；否则如实说明
+ * 「这一局只找到了一个时代」，不硬凑对照。
+ */
+export interface EndgameEraTrack {
+  readonly comparable: boolean;
+  readonly gapYears: number;
+  readonly note: string;
+  readonly groups: readonly EndgameEraGroup[];
 }
 
 export interface EndgameAnswer {
@@ -67,6 +95,13 @@ export interface EndgameAnswer {
   readonly costs: readonly EndgameEvidence[];
   /** 走坏的那条路（有反例才有）。 */
   readonly counter: EndgameEvidence | null;
+  /**
+   * 平行的时间：同一个问题在不同年代的说法（第三条维度）。
+   *
+   * 与相似等级正交 —— 相似等级回答"这个人像不像你"，时代回答
+   * "这条路在当时成不成立"。凑不出两个时代时为 null 或 comparable=false。
+   */
+  readonly eras: EndgameEraTrack | null;
   /** 仍然不知道的那一项（没有就是 null，不编）。 */
   readonly unknown: string | null;
   /** 要验证的一件事（来自真实实验的六要素）。 */
@@ -141,6 +176,7 @@ function evidenceOf(fact: ExperienceFact, kind: EndgameEvidence['kind']): Endgam
     author: fact.author,
     sourceUrl: fact.sourceUrl,
     sourceTitle: fact.sourceTitle ?? null,
+    editedYear: editedYearOf(fact),
   };
 }
 
@@ -267,6 +303,28 @@ export function endgameAnswerOf(input: EndgameAnswerInput): EndgameAnswer {
   const experiment = input.experiment;
   const hasEvidence = taken.length > 0 || borrowed.length > 0 || costs.length > 0 || counter !== null;
 
+  /**
+   * 平行的时间（第三条维度）：把有年份的片段按时代分组。
+   *
+   * 与相似等级正交 —— 相似等级回答"这个人像不像你"，时代回答
+   * "这条路在当时成不成立"。只有合格来源进桶，凑不出两个时代就
+   * `comparable: false`，页面上如实说明而不是硬凑对照。
+   */
+  const track = eraTrackOf(facts);
+  const eras: EndgameEraTrack | null =
+    track.buckets.length > 0
+      ? {
+          comparable: track.comparable,
+          gapYears: track.gapYears,
+          note: track.note,
+          groups: track.buckets.map((bucket) => ({
+            id: bucket.id,
+            label: bucket.label,
+            items: bucket.items.map((item) => evidenceOf(item.fact, 'era')),
+          })),
+        }
+      : null;
+
   return {
     question: frame.rawQuestion,
     conditions,
@@ -275,6 +333,7 @@ export function endgameAnswerOf(input: EndgameAnswerInput): EndgameAnswer {
     borrowed,
     costs,
     counter,
+    eras,
     unknown,
     nextStep: experiment
       ? {

@@ -299,3 +299,74 @@ describe('终局答案：把本局真实发生过的事凝练成答案', () => {
     expect(answer.costs).toHaveLength(0);
   });
 });
+
+/**
+ * 平行的时间（第三条维度）。
+ *
+ * 相似等级回答"这个人像不像你"，时代回答"这条路在当时成不成立"。
+ * 已用真实语料验证前提：本地 39 次实时检索缓存共 312 条带年份来源，
+ * 单个问题跨度可达 13 年（2013–2026）。
+ */
+describe('终局答案里的时代对照', () => {
+  const dated = (id: string, year: number): ExperienceFact =>
+    fact({ id, type: 'action', sourceEditTime: Math.floor(Date.UTC(year, 5, 1) / 1000) });
+
+  it('跨年代时给出年代分组、跨度与年份标签', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({
+        experienceFacts: [dated('e1', 2013), dated('e2', 2016), dated('r1', 2023), dated('r2', 2026)],
+      }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+
+    expect(answer.eras?.comparable).toBe(true);
+    expect(answer.eras?.gapYears).toBe(13);
+    expect(answer.eras?.groups.map((group) => group.id)).toEqual(['early', 'recent']);
+    const items = answer.eras!.groups.flatMap((group) => group.items);
+    // 每一条都带"最后编辑年份"，且引文仍是原文的连续前缀
+    for (const item of items) {
+      expect(typeof item.editedYear).toBe('number');
+      const source = [dated('e1', 2013), dated('e2', 2016), dated('r1', 2023), dated('r2', 2026)].find(
+        (entry) => entry.id === item.id,
+      )!;
+      expect(source.exactQuote).toContain(item.quote.replace(/…$/, ''));
+    }
+    expect(answer.eras?.note).toContain('最后编辑时间');
+  });
+
+  it('只有一个年代时如实说没有对照（不硬凑）', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({ experienceFacts: [dated('a', 2025), dated('b', 2026)] }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+
+    expect(answer.eras?.comparable).toBe(false);
+    expect(answer.eras?.groups).toHaveLength(1);
+    expect(answer.eras?.note).toContain('不为了凑');
+  });
+
+  it('来源没有时间信息时整块为 null（不猜年代）', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({
+        experienceFacts: [
+          fact({
+            id: 'no-time',
+            type: 'action',
+            exactQuote: '我后来辞职去考了导游证，第一年基本没有收入，靠之前的积蓄撑过去。',
+          }),
+        ],
+      }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+    expect(answer.eras).toBeNull();
+  });
+});

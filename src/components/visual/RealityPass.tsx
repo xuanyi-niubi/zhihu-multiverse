@@ -97,6 +97,7 @@ function EvidenceQuote({ item }: { readonly item: EndgameEvidence }) {
       </p>
       <p className="flex flex-wrap items-center gap-2 text-label" style={{ color: INK_FAINT }}>
         <span>{item.author}</span>
+        {item.editedYear ? <span>最后编辑于 {item.editedYear} 年</span> : null}
         {item.sourceUrl ? (
           <a
             href={item.sourceUrl}
@@ -202,6 +203,31 @@ export function RealityPass({
             {answer.counter ? (
               <AnswerRow label="走坏的那条路">
                 <EvidenceQuote item={answer.counter} />
+              </AnswerRow>
+            ) : null}
+
+            {/*
+              平行的时间：同一个问题在不同年代的说法。
+              真的能对照时才摆出两个年代；凑不出就只留一句诚实说明 ——
+              这条维度最怕的不是空，而是拿不相关的人硬凑出"时代差异"。
+            */}
+            {answer.eras ? (
+              <AnswerRow label="同一个问题，不同年代的人">
+                {answer.eras.groups.map((group) => (
+                  <div key={group.id} className="mt-2 first:mt-0">
+                    <p className="text-label" style={{ color: INK_FAINT }}>
+                      {group.label}
+                    </p>
+                    <div className="mt-1 flex flex-col gap-3">
+                      {group.items.map((item) => (
+                        <EvidenceQuote key={item.id} item={item} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <p className="mt-2 text-label leading-relaxed" style={{ color: INK_FAINT }}>
+                  {answer.eras.note}
+                </p>
               </AnswerRow>
             ) : null}
 
