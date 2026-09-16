@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { extractProfile } from '@/core/dm/profile';
 import { buildProblemFrame } from '@/features/experience/frame';
-import { buildSearchPlan, buildSameTargetQuery } from '@/features/experience/queryPlan';
+import { buildSearchPlan, buildSameTargetQuery, searchRequestBudget } from '@/features/experience/queryPlan';
 import { retrieveExperienceSources } from '@/features/experience/retrieve';
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 import type { ProblemFrame, SimilarityTier } from '@/features/experience/domain';
@@ -266,7 +266,7 @@ describe('「电工转导游」端到端：合格候选必须进经验层', () =
 
     expect(searched.some((query) => query === fallback?.query)).toBe(true);
     expect(result.sources.length).toBeGreaterThanOrEqual(3);
-    expect(searched.length).toBeLessThanOrEqual(4);
+    expect(searched.length).toBeLessThanOrEqual(searchRequestBudget());
   });
 });
 

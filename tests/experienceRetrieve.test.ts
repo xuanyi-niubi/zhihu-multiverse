@@ -4,7 +4,7 @@ import {
   MAX_EXPERIENCE_SOURCES,
   retrieveExperienceSources,
 } from '@/features/experience/retrieve';
-import { buildSearchPlan } from '@/features/experience/queryPlan';
+import { buildSearchPlan, searchRequestBudget } from '@/features/experience/queryPlan';
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 
 import type { ExperienceSearch } from '@/features/experience/retrieve';
@@ -274,7 +274,7 @@ describe('按相似等级渐进选择', () => {
     expect(result.similarity?.exactCount).toBe(2);
   });
 
-  it('精确亲历不足两人时只扩展一次，并将总检索限制为四次', async () => {
+  it('精确亲历不足两人时只扩展一次，并在放宽后的预算内打完所有查询', async () => {
     const plan = buildSearchPlan({ frame: transitionFrame() });
     let expansionCalls = 0;
     const searched: string[] = [];
@@ -295,7 +295,9 @@ describe('按相似等级渐进选择', () => {
     });
 
     expect(expansionCalls).toBe(1);
-    expect(searched.length).toBeLessThanOrEqual(4);
+    // 2026-09-16 起每局预算放宽到 searchRequestBudget()（默认 8），
+    // 但仍然**有上限**：超预算的查询一律不发。
+    expect(searched.length).toBeLessThanOrEqual(searchRequestBudget());
     expect(result.sources[0]?.source.id).toBe('family-expanded');
     expect(result.sources[0]?.qualification?.similarityTier).toBe('same-family');
   });

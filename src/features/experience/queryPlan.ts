@@ -7,7 +7,27 @@ import type {
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 
 export const DEFAULT_MAX_REQUESTS = 3;
-export const MAX_SEARCH_REQUESTS = 4;
+/**
+ * 计划层的**硬上限**（不是默认值）。
+ *
+ * 2026-09-16：从 4 提到 12。原因是知乎检索次数已经不是瓶颈
+ * （次数不够时再上 key 池），而"多发一条查询"能换到的真实能力很多：
+ * 丢起点保目标、放宽层拆分、年代线索、反例加厚。默认值仍是 3 条强制视角，
+ * 真正放宽发生在检索执行层（`searchRequestBudget()`）。
+ */
+export const MAX_SEARCH_REQUESTS = 12;
+/** 每局实际检索预算（执行层用）：默认 8，可用 `APP_MAX_SEARCH_REQUESTS` 调。 */
+export const DEFAULT_SEARCH_BUDGET = 8;
+
+/**
+ * 每局知乎检索预算。**这是唯一该调的地方**：想省额度就调小，
+ * 想打满分层放宽/年代查询就调大（硬上限 `MAX_SEARCH_REQUESTS`）。
+ */
+export function searchRequestBudget(env: Record<string, string | undefined> = process.env): number {
+  const raw = Number(env.APP_MAX_SEARCH_REQUESTS);
+  const value = Number.isFinite(raw) && raw > 0 ? Math.round(raw) : DEFAULT_SEARCH_BUDGET;
+  return Math.min(MAX_SEARCH_REQUESTS, Math.max(DEFAULT_MAX_REQUESTS, value));
+}
 
 const STAGE = /大[一二三四五]|研[一二三]|应届|本科|专科|硕士|博士|高[一二三]|毕业生/g;
 const IDENTITY = /数据科学|计算机|软件工程|人工智能|非科班|跨专业|双非|二本|一本|基础(?:一般|薄弱|较差)|零基础/g;
@@ -119,39 +139,96 @@ export function buildSearchPlan(input: BuildSearchPlanInput): SearchPlan {
     },
   ];
 
-  if (budget >= 4 && hasLayeredOrigin) {
+  /**
+   * 追加项：**零模型成本**的检索面。
+   *
+   * 2026-09-16 放宽：每局检索预算从 4 提到 `DEFAULT_SEARCH_BUDGET`（8），
+   * 由 `searchRequestBudget()` 决定（`APP_MAX_SEARCH_REQUESTS` 可调，硬上限
+   * `MAX_SEARCH_REQUESTS`）。这些追加项全部只花**知乎检索次数**，
+   * **不增加任何一次模型调用**：
+   *
+   * - `q-similar-target` 丢起点保目标（"其他背景进入同一目标"）——
+   *   以前只在没有模型时兜底，现在只要有预算就先跑；它是"其他转导游"的主要来源；
+   * - `q-similar-family` / `q-similar-domain` 把放宽层**拆成两条**：
+   *   合并成一条时"工科"与"电气"会互相稀释，拆开后"工科转导游"更容易被捞到；
+   * - `q-era` 带年份线索，主动去捞更早的回答 —— 喂「平行的时间」那条维度；
+   * - `q-counter-regret` 把反例拆厚一条（劝退 / 后悔），反例轨更不容易空。
+   */
+  const extras: SearchQuery[] = [];
+
+  /**
+   * 放宽层**排在追加项最前面**：预算紧张时最先被保住的应该是
+   * 「相似起点 / 同类背景」（"工科转导游"），因为那是用户最早提出的诉求。
+   * 「丢起点保目标」由检索执行层在第二步显式执行，不依赖计划里是否有它。
+   */
+  if (hasLayeredOrigin) {
     const relaxedFamilyTerms = intent.origin.family
       .filter((term) => !intent.origin.exact.includes(term))
       .slice(0, 2);
-    const relaxedFamily = relaxedFamilyTerms[0];
-    const relaxedDomain = intent.origin.domain[0];
-    const relaxedOrigin = [...relaxedFamilyTerms, relaxedDomain]
-      .filter((term): term is string => Boolean(term));
-    candidates.splice(1, 0, {
-      id: 'q-similar-relaxed',
-      query: `${relaxedOrigin.join(' ')} ${target} 亲身经历 后来`,
-      purpose: 'similar-person',
-      priority: 2,
-      expectedTier: relaxedFamily ? 'same-family' : 'same-domain',
-    });
-    for (let index = 0; index < candidates.length; index += 1) {
-      candidates[index] = { ...candidates[index]!, priority: index + 1 };
+    const relaxedDomainTerms = intent.origin.domain.slice(0, 2);
+    if (relaxedFamilyTerms.length > 0) {
+      extras.push({
+        id: 'q-similar-family',
+        query: `${relaxedFamilyTerms.join(' ')} ${target} 亲身经历 后来`,
+        purpose: 'similar-person',
+        priority: 0,
+        expectedTier: 'same-family',
+      });
+    }
+    if (relaxedDomainTerms.length > 0) {
+      extras.push({
+        id: 'q-similar-domain',
+        query: `${relaxedDomainTerms.join(' ')} ${target} 亲身经历 后来`,
+        purpose: 'similar-person',
+        priority: 0,
+        expectedTier: 'same-domain',
+      });
     }
   }
 
+  const transitionHint = TRANSITION_HINTS[intent.transition];
+  extras.push({
+    id: 'q-similar-target',
+    query: `${transitionHint} ${target} 亲身经历 后来`.replace(/\s+/g, ' ').trim(),
+    purpose: 'similar-person',
+    priority: 0,
+    expectedTier: 'same-target',
+  });
+
+  /** 年份线索：往前 8 年（"2018 年"这类词更容易把当时的回答捞上来）。 */
+  const earlyYear = new Date().getUTCFullYear() - 8;
+  extras.push({
+    id: 'q-era',
+    query: `${target} ${earlyYear} 亲身经历 后来`,
+    purpose: 'similar-person',
+    priority: 0,
+  });
+
+  extras.push({
+    id: 'q-counter-regret',
+    query: `${target} 劝退 后悔 经历`,
+    purpose: 'counterexample',
+    priority: 0,
+  });
+
   const HIGH_COST = /裸辞|辞职|脱产|全职|创业|二战|留学|读博|gap|GAP/;
-  if (budget >= 4 && HIGH_COST.test(input.frame.rawQuestion)) {
-    candidates.push({
+  if (HIGH_COST.test(input.frame.rawQuestion)) {
+    extras.push({
       id: 'q-cost',
       query: `${target} 亲身经历 付出代价 后来`,
       purpose: 'cost',
-      priority: 4,
-      expectedTier: 'same-target',
+      priority: 0,
     });
   }
 
+  // 三条强制视角在先，追加项按价值在后 —— 预算紧张时先砍追加项。
+  const ordered: SearchQuery[] = [...candidates, ...extras].map((item, index) => ({
+    ...item,
+    priority: index + 1,
+  }));
+
   const seen = new Set<string>();
-  const queries = candidates.filter((item) => {
+  const queries = ordered.filter((item) => {
     const key = item.query.replace(/\s+/g, '');
     if (seen.has(key)) return false;
     seen.add(key);

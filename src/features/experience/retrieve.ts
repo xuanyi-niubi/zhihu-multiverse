@@ -11,12 +11,19 @@ import type {
   TransitionIntent,
 } from '@/features/experience/domain';
 import { qualifyExperienceSource } from '@/features/experience/qualification';
-import { buildSameTargetQuery, buildSearchPlan, MAX_SEARCH_REQUESTS } from '@/features/experience/queryPlan';
+import { buildSameTargetQuery, buildSearchPlan, searchRequestBudget } from '@/features/experience/queryPlan';
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 import type { KnowledgeSource } from '@/features/run/knowledgeSource';
 
 export const MAX_EXPERIENCE_SOURCES = 12;
-export const RETRIEVAL_CONCURRENCY = 2;
+/**
+ * 并发批大小。
+ *
+ * 2026-09-16 从 2 提到 4：每局检索预算放宽到 8 条之后，
+ * 若仍是"每批 2 条、每批最多等 6 秒"，最坏等待会从约 12 秒涨到约 24 秒。
+ * 提到 4 之后 8 条只需两批 —— **原地守住编译页的等待预算**。
+ */
+export const RETRIEVAL_CONCURRENCY = 4;
 
 export type ExperienceSearch = (
   query: string,
@@ -288,9 +295,12 @@ export async function retrieveExperienceSources(input: {
       return qualification.eligibleAsCase && GOOD_ENOUGH_TIERS.includes(qualification.similarityTier);
     }).length;
 
-  /** 总请求数永远不超过预算（配额纪律与设计文档 §5 一致）。 */
+  /** 每局检索预算（默认 8；`APP_MAX_SEARCH_REQUESTS` 可调，硬上限 12）。 */
+  const budget = searchRequestBudget();
+
+  /** 总请求数永远不超过预算（配额纪律）。 */
   const runWithinBudget = async (list: readonly SearchQuery[]): Promise<void> => {
-    const room = Math.max(0, MAX_SEARCH_REQUESTS - runs.length);
+    const room = Math.max(0, budget - runs.length);
     if (room === 0 || list.length === 0) return;
     await mergeResults(list.slice(0, room));
   };
@@ -316,20 +326,27 @@ export async function retrieveExperienceSources(input: {
     await runWithinBudget([exactQuery]);
 
     if (goodEnoughCount() < 2) {
+      /**
+       * 第一步永远是**零模型成本**的「丢起点保目标」："其他背景进入同一目标"
+       * 主要靠它捞 —— 以前它只在"没有模型可用"时兜底，现在只要有预算就先跑。
+       *
+       * 计划里通常已经有它（`q-similar-target`）；调用方若传了更小的计划，
+       * 这里就现场补一条，保证这一步永远存在。
+       */
+      const plannedTarget = queries.find((query) => query.id === 'q-similar-target');
+      const targetQuery =
+        plannedTarget ?? buildSameTargetQuery({ frame: input.frame, ...(intent ? { intent } : {}) });
+      if (targetQuery) await runWithinBudget([targetQuery]);
+
       if (input.expandIntent) {
         intent = await input.expandIntent(input.frame);
         const expanded = buildSearchPlan({
           frame: input.frame,
           intent,
-          maxRequests: MAX_SEARCH_REQUESTS,
+          maxRequests: budget,
         }).queries;
         await runWithinBudget(notYetRun(expanded));
       } else {
-        const fallback = buildSameTargetQuery({
-          frame: input.frame,
-          ...(intent ? { intent } : {}),
-        });
-        if (fallback) await runWithinBudget([fallback]);
         await runWithinBudget(notYetRun(queries));
       }
     } else {

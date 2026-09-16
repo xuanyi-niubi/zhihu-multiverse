@@ -6,6 +6,7 @@ import {
   buildSearchPlan,
   DEFAULT_MAX_REQUESTS,
   MAX_SEARCH_REQUESTS,
+  searchRequestBudget,
 } from '@/features/experience/queryPlan';
 import { buildTransitionIntent } from '@/features/experience/transitionIntent';
 import { extractProfile } from '@/core/dm/profile';
@@ -39,17 +40,23 @@ const PURPOSES: readonly SearchPurpose[] = [
   'counterexample',
 ];
 
-describe('预算：默认 3、上限 4、下限 3', () => {
-  it('不传 maxRequests → 3 条 query', () => {
+describe('预算：默认 3、上限 12、下限 3', () => {
+  it('不传 maxRequests → 3 条 query（三条强制视角）', () => {
     const plan = buildSearchPlan({ frame: frameOf('大二想参加比赛') });
     expect(plan.queries).toHaveLength(3);
     expect(plan.maxRequests).toBe(DEFAULT_MAX_REQUESTS);
   });
 
-  it('显式传 10 → 钳到 4（高成本问题才有第 4 条候选）', () => {
+  it('显式传预算 → 按预算放宽（2026-09-16 起上限为 12）', () => {
     const plan = buildSearchPlan({ frame: frameOf('想裸辞创业'), maxRequests: 10 });
+    expect(plan.maxRequests).toBe(10);
+    expect(plan.queries.length).toBeGreaterThan(3);
+    expect(plan.queries.length).toBeLessThanOrEqual(10);
+  });
+
+  it('显式传超大值 → 钳到硬上限 MAX_SEARCH_REQUESTS', () => {
+    const plan = buildSearchPlan({ frame: frameOf('想裸辞创业'), maxRequests: 999 });
     expect(plan.maxRequests).toBe(MAX_SEARCH_REQUESTS);
-    expect(plan.queries).toHaveLength(4);
   });
 
   it('显式传 1 → 不低于 3（三种强制意图一条都不能少）', () => {
@@ -86,8 +93,11 @@ describe('意图覆盖：相似 + 替代 + 反例，一条不少', () => {
 });
 
 describe('高成本尝试才多花一条预算问代价', () => {
-  it('裸辞类问题 + 预算 4 → 有 cost 意图', () => {
-    const plan = buildSearchPlan({ frame: frameOf('想裸辞创业'), maxRequests: 4 });
+  it('裸辞类问题 → 计划里有 cost 意图', () => {
+    const plan = buildSearchPlan({
+      frame: frameOf('想裸辞创业'),
+      maxRequests: searchRequestBudget(),
+    });
     expect(plan.queries.some((item) => item.purpose === 'cost')).toBe(true);
   });
 
@@ -126,7 +136,7 @@ describe('跨行业转变的分层检索', () => {
     expect(plan.queries[0]?.query).toContain('导游');
   });
 
-  it('拿到开放式语义扩展后在预算内搜索精确、放宽、替代与反例', () => {
+  it('拿到开放式语义扩展后，在放宽后的预算里分别搜精确 / 同族 / 同域 / 相同终点 / 年代 / 反例', () => {
     const frame = frameOf('我是电工专业，然后想转导游', {
       currentSituation: '电工专业',
       desiredChange: '转导游',
@@ -140,9 +150,10 @@ describe('跨行业转变的分层检索', () => {
     const plan = buildSearchPlan({
       frame,
       intent,
+      maxRequests: searchRequestBudget(),
     });
 
-    expect(plan.queries).toHaveLength(4);
+    expect(plan.queries).toHaveLength(searchRequestBudget());
     const text = plan.queries.map((item) => item.query).join('\n');
     expect(text).toContain('电工');
     expect(text).toContain('电气');
@@ -151,6 +162,10 @@ describe('跨行业转变的分层检索', () => {
     expect(text).not.toContain('做出一个改变现状的决定');
     expect(plan.queries.some((item) => item.expectedTier === 'exact')).toBe(true);
     expect(plan.queries.some((item) => item.expectedTier === 'same-family')).toBe(true);
+    expect(plan.queries.some((item) => item.expectedTier === 'same-domain')).toBe(true);
+    // 年代查询与常驻的「丢起点保目标」都在场（都零模型成本）
+    expect(plan.queries.some((item) => item.id === 'q-era')).toBe(true);
+    expect(plan.queries.some((item) => item.id === 'q-similar-target')).toBe(true);
   });
 
   it('显式压到三条预算时仍保留相似、替代、反例三个视角', () => {
