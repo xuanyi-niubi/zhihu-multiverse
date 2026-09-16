@@ -703,6 +703,15 @@ export async function prepareExperienceSession(
       factual: retrieved.sources.length > 0,
       notes: [
         ...(retrieved.similarity ? [similaritySummaryCopy(retrieved.similarity)] : []),
+        ...(retrieved.expansion
+          ? [
+              retrieved.expansion.modelTerms > 0
+                ? `语义扩展：模型给了 ${retrieved.expansion.modelTerms} 个相邻起点词，另有 ${retrieved.expansion.harvestedTerms} 个从真实返回里学到。`
+                : retrieved.expansion.modelCalled
+                  ? `语义扩展没有产出可用词（模型可能失败或输出被过滤）；本局只用检索学到的 ${retrieved.expansion.harvestedTerms} 个词放宽 —— 这是“扩展失效”，不是“语料没有”。`
+                  : `本局没有调用模型扩展，只用检索学到的 ${retrieved.expansion.harvestedTerms} 个词放宽。`,
+            ]
+          : []),
         retrieved.sources.length > 0
           ? `从 ${retrieved.rawSourceCount} 条候选中筛出 ${retrieved.sources.length} 位可核验亲历者，得到 ${facts.length} 条逐字片段。`
           : failureKind === 'search-budget'

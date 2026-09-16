@@ -50,6 +50,23 @@ export interface RetrieveExperienceResult {
   readonly rawSourceCount: number;
   readonly rejectedCount: number;
   readonly similarity: SimilaritySummary | null;
+  /**
+   * 本局**放宽词从哪来**的诚实记录。
+   *
+   * 为什么要有：线上出现过"模型扩展一个词都没产出、只剩检索学到的词兜底"
+   * 的情况，而这件事在结果里完全看不见 —— 页面只会说"没有找到完整同路经历"，
+   * 让人误以为是语料没有，而不是**扩展这一步失败了**。
+   */
+  readonly expansion?: ExpansionTrace;
+}
+
+export interface ExpansionTrace {
+  /** 模型给的相邻起点词数量（family + domain）。 */
+  readonly modelTerms: number;
+  /** 从第一轮真实返回里学到的起点词数量。 */
+  readonly harvestedTerms: number;
+  /** 是否真的调用过模型扩展。 */
+  readonly modelCalled: boolean;
 }
 
 function sameSource(left: KnowledgeSource, right: KnowledgeSource): boolean {
@@ -240,6 +257,8 @@ export async function retrieveExperienceSources(input: {
 }): Promise<RetrieveExperienceResult> {
   const runs: RetrieveRun[] = [];
   const merged: Accumulator[] = [];
+  let modelCalled = false;
+  let expansionTrace: ExpansionTrace | undefined;
   let intent = input.frame
     ? input.intent ?? buildTransitionIntent(input.frame)
     : undefined;
@@ -355,6 +374,7 @@ export async function retrieveExperienceSources(input: {
       /** b. 有模型就扩展一次；同时从这一轮**真实返回**里学起点词，重建查询面。 */
       let nextIntent: TransitionIntent = intent ?? buildTransitionIntent(input.frame);
       if (input.expandIntent) {
+        modelCalled = true;
         nextIntent = await input.expandIntent(input.frame);
       }
       intent = nextIntent;
@@ -373,6 +393,11 @@ export async function retrieveExperienceSources(input: {
         origin: intent.origin.exact[0] ?? null,
         limit: 3,
       });
+      expansionTrace = {
+        modelTerms: intent.origin.family.length + intent.origin.domain.length,
+        harvestedTerms: harvested.length,
+        modelCalled,
+      };
       const rebuilt = buildSearchPlan({
         frame: input.frame,
         intent,
@@ -393,7 +418,14 @@ export async function retrieveExperienceSources(input: {
       purposes: [...item.purposes],
       matchedQueryIds: [...item.matchedQueryIds],
     }));
-    return { sources, runs, rawSourceCount: merged.length, rejectedCount: 0, similarity: null };
+    return {
+      sources,
+      runs,
+      rawSourceCount: merged.length,
+      rejectedCount: 0,
+      similarity: null,
+      ...(expansionTrace ? { expansion: expansionTrace } : {}),
+    };
   }
 
   const qualified: QualifiedAccumulator[] = merged.map((item) => ({
@@ -420,6 +452,7 @@ export async function retrieveExperienceSources(input: {
     rawSourceCount: merged.length,
     rejectedCount: merged.length - selected.length,
     similarity: similaritySummary(selected),
+    ...(expansionTrace ? { expansion: expansionTrace } : {}),
   };
 }
 
