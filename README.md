@@ -42,7 +42,7 @@
 
 | 机制 | 玩家能感觉到什么 | 代码落点 |
 |---|---|---|
-| **先找人，再谈相似** —— 先查精确起点；不足两位时才用一次短 AI 扩展，按相似起点 / 同类背景 / 相同终点 / 相邻路径逐层放宽 | 找不到完全相同的人时，也能看清“哪里相同、哪里不同”；同一问题 24 小时内复用扩展结果 | `features/experience/transitionIntent.ts` · `features/experience/qualification.ts` · `features/experience/retrieve.ts` |
+| **先找人，再谈相似** —— 先查精确起点；还没拿到「完全同路 / 相似起点 / 同类背景」时，才用一次短 AI 扩展，按相似起点 / 同类背景 / 相同终点 / 相邻路径逐层放宽（没有可用模型时，改用一条零成本的「丢起点保目标」查询） | 找不到完全相同的人时，也能看清“哪里相同、哪里不同”；同一问题 24 小时内复用扩展结果 | `features/experience/transitionIntent.ts` · `features/experience/qualification.ts` · `features/experience/retrieve.ts` |
 | **逐字引用** —— `exactQuote` 必须是原回答的连续子串，改一个字整条丢弃 | 每句话都能点回那一篇真实回答 | `features/experience/validate.ts` |
 | **Experience Unlock** —— 一条真实经历会在某一幕解锁一个此前不存在的行动 | 「他的做法我原来根本没想到」 | `features/game-world/experienceUnlock.ts` |
 | **反例驱动第三幕** —— 找不到真实反例就诚实留空，不编 | 「原来看起来对的路，有人是这样走坏的」 | `features/game-world/compileWorld.ts` |
@@ -50,6 +50,25 @@
 | **Reality Pass** —— 终局不判卷，给一条带成功信号与停止信号的现实支线 | 「我知道接下来该验证什么了」 | `features/game-world/questView.ts` |
 
 一条贯穿全链的纪律：**不替玩家编答案**。没有证据就留空，并把它显式标成「未显影」。
+
+### 我们刻意不做的事，以及它怎么被代码固定
+
+一句「我们不会编」不值钱，值钱的是**它写在代码里、还有测试拦着**。
+
+| 承诺 | 实现方式 |
+|---|---|
+| **AI 不能改写知乎原文** | `ExperienceFact.exactQuote` 必须是来源原文的**连续子串**，多一字少一字整条丢弃（`features/experience/validate.ts` · `features/experience/invariants.ts`） |
+| **查不到就留空，不补齐** | 相似 / 替代 / 反例三条轨道都允许为空；`unrelated` 永不进入经验层；找不到真实反例时第三幕如实空着（`features/experience/queryPlan.ts` · `features/experience/qualification.ts` · `features/game-world/compileWorld.ts`） |
+| **未知就是未知** | 只有现实能回答的事在游戏里始终锁着 `REALITY REQUIRED`，并转成一条现实实验（`features/game-mechanics/unknownLock.ts`） |
+| **不给成功率 / 匹配度 / 推荐分** | 终局不判卷；内部相似等级只用于排序，从不展示成分数（`features/game-world/questView.ts` · `features/experience/similarityCopy.ts`） |
+| **不把旧快照伪装成实时结果** | 检索来源分 `live / snapshot / curated / offline` 四档并如实显示；没有 key 时走人工校验过的快照，界面标注来源（`features/decision-session/service.ts`） |
+| **不把「没人讨论」说成「查过了没有」** | 上游失败记 `upstream-error`、没有候选记 `no-result`、搜到但不合格记 `no-qualified-person`，三种文案互不相同（`features/decision-session/service.ts`） |
+
+### 上线前的一次实测调整（如实记录）
+
+最初我们把这类问题的目标词直接当检索条件，结果很多页面显示「0 位可核验亲历者」。实测后发现根因**不是「门槛太高」，而是门槛判错了词**：目标被解析成了 `当导游` 这样的动词碎片，而资格门槛要求来源正文逐字包含它 —— 于是「机械 / 电气 / 会计转导游」这些完全合格的经历全被判成了无关。
+
+改法是**不动门槛、只修词**：端点只从用户原话里抽取，并加一条「必须是原话连续子串」的不变量；再加一条零成本的「丢起点保目标」查询（其他背景进入同一目标）；只有还没拿到「完全同路 / 相似起点 / 同类背景」时，才花那一次模型扩展。现在同一句话线上能筛出 3 位可核验亲历者，并诚实标注「已放宽到相同终点」。
 
 ## 一局怎么走
 
