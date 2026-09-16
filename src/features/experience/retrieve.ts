@@ -371,7 +371,14 @@ export async function retrieveExperienceSources(input: {
         plannedTarget ?? buildSameTargetQuery({ frame: input.frame, ...(intent ? { intent } : {}) });
       if (targetQuery) await runWithinBudget([targetQuery]);
 
-      /** b. 有模型就扩展一次；同时从这一轮**真实返回**里学起点词，重建查询面。 */
+      /**
+       * b. 有模型就扩展一次；同时从这一轮**真实返回**里学起点词，重建查询面。
+       *
+       * 刻意保持**串行且只在不足时调用**："拿到相似起点就不再支付模型调用"
+       * 是一条产品承诺，测试守着它（并行发起会白烧一次调用）。
+       * 失败风险由超时预算解决：`expandTransitionIntent` 的 4 秒曾把整次扩展
+       * 打掉（线上只剩兜底词），现在提到 8 秒，与路由自身配置一致。
+       */
       let nextIntent: TransitionIntent = intent ?? buildTransitionIntent(input.frame);
       if (input.expandIntent) {
         modelCalled = true;

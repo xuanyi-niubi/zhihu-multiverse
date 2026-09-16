@@ -413,7 +413,7 @@ counterTerms：失败、退出或代价线索。
         content: `用户原话：${frame.rawQuestion}\n明确起点：${exact.origin.exact.join('、') || '未明确'}\n明确目标：${exact.target.exact.join('、') || '未明确'}`,
       },
     ],
-    { jsonMode: true, signal: AbortSignal.timeout(4_000) },
+    { jsonMode: true, signal: AbortSignal.timeout(8_000) },
   );
 
   let expansion = EMPTY_EXPANSION;
