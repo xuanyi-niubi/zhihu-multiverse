@@ -124,7 +124,21 @@ function compareQualified(left: QualifiedAccumulator, right: QualifiedAccumulato
   if (right.qualification.rankScore !== left.qualification.rankScore) {
     return right.qualification.rankScore - left.qualification.rankScore;
   }
+  /**
+   * 同等级、同内部分时，用**官方相关性分**决胜。
+   *
+   * 这是接口本来就返回、我们以前丢掉的字段（`RankingScore`）——
+   * 读它不增加任何一次调用。缺失时按 0 处理，旧数据排序完全不变。
+   */
+  const officialGap = officialScoreOf(right.source) - officialScoreOf(left.source);
+  if (officialGap !== 0) return officialGap;
   return compareLegacy(left, right);
+}
+
+/** 官方相关性分；缺失当 0（不猜、也不让旧数据受影响）。 */
+function officialScoreOf(source: KnowledgeSource): number {
+  const value = source.rankingScore;
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function similaritySummary(items: readonly QualifiedAccumulator[]): SimilaritySummary {

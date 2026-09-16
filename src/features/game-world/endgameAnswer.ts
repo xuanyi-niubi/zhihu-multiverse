@@ -80,6 +80,14 @@ export interface EndgameEraTrack {
   readonly groups: readonly EndgameEraGroup[];
 }
 
+/** 一条读者评论（逐字）。**不是作者的经历**。 */
+export interface EndgameVoice {
+  readonly content: string;
+  readonly author: string | null;
+  readonly sourceTitle: string | null;
+  readonly sourceUrl: string;
+}
+
 export interface EndgameAnswer {
   /** 你进来时问的那句话（原句）。 */
   readonly question: string;
@@ -102,6 +110,14 @@ export interface EndgameAnswer {
    * "这条路在当时成不成立"。凑不出两个时代时为 null 或 comparable=false。
    */
   readonly eras: EndgameEraTrack | null;
+  /**
+   * 同一篇回答下，**读者**在争什么（精选评论，逐字）。
+   *
+   * 与「作者亲历」严格区分：评论没进过任何资格判定，永远不会被当成证据，
+   * 展示时必须带"读者评论"标签。它补的是"作者之外的另一种声音"。
+   */
+  readonly voices: readonly EndgameVoice[];
+  readonly voicesNote: string | null;
   /** 仍然不知道的那一项（没有就是 null，不编）。 */
   readonly unknown: string | null;
   /** 要验证的一件事（来自真实实验的六要素）。 */
@@ -325,6 +341,32 @@ export function endgameAnswerOf(input: EndgameAnswerInput): EndgameAnswer {
         }
       : null;
 
+  /**
+   * 读者评论（逐字）：接口本来就返回 `CommentInfoList`，我们以前丢掉。
+   * 最多两条，按来源顺序取；去重；**永不进证据层**。
+   */
+  const voices: EndgameVoice[] = [];
+  const seenVoice = new Set<string>();
+  for (const fact of facts) {
+    for (const comment of fact.sourceComments ?? []) {
+      const content = comment.content.trim();
+      if (content.length < 4 || seenVoice.has(content)) continue;
+      seenVoice.add(content);
+      voices.push({
+        content,
+        author: comment.author,
+        sourceTitle: fact.sourceTitle ?? null,
+        sourceUrl: fact.sourceUrl,
+      });
+      if (voices.length >= 2) break;
+    }
+    if (voices.length >= 2) break;
+  }
+  const voicesNote =
+    voices.length > 0
+      ? '这些是同一篇回答下的读者评论（逐字），不是作者的经历 —— 我们不对它们做总结，也不把它们算进证据。'
+      : null;
+
   return {
     question: frame.rawQuestion,
     conditions,
@@ -334,6 +376,8 @@ export function endgameAnswerOf(input: EndgameAnswerInput): EndgameAnswer {
     costs,
     counter,
     eras,
+    voices,
+    voicesNote,
     unknown,
     nextStep: experiment
       ? {

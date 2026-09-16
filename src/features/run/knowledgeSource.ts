@@ -37,6 +37,27 @@ export interface KnowledgeSource {
   readonly editTime: number | null;
   /** 权威等级原值（数字越大越权威；缺失为 null）。 */
   readonly authority: number | null;
+  /**
+   * 官方相关性分（接口的 `RankingScore`）。真实值，缺失为 undefined —— 不猜。
+   *
+   * 用途：同一相似等级内的排序 tie-break（官方相关性比我们的二字组主题分更权威）。
+   */
+  readonly rankingScore?: number | null;
+  /** 评论区规模（真实值）。缺失为 undefined。 */
+  readonly commentCount?: number | null;
+  /**
+   * 精选评论（**逐字原文**，不做摘要）。
+   *
+   * ⚠️ 它们**不是作者的亲历**，所以**永远不能进入经验层**
+   * （不能变成 `ExperienceFact`、不能当证据）。只用于
+   * 「同一篇回答下，读者在争什么」这类旁证展示，并且必须带"读者评论"标签。
+   */
+  readonly featuredComments?: readonly {
+    readonly content: string;
+    readonly author: string | null;
+  }[];
+  /** 作者签名 / 认证原文。只是身份线索，不是真实性背书。 */
+  readonly authorSignature?: string | null;
 }
 
 export interface BadgeInput {
@@ -122,6 +143,36 @@ export function normalizeKnowledgeSource(raw: unknown, fallbackId: string): Know
         ? Number(authorityRaw)
         : null;
 
+  /**
+   * 2026-09-16 起读全接口字段（相关性分 / 评论 / 作者签名）。
+   *
+   * 旧快照里没有这些键 → 一律**不加键**（保持原有形状不变，旧数据读取零回归）。
+   * 精选评论只保留逐字内容与作者名，绝不生成、绝不摘要。
+   */
+  const rankingScore =
+    typeof record.rankingScore === 'number' && Number.isFinite(record.rankingScore) ? record.rankingScore : null;
+  const commentCount =
+    typeof record.commentCount === 'number' && Number.isFinite(record.commentCount)
+      ? Math.round(record.commentCount)
+      : null;
+  const authorSignature =
+    typeof record.authorSignature === 'string' && record.authorSignature.trim().length > 0
+      ? record.authorSignature.trim().slice(0, 120)
+      : null;
+  const rawComments = Array.isArray(record.featuredComments) ? record.featuredComments : [];
+  const featuredComments = rawComments
+    .map((entry) => {
+      const comment = typeof entry === 'object' && entry !== null ? (entry as Record<string, unknown>) : {};
+      const content = typeof comment.content === 'string' ? comment.content.trim().slice(0, 200) : '';
+      const author =
+        typeof comment.author === 'string' && comment.author.trim().length > 0
+          ? comment.author.trim().slice(0, 64)
+          : null;
+      return content.length > 0 ? { content, author } : null;
+    })
+    .filter((entry): entry is { readonly content: string; readonly author: string | null } => entry !== null)
+    .slice(0, 3);
+
   return {
     id: typeof record.id === 'string' && record.id.length > 0 ? record.id : fallbackId,
     author: author.slice(0, 64),
@@ -141,5 +192,9 @@ export function normalizeKnowledgeSource(raw: unknown, fallbackId: string): Know
     status,
     editTime,
     authority,
+    ...(rankingScore !== null ? { rankingScore } : {}),
+    ...(commentCount !== null ? { commentCount } : {}),
+    ...(featuredComments.length > 0 ? { featuredComments } : {}),
+    ...(authorSignature !== null ? { authorSignature } : {}),
   };
 }

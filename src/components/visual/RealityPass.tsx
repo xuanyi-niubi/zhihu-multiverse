@@ -231,6 +231,44 @@ export function RealityPass({
               </AnswerRow>
             ) : null}
 
+            {/*
+              读者评论：接口本来就返回（CommentInfoList），我们以前丢掉。
+              它补的是"作者之外的另一种声音"——但**必须**标明它来自读者，
+              否则就是把别人说的话算在答主头上。
+            */}
+            {answer.voices.length > 0 ? (
+              <AnswerRow label="同一篇回答下，读者在争什么">
+                <div className="flex flex-col gap-3">
+                  {answer.voices.map((voice, index) => (
+                    <div key={`${voice.content}-${index}`} className="flex flex-col gap-1">
+                      <p className="text-meta leading-relaxed" style={{ color: INK_SOFT }}>
+                        「{voice.content}」
+                      </p>
+                      <p className="flex flex-wrap items-center gap-2 text-label" style={{ color: INK_FAINT }}>
+                        <span>{voice.author ?? '读者'}</span>
+                        {voice.sourceUrl ? (
+                          <a
+                            href={voice.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="underline decoration-dotted underline-offset-4"
+                            style={{ color: INK_SOFT }}
+                          >
+                            查看知乎原回答 ↗
+                          </a>
+                        ) : null}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {answer.voicesNote ? (
+                  <p className="mt-2 text-label leading-relaxed" style={{ color: INK_FAINT }}>
+                    {answer.voicesNote}
+                  </p>
+                ) : null}
+              </AnswerRow>
+            ) : null}
+
             {answer.unknown ? (
               <AnswerRow label="仍然不知道">
                 <p className="text-body leading-relaxed" style={{ color: INK }}>

@@ -38,12 +38,27 @@ export function searchItemToSource(item: ZhihuSearchItem, retrievedAt: string): 
   const rank = Number(item.AuthorityLevel);
   const authority = Number.isFinite(rank) && rank > 0 ? rank : null;
   const id = item.ContentID.trim().length > 0 ? item.ContentID : stableHash(url);
+  /** 认证文案：优先「认证文字」，其次「认证标识」——两个字段接口都给。 */
+  const badge = item.AuthorBadgeText?.trim() || item.AuthorBadge?.trim() || null;
+  /**
+   * 精选评论：**逐字**保留，最多 3 条。
+   *
+   * 它们不是作者的亲历，只作"同一篇回答下读者在争什么"的旁证 ——
+   * 所以只挂在来源上，绝不进入经验层。
+   */
+  const featuredComments = (item.CommentInfoList ?? [])
+    .map((comment) => ({
+      content: comment.Content.trim().slice(0, 200),
+      author: comment.AuthorName?.trim() ? comment.AuthorName.trim().slice(0, 64) : null,
+    }))
+    .filter((comment) => comment.content.length > 0)
+    .slice(0, 3);
 
   return {
     id: `live:${id}`,
     author: item.AuthorName?.trim().length ? item.AuthorName.trim() : '匿名用户',
     title: item.Title?.trim().length ? item.Title.trim() : null,
-    authorBadge: item.AuthorBadgeText?.trim().length ? item.AuthorBadgeText.trim() : null,
+    authorBadge: badge,
     contentType: item.ContentType?.trim().length ? item.ContentType.trim() : null,
     quote,
     upvotes: Number.isFinite(item.VoteUpCount) ? item.VoteUpCount : null,
@@ -56,6 +71,17 @@ export function searchItemToSource(item: ZhihuSearchItem, retrievedAt: string): 
     status: 'verified',
     editTime: typeof item.EditTime === 'number' && item.EditTime > 0 ? item.EditTime : null,
     authority,
+    // 以下都是「同一次请求本来就返回、我们以前丢掉」的字段：读全它们不增加调用。
+    ...(typeof item.RankingScore === 'number' && Number.isFinite(item.RankingScore)
+      ? { rankingScore: item.RankingScore }
+      : {}),
+    ...(typeof item.CommentCount === 'number' && Number.isFinite(item.CommentCount)
+      ? { commentCount: Math.round(item.CommentCount) }
+      : {}),
+    ...(featuredComments.length > 0 ? { featuredComments } : {}),
+    ...(item.AuthorSignature?.trim()
+      ? { authorSignature: item.AuthorSignature.trim().slice(0, 120) }
+      : {}),
   };
 }
 

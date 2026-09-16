@@ -168,6 +168,84 @@ describe('search', () => {
 
     expect(result.ok).toBe(false);
   });
+
+  /**
+   * 2026-09-16：接口实测返回 17 个字段，我们此前只读了 9 个。
+   * 读全它们**不增加任何一次调用** —— 这是"提高能力但不扩大调用面"。
+   */
+  it('读全同一次请求本来就返回的字段：相关性分、精选评论、作者签名', async () => {
+    stubFetch({
+      Code: 0,
+      Data: {
+        Items: [
+          {
+            Title: '标题',
+            ContentText: '内容',
+            Url: 'https://www.zhihu.com/a',
+            RankingScore: 7.5,
+            CommentCount: 12,
+            AuthorSignature: '某行业十年',
+            AuthorBadge: '优秀回答者',
+            CommentInfoList: [
+              { Content: '说得对', AuthorName: '读者甲' },
+              { Content: '我有不同意见' },
+            ],
+          },
+        ],
+      },
+    });
+
+    const result = await createZhihuClient(config()).search('转码');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data[0].RankingScore).toBe(7.5);
+      expect(result.data[0].CommentInfoList).toEqual([
+        { Content: '说得对', AuthorName: '读者甲' },
+        { Content: '我有不同意见' },
+      ]);
+      expect(result.data[0].AuthorSignature).toBe('某行业十年');
+      expect(result.data[0].AuthorBadge).toBe('优秀回答者');
+    }
+  });
+
+  it('精选评论是单个对象时也能读（实测两种形态都可能）', async () => {
+    stubFetch({
+      Code: 0,
+      Data: {
+        Items: [
+          { Title: 't', ContentText: 'c', Url: 'https://www.zhihu.com/a', CommentInfoList: { Content: '只有一条' } },
+        ],
+      },
+    });
+
+    const result = await createZhihuClient(config()).search('转码');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data[0].CommentInfoList).toEqual([{ Content: '只有一条' }]);
+    }
+  });
+
+  it('空白评论被丢掉；新字段缺失时不补默认值（不猜）', async () => {
+    stubFetch({
+      Code: 0,
+      Data: {
+        Items: [
+          { Title: 't', ContentText: 'c', Url: 'https://www.zhihu.com/a', CommentInfoList: [{ Content: '   ' }] },
+        ],
+      },
+    });
+
+    const result = await createZhihuClient(config()).search('转码');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data[0].CommentInfoList).toBeUndefined();
+      expect(result.data[0].RankingScore).toBeUndefined();
+      expect(result.data[0].AuthorSignature).toBeUndefined();
+    }
+  });
 });
 
 describe('hotList', () => {

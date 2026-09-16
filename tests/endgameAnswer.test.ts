@@ -370,3 +370,67 @@ describe('终局答案里的时代对照', () => {
     expect(answer.eras).toBeNull();
   });
 });
+
+/**
+ * 读者评论（接口的 `CommentInfoList`，我们此前一直丢掉）。
+ *
+ * 它们**不是作者的经历**：不参与资格判定、不作为证据，
+ * 展示时必须带"读者评论"说明，否则就是把别人说的话算在答主头上。
+ */
+describe('同一篇回答下，读者在争什么', () => {
+  it('评论作为旁证带出，并带"读者评论 / 不算进证据"的说明', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({
+        experienceFacts: [
+          fact({
+            id: 'c1',
+            type: 'action',
+            sourceComments: [{ content: 'MFG 也有出路吗[大哭]', author: '读者甲' }],
+          }),
+        ],
+      }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+
+    expect(answer.voices).toHaveLength(1);
+    expect(answer.voices[0]?.content).toContain('MFG 也有出路吗');
+    expect(answer.voices[0]?.author).toBe('读者甲');
+    expect(answer.voices[0]?.sourceUrl).toContain('zhihu.com');
+    expect(answer.voicesNote).toContain('读者评论');
+    expect(answer.voicesNote).toContain('算进证据');
+  });
+
+  it('没有评论时不编：空数组 + note 为 null', () => {
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({ experienceFacts: [fact({ id: 'n1' })] }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+
+    expect(answer.voices).toHaveLength(0);
+    expect(answer.voicesNote).toBeNull();
+  });
+
+  it('最多两条，且同一条评论不会重复出现', () => {
+    const same = { content: '这条评论重复了', author: null };
+    const answer = endgameAnswerOf({
+      frame: FRAME,
+      blueprint: blueprint({
+        experienceFacts: [
+          fact({ id: 'v1', sourceComments: [same, { content: '第二条不同的话', author: '读者乙' }] }),
+          fact({ id: 'v2', sourceComments: [same] }),
+        ],
+      }),
+      walked: [],
+      usedUnlockIds: [],
+      experiment: EXPERIMENT,
+    });
+
+    expect(answer.voices.map((voice) => voice.content)).toEqual(['这条评论重复了', '第二条不同的话']);
+  });
+});

@@ -12,6 +12,12 @@
  * 与其他层一致的契约：所有方法**永不抛出**，失败返回结构化结果。
  */
 
+/** 一条精选评论（接口原样给的是逐字内容，我们不做摘要）。 */
+export interface ZhihuComment {
+  readonly Content: string;
+  readonly AuthorName?: string;
+}
+
 export interface ZhihuSearchItem {
   readonly Title: string;
   readonly ContentType: string;
@@ -24,6 +30,20 @@ export interface ZhihuSearchItem {
   readonly AuthorBadgeText?: string;
   readonly EditTime?: number;
   readonly AuthorityLevel?: string;
+  /**
+   * 下面这几个字段**我们此前一直没读**（2026-09-16 补上）。
+   *
+   * 同一次请求本来就把它们返回了 —— 读全它们不增加任何一次调用，
+   * 这正是"提高能力但不扩大调用面"的做法。接口实测返回 17 个字段，
+   * 其中 `CommentInfoList` 是精选评论原文、`RankingScore` 是官方相关性分。
+   *
+   * 注意：接口**没有**发布时间字段（文档里的"发布时间"实际就是 `EditTime`
+   * 最后编辑时间），所以任何"这一篇写于哪一年"的说法都必须带这个限定。
+   */
+  readonly RankingScore?: number;
+  readonly CommentInfoList?: readonly ZhihuComment[];
+  readonly AuthorSignature?: string;
+  readonly AuthorBadge?: string;
 }
 
 export interface ZhihuHotItem {
@@ -144,6 +164,28 @@ function asNumber(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+/** 可选数字：缺失就是 undefined，不补默认值。 */
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * 精选评论：接口可能给数组，也可能给单个对象（实测两种都可能）。
+ * 只保留有逐字内容的条目，绝不生成或改写评论。
+ */
+function normalizeComments(raw: unknown): readonly ZhihuComment[] | undefined {
+  const list = Array.isArray(raw) ? raw : isRecord(raw) ? [raw] : [];
+  const items: ZhihuComment[] = [];
+  for (const entry of list) {
+    const record = isRecord(entry) ? entry : {};
+    const content = asString(record.Content).trim();
+    if (content.length === 0) continue;
+    const author = asString(record.AuthorName).trim();
+    items.push(author.length > 0 ? { Content: content, AuthorName: author } : { Content: content });
+  }
+  return items.length > 0 ? items : undefined;
+}
+
 function normalizeItem(raw: unknown): ZhihuSearchItem {
   const item = isRecord(raw) ? raw : {};
 
@@ -159,6 +201,10 @@ function normalizeItem(raw: unknown): ZhihuSearchItem {
     AuthorBadgeText: asString(item.AuthorBadgeText) || undefined,
     EditTime: asNumber(item.EditTime) || undefined,
     AuthorityLevel: asString(item.AuthorityLevel) || undefined,
+    RankingScore: optionalNumber(item.RankingScore),
+    CommentInfoList: normalizeComments(item.CommentInfoList),
+    AuthorSignature: asString(item.AuthorSignature) || undefined,
+    AuthorBadge: asString(item.AuthorBadge) || undefined,
   };
 }
 

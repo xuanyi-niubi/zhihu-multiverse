@@ -89,6 +89,18 @@ export function validateExtractedFact(input: ValidateExtractedFactInput): Experi
     author: input.source.author,
     sourceTitle: input.source.title ?? null,
     sourceEditTime: input.source.editTime,
+    /**
+     * 精选评论**只是随来源携带**：不参与 `eligibleAsCase`，也不作为证据。
+     * 展示层必须把它标成"读者评论"，不能算在答主头上。
+     */
+    ...(input.source.featuredComments && input.source.featuredComments.length > 0
+      ? {
+          sourceComments: input.source.featuredComments.map((comment) => ({
+            content: comment.content,
+            author: comment.author,
+          })),
+        }
+      : {}),
     ...(input.qualification ? { qualification: input.qualification } : {}),
     exactQuote,
     type: input.type,

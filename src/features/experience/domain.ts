@@ -273,6 +273,17 @@ export interface ExperienceFact {
   readonly author: string;
   readonly sourceTitle?: string | null;
   readonly sourceEditTime?: number | null;
+  /**
+   * 该来源下的**精选评论**（逐字原文）。
+   *
+   * ⚠️ 评论不是作者的亲历：**永不参与资格判定、永不作为证据被引用**。
+   * 它只用于「同一篇回答下，读者在争什么」这类旁证展示，
+   * 而且展示时必须带"读者评论"标签 —— 否则就是把别人说的话算在答主头上。
+   */
+  readonly sourceComments?: readonly {
+    readonly content: string;
+    readonly author: string | null;
+  }[];
   /** 人物资格审查随片段传递，避免展示层再猜一次。 */
   readonly qualification?: SourceQualification;
 
