@@ -223,13 +223,39 @@ function transitionOf(frame: ProblemFrame): TransitionIntent['transition'] {
   return 'other';
 }
 
+/**
+ * **类别标签的形状特征** —— 这类词是"概括"，不是检索词。
+ *
+ * 实测（2026-09-16 线上）：模型对「电工转导游」返回 `技能型蓝领` /
+ * `职业资格转型` / `技术转服务`。这些词几乎**不会出现在回答原文里**，
+ * 于是放宽查询一条都命中不了 —— 等级分布 0 条同族 / 同域，就是这个原因。
+ *
+ * 判别**只看词形**，不含任何职业 / 专业 / 行业清单：
+ * - 「型 / 类」+ 类别名词（`技能型蓝领`、`技术类岗位`）→ 概括；
+ * - 以「群体 / 人群 / 类别 / 阶层 / 领域 / 方向 / 岗位 / 职业 / 类」结尾 → 概括；
+ * - 含「转型 / 转换 / 转变 / 升级 / 变动 / 过渡」→ 过程短语（不是身份名词）。
+ *
+ * 刻意**不**因为一个"型"字就全丢：`发型师` 这类含"型"的具体职业要留下。
+ */
+const CATEGORY_LABEL =
+  /(?:型|类)(?:蓝领|白领|人才|员工|人员|岗位|工作|职业|人格|性格|特征|倾向|的)|(?:群体|人群|类别|阶层|领域|方向|岗位|职业|类)$|转型|转换|转变|升级|变动|过渡/;
+
+/** 检索词长度上限：太长的一律不是"人们会打出来的说法"。 */
+const MAX_SEARCH_TERM_LENGTH = 8;
+
 function validTerms(value: unknown): readonly string[] {
   if (!Array.isArray(value)) return [];
   return unique(
     value
       .filter((item): item is string => typeof item === 'string')
       .map((item) => item.replace(/[，。！？；、,.!?;:：]/g, '').trim())
-      .filter((item) => item.length >= 2 && item.length <= 12 && !GENERIC.has(item)),
+      .filter(
+        (item) =>
+          item.length >= 2 &&
+          item.length <= MAX_SEARCH_TERM_LENGTH &&
+          !GENERIC.has(item) &&
+          !CATEGORY_LABEL.test(item),
+      ),
   ).slice(0, 4);
 }
 
@@ -357,7 +383,12 @@ export async function expandTransitionIntent(
         role: 'system',
         content: `你只负责扩展检索语义，不回答用户问题。输出一个 JSON 对象：
 {"familyOrigins":[],"domainOrigins":[],"adjacentTargets":[],"counterTerms":[]}
-每组 0-4 个、每个 2-12 字。familyOrigins 是与起点最接近的处境；domainOrigins 是再放宽一层但仍可比较的起点；adjacentTargets 是紧邻目标；counterTerms 是失败、退出或代价线索。适用于任何人生问题，不限职业、学业或关系。不要输出“人生、选择、工作、专业、建议”等泛词，不要写句子，不要解释。`,
+每组 0-4 个、每个 2-8 字。familyOrigins 是与起点最接近的处境；domainOrigins 是再放宽一层但仍可比较的起点；adjacentTargets 是紧邻目标；counterTerms 是失败、退出或代价线索。
+
+硬要求：每个词都必须是**人们在知乎回答原文里真的会打出来的具体说法**（具体的工种 / 岗位 / 职务 / 专业 / 学校 / 资格证 / 角色的常见叫法）。
+不要给概括性的类别标签：例如「技能型蓝领」「职业资格转型」「技术类岗位」这种概括词几乎不会出现在回答里，拿去检索一条都命中不了。
+不要输出「人生、选择、工作、专业、建议」等泛词，不要写句子，不要解释。
+适用于任何人生问题，不限职业、学业或关系；不要依赖任何特定行业的词表。`,
       },
       {
         role: 'user',

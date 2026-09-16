@@ -21,11 +21,11 @@ export const MAX_EXPERIENCE_SOURCES = 12;
 /**
  * 并发批大小。
  *
- * 2026-09-16 从 2 提到 4：每局检索预算放宽到 8 条之后，
- * 若仍是"每批 2 条、每批最多等 6 秒"，最坏等待会从约 12 秒涨到约 24 秒。
- * 提到 4 之后 8 条只需两批 —— **原地守住编译页的等待预算**。
+ * 2026-09-16：每局检索预算放宽到 10 条之后，并发从 2 提到 5 ——
+ * 10 条只需两批，**编译页的等待预算原地守住**（最坏约两批 × 6 秒）。
+ * 实测：16 次真实检索在并发 4 下耗时 4.1 秒。
  */
-export const RETRIEVAL_CONCURRENCY = 4;
+export const RETRIEVAL_CONCURRENCY = 5;
 
 export type ExperienceSearch = (
   query: string,

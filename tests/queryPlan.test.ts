@@ -153,7 +153,9 @@ describe('跨行业转变的分层检索', () => {
       maxRequests: searchRequestBudget(),
     });
 
-    expect(plan.queries).toHaveLength(searchRequestBudget());
+    // 预算是上限，不是配额目标：够用就停，不为了凑满而多发查询
+    expect(plan.queries.length).toBeLessThanOrEqual(searchRequestBudget());
+    expect(plan.queries.length).toBeGreaterThan(6);
     const text = plan.queries.map((item) => item.query).join('\n');
     expect(text).toContain('电工');
     expect(text).toContain('电气');
@@ -163,8 +165,9 @@ describe('跨行业转变的分层检索', () => {
     expect(plan.queries.some((item) => item.expectedTier === 'exact')).toBe(true);
     expect(plan.queries.some((item) => item.expectedTier === 'same-family')).toBe(true);
     expect(plan.queries.some((item) => item.expectedTier === 'same-domain')).toBe(true);
-    // 年代查询与常驻的「丢起点保目标」都在场（都零模型成本）
+    // 年代查询两条（早 / 中）与常驻的「丢起点保目标」都在场（都零模型成本）
     expect(plan.queries.some((item) => item.id === 'q-era')).toBe(true);
+    expect(plan.queries.some((item) => item.id === 'q-era-mid')).toBe(true);
     expect(plan.queries.some((item) => item.id === 'q-similar-target')).toBe(true);
   });
 

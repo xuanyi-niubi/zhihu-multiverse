@@ -141,7 +141,7 @@ describe('转变意图', () => {
     const complete = vi.fn(async () => ({
       ok: true as const,
       text: JSON.stringify({
-        familyOrigins: ['电气类', '自动化'],
+        familyOrigins: ['电气自动化', '自动化'],
         domainOrigins: ['工科', '机械专业'],
         adjacentTargets: ['领队', '旅游从业'],
         counterTerms: ['退出', '后悔'],
@@ -156,7 +156,7 @@ describe('转变意图', () => {
     const first = await expandTransitionIntent(frame, { router });
     const second = await expandTransitionIntent(frame, { router });
 
-    expect(first.origin.family).toContain('电气类');
+    expect(first.origin.family).toContain('电气自动化');
     expect(first.origin.domain).toContain('机械专业');
     expect(first.target.adjacent).toContain('领队');
     expect(second).toEqual(first);
@@ -173,7 +173,7 @@ describe('转变意图', () => {
     const cacheDir = mkdtempSync(join(tmpdir(), 'transition-intent-'));
     const complete = vi.fn(async () => ({
       ok: true as const,
-      text: JSON.stringify({ familyOrigins: ['电气类'], domainOrigins: ['工科'], adjacentTargets: ['领队'], counterTerms: [] }),
+      text: JSON.stringify({ familyOrigins: ['电气自动化'], domainOrigins: ['工科'], adjacentTargets: ['领队'], counterTerms: [] }),
       provider: 'fast',
       model: 'cheap-model',
       attempts: [],
@@ -187,20 +187,26 @@ describe('转变意图', () => {
     // 清掉进程内缓存：模拟容器重启，只靠落盘缓存
     clearTransitionIntentCacheForTests();
     const afterRestart = await expandTransitionIntent(realFrame('我是电工，想转行当导游'), { router, cacheDir });
-    expect(afterRestart.origin.family).toContain('电气类');
+    expect(afterRestart.origin.family).toContain('电气自动化');
     expect(complete).toHaveBeenCalledTimes(1);
   });
 
-  it('过滤过长、泛化和非数组扩展词', async () => {
+  it('过滤过长、泛化、类别标签与过程短语（只留具体说法）', async () => {
     const router = {
       providers: ['fast'],
       complete: vi.fn(async () => ({
         ok: true as const,
         text: JSON.stringify({
-          familyOrigins: ['人生', '电气类', '这是一段明显过长而且没有检索价值的完整句子'],
+          familyOrigins: [
+            '人生',
+            '电气类',
+            '技能型蓝领',
+            '电气自动化',
+            '这是一段明显过长而且没有检索价值的完整句子',
+          ],
           domainOrigins: '工科',
           adjacentTargets: ['工作', '领队'],
-          counterTerms: ['建议', '退出'],
+          counterTerms: ['建议', '职业资格转型', '退出'],
         }),
         provider: 'fast',
         model: 'cheap-model',
@@ -211,9 +217,53 @@ describe('转变意图', () => {
       frameOf('我是电工专业，然后想转导游', '电工专业', '转导游'),
       { router },
     );
-    expect(result.origin.family).toEqual(['电气类']);
+
+    // 线上实测模型给的就是「技能型蓝领 / 职业资格转型」这类概括：
+    // 它们不会出现在回答原文里，拿去检索一条都命中不了 → 全部丢掉。
+    expect(result.origin.family).toEqual(['电气自动化']);
     expect(result.origin.domain).toEqual([]);
     expect(result.target.adjacent).toEqual(['领队']);
     expect(result.counterTerms).toEqual(['退出']);
+  });
+
+  it('含"型"的具体职业不被误杀（发型师）', async () => {
+    const router = {
+      providers: ['fast'],
+      complete: vi.fn(async () => ({
+        ok: true as const,
+        text: JSON.stringify({ familyOrigins: ['发型师', '偏内向型人格'] }),
+        provider: 'fast',
+        model: 'cheap-model',
+        attempts: [],
+      })),
+    } as ProviderRouter;
+
+    const result = await expandTransitionIntent(
+      frameOf('我是电工专业，然后想转导游', '电工专业', '转导游'),
+      { router },
+    );
+    expect(result.origin.family).toEqual(['发型师']);
+  });
+
+  it('扩展提示词明确要求"人们在回答原文里真的会打出来的说法"', async () => {
+    const complete = vi.fn(
+      async (_purpose: string, messages: readonly { readonly role: string; readonly content: string }[]) => ({
+        ok: true as const,
+        text: '{"familyOrigins":[]}',
+        provider: 'fast',
+        model: 'cheap-model',
+        attempts: [],
+        _echo: messages.length,
+      }),
+    );
+    await expandTransitionIntent(
+      frameOf('我是电工专业，然后想转导游', '电工专业', '转导游'),
+      { router: { providers: ['fast'], complete } as unknown as ProviderRouter },
+    );
+
+    const systemPrompt = complete.mock.calls[0]?.[1]?.[0]?.content ?? '';
+    expect(systemPrompt).toContain('真的会打出来');
+    expect(systemPrompt).toContain('不要给概括性的类别标签');
+    expect(systemPrompt).toContain('不要依赖任何特定行业的词表');
   });
 });

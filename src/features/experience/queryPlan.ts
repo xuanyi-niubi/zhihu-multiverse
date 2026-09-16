@@ -16,8 +16,13 @@ export const DEFAULT_MAX_REQUESTS = 3;
  * 真正放宽发生在检索执行层（`searchRequestBudget()`）。
  */
 export const MAX_SEARCH_REQUESTS = 12;
-/** 每局实际检索预算（执行层用）：默认 8，可用 `APP_MAX_SEARCH_REQUESTS` 调。 */
-export const DEFAULT_SEARCH_BUDGET = 8;
+/**
+ * 每局实际检索预算（执行层用）：默认 10，可用 `APP_MAX_SEARCH_REQUESTS` 调。
+ *
+ * 2026-09-16 从 8 提到 10：加了第二条年代查询（`q-era-mid`），
+ * 它的收益已被真实数据验证（把中位年份从 2025 拉回 2020）。
+ */
+export const DEFAULT_SEARCH_BUDGET = 10;
 
 /**
  * 每局知乎检索预算。**这是唯一该调的地方**：想省额度就调小，
@@ -209,11 +214,33 @@ export function buildSearchPlan(input: BuildSearchPlanInput): SearchPlan {
     expectedTier: 'same-target',
   });
 
-  /** 年份线索：往前 8 年（"2018 年"这类词更容易把当时的回答捞上来）。 */
+  /**
+   * 年代线索：**两条**，分别锚定"早"与"中"两个时代。
+   *
+   * 实测（2026-09-16 真实接口，10 条/查询）：
+   * ```
+   * 转行 导游 亲身经历 后来      → 年份 2023–2026，中位数 2025
+   * 导游 2018 亲身经历 后来      → 年份 2018–2025，中位数 2020
+   * 导游 2020 亲身经历 后来      → 年份 2020–2025，中位数 2020（10 条里 6 条 2020）
+   * 导游 2012 亲身经历 后来      → 年份 2016–2025，中位数 2023  ← 太早反而失效
+   * ```
+   * 所以锚点取"往前 8 年"与"往前 5 年"：前者把早期（≤锚-8）那一桶填上，
+   * 后者填中段（锚-7..锚-4）。**越早越好是错的** —— 2012 明显退化。
+   *
+   * 这两条查询直接决定「平行的时间」能不能成立（此前 39 个真实问题里
+   * 只有 14 个能形成时代对照）。
+   */
   const earlyYear = new Date().getUTCFullYear() - 8;
+  const midYear = new Date().getUTCFullYear() - 5;
   extras.push({
     id: 'q-era',
     query: `${target} ${earlyYear} 亲身经历 后来`,
+    purpose: 'similar-person',
+    priority: 0,
+  });
+  extras.push({
+    id: 'q-era-mid',
+    query: `${target} ${midYear} 亲身经历 后来`,
     purpose: 'similar-person',
     priority: 0,
   });
