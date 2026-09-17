@@ -141,3 +141,64 @@ jobs:
           ls -la /opt || true
           echo "拆除完成。"
           REMOTE
+
+      # 第二轮：把 nginx 这一层也清掉，并且**把现场打出来**（否则只能看到 502，无从判断原因）。
+      # 与第一步一样是幂等的：可以反复执行。
+      - name: Deep clean (nginx + listeners)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          export SSHPASS="$VPS_PASSWORD"
+          sshpass -e ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'DOMAIN=zhihu.xuanyi888.cloud bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+
+          echo "== A. 谁在监听 443 / 8443 =="
+          (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | grep -E ':(443|8443)\b' || echo "  （没有进程监听 443/8443）"
+
+          echo "== B. /etc/nginx 下引用本域名（或 xuanyi888）的文件 =="
+          grep -rl -- 'xuanyi888' /etc/nginx 2>/dev/null || echo "  （/etc/nginx 里没有匹配）"
+
+          echo "== C. 站点目录列表（判断是否只有我们一个站点）=="
+          ls -la /etc/nginx/sites-enabled 2>/dev/null || true
+          ls -la /etc/nginx/conf.d 2>/dev/null || true
+
+          echo "== D. 停用匹配到的站点配置（先备份改名，再校验，失败自动回滚）=="
+          touched=0
+          for file in $(grep -rl -- 'xuanyi888' /etc/nginx 2>/dev/null || true); do
+            case "$file" in
+              *.disabled-by-teardown) continue ;;
+            esac
+            mv -- "$file" "${file}.disabled-by-teardown"
+            echo "  已停用：$file"
+            touched=$((touched + 1))
+          done
+
+          if [ "$touched" -gt 0 ]; then
+            if nginx -t; then
+              systemctl reload nginx || service nginx reload || true
+              echo "  nginx 已重载"
+            else
+              echo "  nginx -t 校验失败 → 回滚全部改动"
+              for f in $(grep -rl 'disabled-by-teardown' /etc/nginx 2>/dev/null || true); do
+                mv -- "$f" "${f%.disabled-by-teardown}"
+              done
+              nginx -t || true
+              exit 1
+            fi
+          else
+            echo "  没有可停用的匹配文件"
+          fi
+
+          echo "== E. 重载后的本机响应（期望：无响应 / 404 / 连接被拒，而不是 502）=="
+          curl -s -o /dev/null -w '  443  → HTTP %{http_code}\n' -k --max-time 8 https://127.0.0.1/ || echo "  443  → 无响应"
+          curl -s -o /dev/null -w '  8443 → HTTP %{http_code}\n' -k --max-time 8 https://127.0.0.1:8443/ || echo "  8443 → 无响应"
+
+          echo "== F. 域名解析仍指向本机（DNS 记录需要域名持有者自行删除）=="
+          host "$DOMAIN" 2>/dev/null || getent hosts "$DOMAIN" || true
+
+          echo "深层清理完成。"
+          REMOTE
