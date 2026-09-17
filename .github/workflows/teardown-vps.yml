@@ -1,0 +1,143 @@
+name: Teardown VPS
+
+# 一次性拆除：把公网部署清干净，只保留 GitHub 仓库。
+#
+# 为什么是工作流而不是手动 SSH：这台机器的部署本来就是通过 `Deploy VPS`
+# 用 `VPS_*` secrets + sshpass 完成的；拆除走同一条通道最不容易出错，
+# 而且**过程本身留档**（这个文件就是"当初怎么下线的"的记录）。
+#
+# 它会做四件事，每一步都先打印再执行：
+#   1. 读容器标签拿到 compose 项目名与工作目录（容器删掉后就读不到了，所以先读）；
+#   2. `docker compose down -v --remove-orphans` 停服务、删网络与**数据卷**；
+#   3. 删掉工作目录与 /opt/zhihu-multiverse-releases 下的全部发行快照；
+#   4. 只在**确实引用本域名**的 nginx 配置文件上做 disable（先 nginx -t 再 reload）。
+#
+# 之后服务器上不再有任何本项目的东西；代码仍在 GitHub 仓库里。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Validate teardown secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$VPS_HOST"
+          test -n "$VPS_PORT"
+          test -n "$VPS_USER"
+          test -n "$VPS_PASSWORD"
+
+      - name: Install SSH client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends sshpass
+
+      - name: Trust current server host key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -Eeuo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Tear down the deployment
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          export SSHPASS="$VPS_PASSWORD"
+          sshpass -e ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'DOMAIN=zhihu.xuanyi888.cloud bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+
+          container="zhihu-multiverse"
+          release_root="/opt/zhihu-multiverse-releases"
+
+          echo "== 1. 读取容器标签（必须删容器之前读） =="
+          if docker inspect "$container" >/dev/null 2>&1; then
+            compose_project="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project" }}')"
+            current_dir="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')"
+            echo "compose 项目：$compose_project"
+            echo "工作目录：$current_dir"
+
+            # 与部署脚本同样的白名单：只允许操作我们自己的目录
+            case "$current_dir" in
+              /opt/zhihu-multiverse|/opt/zhihu-multiverse-*|/opt/zhihu-multiverse-releases/*) ;;
+              *)
+                echo "拒绝操作未授权的目录：$current_dir"
+                exit 1
+                ;;
+            esac
+
+            echo "== 2. 停服务并删除数据卷 =="
+            cd "$current_dir"
+            docker compose -p "$compose_project" down -v --remove-orphans || true
+          else
+            echo "容器不存在（可能已删过）：跳过 compose down"
+            current_dir=""
+          fi
+
+          echo "== 3. 删除工作目录与全部发行快照 =="
+          if [ -n "$current_dir" ]; then
+            rm -rf -- "$current_dir"
+            echo "已删除：$current_dir"
+          fi
+          rm -rf -- "$release_root"
+          echo "已删除：$release_root"
+
+          echo "== 4. 摘掉引用本域名的 nginx 站点配置 =="
+          if command -v nginx >/dev/null 2>&1; then
+            touched=0
+            while IFS= read -r file; do
+              [ -n "$file" ] || continue
+              target="${file}.disabled-by-teardown"
+              mv -- "$file" "$target"
+              echo "已停用：$file -> $target"
+              touched=$((touched + 1))
+            done < <(grep -rl -- "$DOMAIN" /etc/nginx 2>/dev/null || true)
+
+            if [ "$touched" -gt 0 ]; then
+              if nginx -t; then
+                systemctl reload nginx || service nginx reload || true
+                echo "nginx 已重载"
+              else
+                echo "nginx 配置校验失败 —— 回滚所有改动"
+                for f in $(grep -rl -- "disabled-by-teardown" /etc/nginx 2>/dev/null || true); do
+                  mv -- "$f" "${f%.disabled-by-teardown}"
+                done
+                nginx -t && (systemctl reload nginx || true)
+                exit 1
+              fi
+            else
+              echo "没有找到引用 $DOMAIN 的 nginx 配置（可能已在别处托管）"
+            fi
+          else
+            echo "本机没有 nginx，跳过"
+          fi
+
+          echo "== 5. 收尾：确认没有残留进程与目录 =="
+          docker ps -a --filter "name=$container" --format '{{.Names}} {{.Status}}' || true
+          ls -la /opt || true
+          echo "拆除完成。"
+          REMOTE
