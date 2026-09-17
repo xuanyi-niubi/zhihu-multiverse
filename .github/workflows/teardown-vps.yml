@@ -76,23 +76,30 @@ jobs:
 
           echo "== 1. 读取容器标签（必须删容器之前读） =="
           if docker inspect "$container" >/dev/null 2>&1; then
-            compose_project="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project" }}')"
-            current_dir="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')"
-            echo "compose 项目：$compose_project"
-            echo "工作目录：$current_dir"
+            compose_project="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project" }}' || true)"
+            current_dir="$(docker inspect "$container" --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' || true)"
+            echo "compose 项目：${compose_project:-（空）}"
+            echo "工作目录：${current_dir:-（空）}"
 
-            # 与部署脚本同样的白名单：只允许操作我们自己的目录
-            case "$current_dir" in
-              /opt/zhihu-multiverse|/opt/zhihu-multiverse-*|/opt/zhihu-multiverse-releases/*) ;;
-              *)
-                echo "拒绝操作未授权的目录：$current_dir"
-                exit 1
-                ;;
-            esac
+            # 幂等性：`docker compose down` 之后容器可能还残留、但 compose 标签已经没了。
+            # 这时"空目录"不是越权，只是"没有可清理的 compose 工程"，直接删容器即可。
+            if [ -n "$compose_project" ] && [ -n "$current_dir" ]; then
+              # 与部署脚本同样的白名单：只允许操作我们自己的目录
+              case "$current_dir" in
+                /opt/zhihu-multiverse|/opt/zhihu-multiverse-*|/opt/zhihu-multiverse-releases/*) ;;
+                *)
+                  echo "拒绝操作未授权的目录：$current_dir"
+                  exit 1
+                  ;;
+              esac
 
-            echo "== 2. 停服务并删除数据卷 =="
-            cd "$current_dir"
-            docker compose -p "$compose_project" down -v --remove-orphans || true
+              echo "== 2. 停服务并删除数据卷 =="
+              cd "$current_dir"
+              docker compose -p "$compose_project" down -v --remove-orphans || true
+            else
+              echo "容器存在但缺少 compose 标签（说明上一轮已 down 过）→ 直接删除该容器"
+              docker rm -f "$container" || true
+            fi
           else
             echo "容器不存在（可能已删过）：跳过 compose down"
             current_dir=""
