@@ -227,27 +227,35 @@ jobs:
           # 免密 sudo 可用才动系统配置；否则只报告，绝不瞎试
           if sudo -n true 2>/dev/null; then
             SUDO="sudo -n"
-            echo "== 1. 用 nginx -T 打印**生效配置**并定位本域名（这才是定论手段）=="
-            # 之前用 `grep -r` 一直"无匹配"：`-r` 不跟随符号链接，而站点配置常常是 conf.d 下的软链。
-            # `nginx -T` 会把 include 展开后的全部配置打出来，来源无处可藏。
-            $SUDO nginx -T 2>/dev/null | grep -n -- 'xuanyi888' | head -20 || echo "  （生效配置里确实没有本域名）"
+            echo "== 1. 用 nginx -T 打印**生效配置**，并从中解析配置文件的真实路径 =="
+            # 之前 grep /etc/nginx 一直"无匹配"：本机 nginx 用的是**非标准布局**
+            # （sites-enabled 与 conf.d 都是空的，vhost 在别处，例如宝塔面板的
+            #  /www/server/panel/vhost/nginx/）。`nginx -T` 会按文件打印生效配置，
+            #  形如 `# configuration file /path/to/x.conf:` —— 路径就藏在这里。
+            $SUDO nginx -T 2>/dev/null | grep -n -- 'server_name .*xuanyi888' | head -20 || echo "  （生效配置里没有本域名的 server_name）"
 
-            echo "-- 软链也要跟（grep -R）--"
-            $SUDO grep -Rl -- 'xuanyi888' /etc/nginx 2>/dev/null || echo "  （-R 也没有匹配）"
-
-            echo "-- sites-enabled / conf.d 实际内容（含符号链接指向）--"
-            $SUDO ls -la /etc/nginx/sites-enabled 2>/dev/null || true
-            $SUDO ls -la /etc/nginx/conf.d 2>/dev/null || true
-            $SUDO ls -la /etc/nginx 2>/dev/null | head -20 || true
+            conf_files="$($SUDO nginx -T 2>/dev/null | grep -E '^# configuration file ' | sed -e 's/^# configuration file //' -e 's/:$//' | sort -u)"
+            echo "-- 生效配置涉及的文件 --"
+            echo "$conf_files" | sed 's/^/  /'
+            echo "-- 其中引用本域名的 --"
+            matched=""
+            for f in $conf_files; do
+              if $SUDO grep -l -- 'xuanyi888' "$f" >/dev/null 2>&1; then
+                echo "  $f"
+                matched="$matched $f"
+              fi
+            done
 
             touched=0
-            # 只停用"确凿引用本域名"的文件；`nginx -T` 打出的来源路径优先
-            for file in $($SUDO grep -Rl -- 'xuanyi888' /etc/nginx 2>/dev/null || true); do
+            for file in $matched; do
               case "$file" in *.disabled-by-teardown) continue ;; esac
               $SUDO mv -- "$file" "${file}.disabled-by-teardown"
               echo "  已停用：$file"
               touched=$((touched + 1))
             done
+            if [ "$touched" -eq 0 ]; then
+              echo "  （没有可停用的文件）"
+            fi
 
             if [ "$touched" -gt 0 ]; then
               if $SUDO nginx -t; then
