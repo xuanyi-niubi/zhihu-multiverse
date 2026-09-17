@@ -227,13 +227,22 @@ jobs:
           # 免密 sudo 可用才动系统配置；否则只报告，绝不瞎试
           if sudo -n true 2>/dev/null; then
             SUDO="sudo -n"
-            echo "== 1. sudo 可用，检查 nginx 配置（这次有权限了）=="
-            $SUDO grep -rl -- 'xuanyi888' /etc/nginx 2>/dev/null || echo "  （确实没有匹配）"
-            echo "-- sites-enabled --"; $SUDO ls -la /etc/nginx/sites-enabled 2>/dev/null || true
-            echo "-- conf.d --";        $SUDO ls -la /etc/nginx/conf.d 2>/dev/null || true
+            echo "== 1. 用 nginx -T 打印**生效配置**并定位本域名（这才是定论手段）=="
+            # 之前用 `grep -r` 一直"无匹配"：`-r` 不跟随符号链接，而站点配置常常是 conf.d 下的软链。
+            # `nginx -T` 会把 include 展开后的全部配置打出来，来源无处可藏。
+            $SUDO nginx -T 2>/dev/null | grep -n -- 'xuanyi888' | head -20 || echo "  （生效配置里确实没有本域名）"
+
+            echo "-- 软链也要跟（grep -R）--"
+            $SUDO grep -Rl -- 'xuanyi888' /etc/nginx 2>/dev/null || echo "  （-R 也没有匹配）"
+
+            echo "-- sites-enabled / conf.d 实际内容（含符号链接指向）--"
+            $SUDO ls -la /etc/nginx/sites-enabled 2>/dev/null || true
+            $SUDO ls -la /etc/nginx/conf.d 2>/dev/null || true
+            $SUDO ls -la /etc/nginx 2>/dev/null | head -20 || true
 
             touched=0
-            for file in $($SUDO grep -rl -- 'xuanyi888' /etc/nginx 2>/dev/null || true); do
+            # 只停用"确凿引用本域名"的文件；`nginx -T` 打出的来源路径优先
+            for file in $($SUDO grep -Rl -- 'xuanyi888' /etc/nginx 2>/dev/null || true); do
               case "$file" in *.disabled-by-teardown) continue ;; esac
               $SUDO mv -- "$file" "${file}.disabled-by-teardown"
               echo "  已停用：$file"
