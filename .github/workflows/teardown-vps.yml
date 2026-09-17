@@ -209,3 +209,86 @@ jobs:
 
           echo "深层清理完成。"
           REMOTE
+
+      # 第三轮：nginx 那一层需要 root（前一轮的 grep/ls 被权限挡了，所以"无匹配"是假象），
+      # 另外 /opt 下还留着工作目录与几十份 .env.production 备份（**里面有真实凭据**）必须清掉。
+      - name: Deep clean with sudo (nginx config + leftover credentials)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          set -Eeuo pipefail
+          export SSHPASS="$VPS_PASSWORD"
+          sshpass -e ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'DOMAIN=zhihu.xuanyi888.cloud bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+
+          # 免密 sudo 可用才动系统配置；否则只报告，绝不瞎试
+          if sudo -n true 2>/dev/null; then
+            SUDO="sudo -n"
+            echo "== 1. sudo 可用，检查 nginx 配置（这次有权限了）=="
+            $SUDO grep -rl -- 'xuanyi888' /etc/nginx 2>/dev/null || echo "  （确实没有匹配）"
+            echo "-- sites-enabled --"; $SUDO ls -la /etc/nginx/sites-enabled 2>/dev/null || true
+            echo "-- conf.d --";        $SUDO ls -la /etc/nginx/conf.d 2>/dev/null || true
+
+            touched=0
+            for file in $($SUDO grep -rl -- 'xuanyi888' /etc/nginx 2>/dev/null || true); do
+              case "$file" in *.disabled-by-teardown) continue ;; esac
+              $SUDO mv -- "$file" "${file}.disabled-by-teardown"
+              echo "  已停用：$file"
+              touched=$((touched + 1))
+            done
+
+            if [ "$touched" -gt 0 ]; then
+              if $SUDO nginx -t; then
+                $SUDO systemctl reload nginx || true
+                echo "  nginx 已重载"
+              else
+                echo "  nginx -t 失败 → 回滚"
+                for f in $($SUDO grep -rl 'disabled-by-teardown' /etc/nginx 2>/dev/null || true); do
+                  $SUDO mv -- "$f" "${f%.disabled-by-teardown}"
+                done
+                $SUDO nginx -t || true
+                exit 1
+              fi
+            fi
+
+            echo "== 2. 重载后端口状态（期望：443/8443 不再有 nginx 监听，或只剩默认站点）=="
+            (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | grep -E ':(443|8443)\b' || echo "  （已无进程监听 443/8443）"
+          else
+            echo "⚠️ 免密 sudo 不可用：跳过 nginx 配置清理（需要你手动处理，见最后提示）"
+          fi
+
+          echo "== 3. 清掉 /opt 下残留的工作目录与凭据备份 =="
+          # 这些文件里有真实密钥（APP_LLM_API_KEY / ZHIHU_* / OAuth），不能留在机器上
+          removed=0
+          for pattern in \
+            /opt/zhihu-multiverse \
+            /opt/zhihu-multiverse-releases \
+            /opt/_staging \
+            /opt/_upload.tar.gz \
+            /opt/.env.production.bak-* \
+            /opt/.env.before-* \
+            /opt/.rollback-image-*.txt \
+            /opt/.last-deploy-stamp \
+            /opt/build*.log
+          do
+            for target in $pattern; do
+              [ -e "$target" ] || continue
+              if sudo -n rm -rf -- "$target" 2>/dev/null || rm -rf -- "$target" 2>/dev/null; then
+                echo "  已删除：$target"
+                removed=$((removed + 1))
+              else
+                echo "  删除失败（权限）：$target"
+              fi
+            done
+          done
+          echo "  共删除 $removed 项"
+
+          echo "== 4. 收尾：/opt 现状 =="
+          ls -la /opt || true
+          echo "== 5. 端口最终状态 =="
+          (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | grep -E ':(80|443|8443)\b' || echo "  （80/443/8443 均无监听）"
+          echo "全部清理完成。"
+          REMOTE
